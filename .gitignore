@@ -28,3 +28,19 @@ doc/
 # Ignorar archivos bluej
 *.bluej
 package.bluej
+
+# Archivos de salida y compilación (Build Artifacts)
+/out/
+/target/
+/bin/
+*.class
+
+# Archivos de configuración de IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
