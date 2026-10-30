@@ -1,4 +1,4 @@
-package presentation;
+package domain;
 
 /**
  * Tipos de partido de POOBSoccer.

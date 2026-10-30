@@ -1,5 +1,9 @@
 package presentation;
 
+import domain.GameMode;
+import domain.MatchType;
+import domain.POOPSoccer;
+
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
@@ -8,13 +12,8 @@ import java.io.File;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
-/**Ayudado a organizar por Gemini 3.8 Flash
+/**
  * Contenedor central de vistas (JPanel con CardLayout).
- * 
- * Responsabilidades:
- * 1. Gestionar el cambio de pantallas (Menú principal, Configuración de jugadores, Juego activo).
- * 2. Alojar el {@link InfoPanel} en la parte superior durante la partida.
- * 3. Iniciar, pausar y reiniciar las instancias de {@link GamePanel}.
  */
 public class GameContainer extends JPanel {
 
@@ -25,10 +24,10 @@ public class GameContainer extends JPanel {
     private GamePanel activeGamePanel;
 
     public GameContainer() {
-        prepareElements();
+        prepareView();
     }
 
-    private void prepareElements() {
+    private void prepareView() {
         setup = new GameSetup();
         setLayout(new BorderLayout());
         setPreferredSize(new Dimension(800, 650));
@@ -49,7 +48,7 @@ public class GameContainer extends JPanel {
         add(cardPanel, BorderLayout.CENTER);
     }
 
-    public void showView(ScreenView  view) {
+    public void showView(ScreenView view) {
         infoPanel.setVisible(view == ScreenView.GAME);
         cardLayout.show(cardPanel, view.name());
         revalidate();
@@ -62,19 +61,41 @@ public class GameContainer extends JPanel {
         showView(ScreenView.PLAYER_CONFIG);
     }
 
-    public void onPlayerConfigConfirmed(String nameP1, String teamP1) {
+
+    public void onPlayerConfigConfirmed(String nameP1, String teamP1, MatchType matchType, int goalLimit) {
         setup.setPlayer1(nameP1, teamP1);
+        setup.setMatchType(matchType);
+        setup.setGoalLimit(goalLimit);
+        startGame();
+    }
+
+    public void onPlayerConfigConfirmed(String nameP1, String teamP1, String nameP2, String teamP2, MatchType matchType, int goalLimit) {
+        setup.setPlayer1(nameP1, teamP1);
+        setup.setPlayer2(nameP2, teamP2);
+        setup.setMatchType(matchType);
+        setup.setGoalLimit(goalLimit);
         startGame();
     }
 
     public void onPlayerConfigConfirmed(String nameP1, String teamP1, String nameP2, String teamP2) {
-        setup.setPlayer1(nameP1, teamP1);
-        setup.setPlayer2(nameP2, teamP2);
-        startGame();
+        onPlayerConfigConfirmed(nameP1, teamP1, nameP2, teamP2, MatchType.PER_GOALS, 3);
+    }
+
+    public void onPlayerConfigConfirmed(String nameP1, String teamP1) {
+        onPlayerConfigConfirmed(nameP1, teamP1, MatchType.PER_GOALS, 3);
     }
 
     public void startGame() {
         try {
+            POOPSoccer.getGame().startGame(
+                    setup.getGameMode(),
+                    setup.getMatchType(),
+                    setup.getGoalLimit(),
+                    setup.getNameP1(),
+                    setup.getTeamP1(),
+                    setup.getNameP2(),
+                    setup.getTeamP2()
+            );
             if (activeGamePanel != null) {
                 activeGamePanel.stopThread();
                 cardPanel.remove(activeGamePanel);

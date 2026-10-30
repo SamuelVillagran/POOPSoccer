@@ -1,4 +1,4 @@
-package presentation;
+package domain;
 
 /**Modo de juego
  * PVP: Player vs player

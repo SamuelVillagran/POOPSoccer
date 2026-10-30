@@ -35,13 +35,13 @@ public class Window extends JFrame {
     private GameContainer gameContainer;
 
     public Window() throws Exception {
-        prepareElements();
+        prepareView();
         prepareActions();
     }
 
-    private void prepareElements() throws Exception {
+    private void prepareView() throws Exception {
         setScreen();
-        prepareElementsMenu();
+        prepareViewMenu();
     }
 
     private void setScreen() throws Exception {
@@ -55,7 +55,7 @@ public class Window extends JFrame {
         setLocationRelativeTo(null);
     }
 
-    private void prepareElementsMenu() {
+    private void prepareViewMenu() {
         menuBar = new JMenuBar();
         menu = new JMenu("Archivo");
 
@@ -138,7 +138,4 @@ public class Window extends JFrame {
         }
     }
 
-    public GameContainer getGameContainer() {
-        return gameContainer;
-    }
 }

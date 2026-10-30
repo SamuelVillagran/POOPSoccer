@@ -25,7 +25,6 @@ public class FrozenEffect implements Effect {
     public float getSize() {
         return 0.0f;
     }
-
     @Override
     public boolean isDirectionInverted() {
         return false;

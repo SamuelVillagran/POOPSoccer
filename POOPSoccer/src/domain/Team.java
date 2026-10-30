@@ -1,0 +1,29 @@
+package domain;
+
+public enum Team {
+    CANADA("Canadá", new Freeze(), 3, 4, 3),
+    COLOMBIA("Colombia", new Confusion(), 4, 3, 4),
+    ALEMANIA("Alemania", new Shrink(),  3, 3, 4);
+
+    private final String displayName;
+    private final Power POWER;
+    private int speed;
+    private final int JUMP;
+    private int force;
+    Team(String displayName, Power power, int speed, int jump, int force) {
+        this.displayName = displayName;
+        this.POWER = power;
+        this.speed = speed;
+        this.JUMP = jump;
+        this.force = force;
+    }
+
+    public String getDisplayName() { return displayName; }
+    public Power getPower() { return POWER; }
+    public int getSpeed() { return speed; }
+    public int getJump() { return JUMP; }
+    public int getForce() { return force; }
+    public void setSpeed(int newSpeed) { speed = newSpeed; }
+
+
+}

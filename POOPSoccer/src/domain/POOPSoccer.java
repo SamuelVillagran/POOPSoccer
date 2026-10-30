@@ -4,6 +4,7 @@ import java.util.Map;
 
 public class POOPSoccer {
     private static POOPSoccer game;
+    private boolean isPaused;
 
     private int currentLevel;
     private CollisionChecker cChecker;
@@ -14,10 +15,21 @@ public class POOPSoccer {
     }
 
     public static POOPSoccer getGame() {
+        if (game == null) {
+            game = new POOPSoccer();
+        }
         return game;
     }
 
-    public void startGame(int gameMode, int currentLevel) {
+    public void startGame(GameMode gameMode, MatchType matchType, int goalLimit,
+                          String nameP1, String teamP1,
+                          String nameP2, String teamP2) {
+
+
+    }
+
+    public void resumeGame() {
+        isPaused = true;
     }
 
     public Map getElementsToDraw() {

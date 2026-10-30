@@ -11,11 +11,11 @@ import javax.swing.SwingUtilities;
  * - Resuelve el problema arquitectónico de la versión original donde un JPanel se llamaba '...GUI'
  *   y la ventana secundaria contenía el método main.
  */
-public class TheDOPOHardestGameGUI {
+public class POOPSoccerGUI {
 
     private Window window;
 
-    public TheDOPOHardestGameGUI() {
+    public POOPSoccerGUI() {
         try {
             this.window = new Window();
         } catch (Exception e) {
@@ -32,17 +32,13 @@ public class TheDOPOHardestGameGUI {
         }
     }
 
-    public Window getWindow() {
-        return window;
-    }
-
     /**
      * Método principal de ejecución.
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) { //Ayudado con Gemini Flash 3.8 IA
         SwingUtilities.invokeLater(() -> {
-            TheDOPOHardestGameGUI app = new TheDOPOHardestGameGUI();
-            app.start();
+            POOPSoccerGUI gui = new POOPSoccerGUI();
+            gui.start();
         });
     }
 }

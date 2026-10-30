@@ -1,5 +1,7 @@
 package presentation;
 
+import domain.POOPSoccer;
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -139,10 +141,14 @@ public class GamePanel extends JPanel implements Runnable {
             case 0 -> gameContainer.goToMenu();
             case 1 -> gameContainer.restartFromLevel1();
             default -> {
-                // Reanudar juego
+                // 1. Le avisas al dominio que continúe el partido
+                POOPSoccer.getGame().resumeGame(); // o setPaused(false)
+                // 2. FUNDAMENTAL en Swing: le devolves el foco del teclado a la cancha
+                requestFocusInWindow();
             }
         }
     }
+
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -155,6 +161,6 @@ public class GamePanel extends JPanel implements Runnable {
     public void draw(Graphics2D g2) {
         // Renderizado de elementos de la cancha / juego
         g2.setColor(Color.WHITE);
-        g2.drawString("POOBSoccer - Canvas de Juego Activo", 20, 30);
+        g2.drawString("POOBSoccer -o- -o- -o- -o- -o- -o- -o- -o- -o- -o- ", 20, 30);
     }
 }
