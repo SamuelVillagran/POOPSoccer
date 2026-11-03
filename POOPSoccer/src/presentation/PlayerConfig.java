@@ -8,8 +8,12 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.GridLayout;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
 
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -18,7 +22,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-/**
+/**Ayudado a organizar con Claude Sonnet 4.6
  * Pantalla de Configuración de Jugadores y Tipo de Partido.
  */
 public class PlayerConfig extends JPanel {
@@ -34,17 +38,41 @@ public class PlayerConfig extends JPanel {
     private JComboBox<Integer> goalLimitCombo;
 
     private JButton startBtn;
+    private BufferedImage background;
 
     public PlayerConfig(GameContainer container, GameMode mode) {
         this.mode = mode;
+        loadBackground();
         prepareView(container);
     }
 
+    private void loadBackground() {
+        try {
+            InputStream is = getClass().getResourceAsStream("/menu/playerconfig.jpg");
+            if (is != null) {
+                background = ImageIO.read(is);
+            }
+        } catch (Exception e) {
+            background = null;
+        }
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        if (background != null) {
+            g.drawImage(background, 0, 0, getWidth(), getHeight(), null);
+        }
+    }
+
     private void prepareView(GameContainer container) {
+        setOpaque(false);
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
 
         JPanel formPanel = new JPanel(new GridLayout(0, 1, 10, 10));
+        formPanel.setBackground(new Color(255, 255, 255, 120));
+
 
         // 1. Configuración de Jugadores
         prepareViewSettingPlayer(formPanel);
@@ -146,6 +174,7 @@ public class PlayerConfig extends JPanel {
         });
 
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        bottomPanel.setOpaque(false);
         bottomPanel.add(startBtn);
         add(bottomPanel, BorderLayout.SOUTH);
     }

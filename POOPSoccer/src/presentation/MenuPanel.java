@@ -5,10 +5,14 @@ import domain.GameMode;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
 
+import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 
@@ -20,10 +24,31 @@ public class MenuPanel extends JPanel {
     private JButton btnPvP;
     private JButton btnPvM;
     private JButton btnMvM;
+    private BufferedImage background;
 
     public MenuPanel(GameContainer container) {
+        loadBackground();
         prepareElements();
         prepareActions(container);
+    }
+
+    private void loadBackground() {
+        try {
+            InputStream is = getClass().getResourceAsStream("/menu/main.jpg");
+            if (is != null) {
+                background = ImageIO.read(is);
+            }
+        } catch (Exception e) {
+            background = null;
+        }
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        if (background != null) {
+            g.drawImage(background, 0, 0, getWidth(), getHeight(), null);
+        }
     }
 
     private void prepareElements() {

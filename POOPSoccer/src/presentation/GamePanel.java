@@ -36,6 +36,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     private KeyHandler keyH;
     private volatile Thread gameThread;
+    private BufferedImage background = null;
     private HashMap<String, BufferedImage> cachedImages;
     private InfoPanel infoPanel;
     private GameContainer gameContainer;
@@ -51,6 +52,12 @@ public class GamePanel extends JPanel implements Runnable {
         setDoubleBuffered(true);
         addKeyListener(keyH);
         setFocusable(true);
+
+        try {
+            InputStream is = getClass().getResourceAsStream("/map/1.jpg");
+            background = ImageIO.read(is);
+        } catch (Exception e) {
+        }
     }
 
     public void startGameThread() {
@@ -160,7 +167,9 @@ public class GamePanel extends JPanel implements Runnable {
 
     public void draw(Graphics2D g2) {
         // Renderizado de elementos de la cancha / juego
-        g2.setColor(Color.WHITE);
+        if (background != null) {
+            g2.drawImage(background, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, null);
+        }
         g2.drawString("POOBSoccer -o- -o- -o- -o- -o- -o- -o- -o- -o- -o- ", 20, 30);
     }
 }
