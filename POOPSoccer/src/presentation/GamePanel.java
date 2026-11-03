@@ -1,6 +1,7 @@
 package presentation;
 
 import domain.POOPSoccer;
+import domain.Side;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -34,29 +35,33 @@ public class GamePanel extends JPanel implements Runnable {
     private static final int SCREEN_WIDTH = 800;
     private static final int SCREEN_HEIGHT = 600;
 
-    private KeyHandler keyH;
     private volatile Thread gameThread;
-    private BufferedImage background = null;
     private HashMap<String, BufferedImage> cachedImages;
     private InfoPanel infoPanel;
-    private GameContainer gameContainer;
+    private final GamePanelListener LISTENER;
+    private BufferedImage background;
 
-    public GamePanel(InfoPanel infoPanel, GameContainer gameContainer) {
+    public GamePanel(InfoPanel infoPanel, GamePanelListener gameContainer) {
         this.infoPanel = infoPanel;
-        this.gameContainer = gameContainer;
-        this.keyH = new KeyHandler();
+        this.LISTENER = gameContainer;
         this.cachedImages = new HashMap<>();
 
         setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
         setBackground(Color.BLACK);
         setDoubleBuffered(true);
-        addKeyListener(keyH);
+        this.addKeyListener(KeyHandler.getInstance());
         setFocusable(true);
 
         try {
             InputStream is = getClass().getResourceAsStream("/map/1.jpg");
-            background = ImageIO.read(is);
+            if (is != null) {
+                background = ImageIO.read(is);
+            } else {
+                // Te avisará en consola si la carpeta map no está bien configurada
+                System.err.println("Error: No se encontró la imagen en /map/1.jpg");
+            }
         } catch (Exception e) {
+            e.printStackTrace(); // Muestra el error real sin silenciarlo
         }
     }
 
@@ -77,11 +82,12 @@ public class GamePanel extends JPanel implements Runnable {
         final double nsInterval = 1_000_000_000.0 / FPS;
         double delta = 0;
         long lastTime = System.nanoTime();
-
+        long refreshTimer = 0;
         while (gameThread != null) {
             long currentTime = System.nanoTime();
             long elapsed = currentTime - lastTime;
             delta += elapsed / nsInterval;
+            refreshTimer += elapsed;
             lastTime = currentTime;
 
             if (delta >= 1) {
@@ -90,44 +96,53 @@ public class GamePanel extends JPanel implements Runnable {
                 repaint();
                 delta--;
             }
-
-            try {
-                Thread.sleep(2); // Para optimizar más el juego
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            }
+            verifyGame();
+            refreshTimer = updateUI(refreshTimer);
+            if (!optimizeThread()) break;
         }
     }
 
+    private long updateUI(long refreshTimer) {
+        if (refreshTimer >= 100_000_000L) {
+            String score = POOPSoccer.getGame().getGoalsP1() + " - " + POOPSoccer.getGame().getGoalsP2();
+            SwingUtilities.invokeLater(() -> {
+                infoPanel.updateMatchInfo(POOPSoccer.getGame().getPlayer1().getName(),
+                        score, POOPSoccer.getGame().getRemainingTime(),
+                        POOPSoccer.getGame().getPlayer2().getName());
+            });
+            return 0; // Reinicia el contador para la siguiente iteración
+        }
+        return refreshTimer;// Conserva el acumulado actual
+    }
+
     private void update(float deltaTime) {
-        if (keyH.consumeEscToggle()) {
-            SwingUtilities.invokeLater(this::showEscapeMenu);
+        if (KeyHandler.getInstance().consumeEscToggle()) {
+            SwingUtilities.invokeLater(this::showEscapeMenu);//Ayudado con Gemini Flash 3.8 IA
         }
 
         // Lógica de movimiento según teclas activas
-        if (keyH.getW()) {
+        if (KeyHandler.getInstance().getW()) {
             // Movimiento arriba P1
         }
-        if (keyH.getS()) {
+        if (KeyHandler.getInstance().getS()) {
             // Movimiento abajo P1
         }
-        if (keyH.getA()) {
+        if (KeyHandler.getInstance().getA()) {
             // Movimiento izquierda P1
         }
-        if (keyH.getD()) {
+        if (KeyHandler.getInstance().getD()) {
             // Movimiento derecha P1
         }
-        if (keyH.getUp()) {
+        if (KeyHandler.getInstance().getUp()) {
             // Movimiento arriba P2
         }
-        if (keyH.getDown()) {
+        if (KeyHandler.getInstance().getDown()) {
             // Movimiento abajo P2
         }
-        if (keyH.getLeft()) {
+        if (KeyHandler.getInstance().getLeft()) {
             // Movimiento izquierda P2
         }
-        if (keyH.getRigth()) {
+        if (KeyHandler.getInstance().getRight()) {
             // Movimiento derecha P2
         }
     }
@@ -145,8 +160,8 @@ public class GamePanel extends JPanel implements Runnable {
                 options[2]);
 
         switch (choice) {
-            case 0 -> gameContainer.goToMenu();
-            case 1 -> gameContainer.restartFromLevel1();
+            case 0 -> LISTENER.goToMenu();
+            case 1 -> LISTENER.restartFromLevel1();
             default -> {
                 // 1. Le avisas al dominio que continúe el partido
                 POOPSoccer.getGame().resumeGame(); // o setPaused(false)
@@ -170,6 +185,31 @@ public class GamePanel extends JPanel implements Runnable {
         if (background != null) {
             g2.drawImage(background, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, null);
         }
+        // Renderizado de elementos de la cancha / juego
         g2.drawString("POOBSoccer -o- -o- -o- -o- -o- -o- -o- -o- -o- -o- ", 20, 30);
+    }
+
+    private boolean optimizeThread() {
+        try {
+            Thread.sleep(2);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private void verifyGame() {
+        if (POOPSoccer.getGame().isGameOver()) {
+            gameThread = null;
+            if (POOPSoccer.getGame().isGameFinished() ) {
+                String message = POOPSoccer.getGame().checkWinner() == Side.LEFT ?
+                        "Winner " + POOPSoccer.getGame().getPlayer1().getName() :
+                        POOPSoccer.getGame().checkWinner() == Side.RIGTH ?
+                                "Winner " + POOPSoccer.getGame().getPlayer2().getName() :
+                                "TIE!!!";
+                JOptionPane.showMessageDialog(this, message, "Game Finished",  JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
     }
 }

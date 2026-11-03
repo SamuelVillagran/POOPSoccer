@@ -3,7 +3,7 @@ package presentation;
 import domain.GameMode;
 import domain.MatchType;
 
-/**
+/**Ayudado a organizar por Gemini 3.8 Flash
  * Almacena los parámetros de configuración seleccionados en los menús
  * antes de instanciar e iniciar el partido.
  */
@@ -27,10 +27,6 @@ public class GameSetup {
 
     public void setMode(GameMode mode) {
         this.gameMode = mode;
-    }
-
-    public GameMode getMode() {
-        return gameMode;
     }
 
     public void setMatchType(MatchType matchType) {

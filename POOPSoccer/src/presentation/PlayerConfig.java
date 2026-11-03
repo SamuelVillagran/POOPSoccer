@@ -28,6 +28,7 @@ import javax.swing.JTextField;
 public class PlayerConfig extends JPanel {
 
     private GameMode mode;
+    private GameContainer container;
     private JTextField nameFieldP1;
     private JComboBox<String> countryComboP1;
     private JTextField nameFieldP2;
@@ -42,8 +43,10 @@ public class PlayerConfig extends JPanel {
 
     public PlayerConfig(GameContainer container, GameMode mode) {
         this.mode = mode;
+        this.container = container;
         loadBackground();
-        prepareView(container);
+        prepareView();
+        prepareController();
     }
 
     private void loadBackground() {
@@ -65,14 +68,12 @@ public class PlayerConfig extends JPanel {
         }
     }
 
-    private void prepareView(GameContainer container) {
+    private void prepareView() {
         setOpaque(false);
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
-
         JPanel formPanel = new JPanel(new GridLayout(0, 1, 10, 10));
         formPanel.setBackground(new Color(255, 255, 255, 120));
-
 
         // 1. Configuración de Jugadores
         prepareViewSettingPlayer(formPanel);
@@ -83,7 +84,7 @@ public class PlayerConfig extends JPanel {
         add(formPanel, BorderLayout.CENTER);
 
         // 3. Botón Iniciar
-        prepareViewStartButton(container);
+        prepareViewStartButton();
     }
 
     private void prepareViewSettingPlayer(JPanel formPanel) {
@@ -134,7 +135,23 @@ public class PlayerConfig extends JPanel {
         goalLimitCombo = new JComboBox<>(new Integer[] { 3, 5, 7 });
         formPanel.add(new JLabel("Goles para ganar (si es por goles):"));
         formPanel.add(goalLimitCombo);
+    }
 
+    private void prepareViewStartButton() {
+        startBtn = new JButton("Iniciar Partido");
+        startBtn.setFont(new Font("Arial", Font.BOLD, 16));
+        startBtn.setBackground(new Color(40, 140, 40));
+        startBtn.setForeground(Color.WHITE);
+        startBtn.setPreferredSize(new Dimension(200, 45));
+
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        bottomPanel.setOpaque(false);
+        bottomPanel.add(startBtn);
+        add(bottomPanel, BorderLayout.SOUTH);
+    }
+
+    private void prepareController() {
+        prepareControllerStartButton();
         // Si selecciona Supervivencia, se desactiva el límite de goles
         matchTypeCombo.addActionListener(e -> {
             boolean isPerGoals = matchTypeCombo.getSelectedItem() == MatchType.PER_GOALS;
@@ -142,13 +159,7 @@ public class PlayerConfig extends JPanel {
         });
     }
 
-    private void prepareViewStartButton(GameContainer container) {
-        startBtn = new JButton("Iniciar Partido");
-        startBtn.setFont(new Font("Arial", Font.BOLD, 16));
-        startBtn.setBackground(new Color(40, 140, 40));
-        startBtn.setForeground(Color.WHITE);
-        startBtn.setPreferredSize(new Dimension(200, 45));
-
+    private void prepareControllerStartButton() {
         startBtn.addActionListener(e -> {
             String p1Name = nameFieldP1.getText().trim();
             if (p1Name.isEmpty()) {
@@ -156,7 +167,6 @@ public class PlayerConfig extends JPanel {
                 return;
             }
             String p1Country = (String) countryComboP1.getSelectedItem();
-
             MatchType selectedMatchType = (MatchType) matchTypeCombo.getSelectedItem();
             int goalLimit = (Integer) goalLimitCombo.getSelectedItem();
 
@@ -172,10 +182,5 @@ public class PlayerConfig extends JPanel {
                 container.onPlayerConfigConfirmed(p1Name, p1Country, selectedMatchType, goalLimit);
             }
         });
-
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        bottomPanel.setOpaque(false);
-        bottomPanel.add(startBtn);
-        add(bottomPanel, BorderLayout.SOUTH);
     }
 }

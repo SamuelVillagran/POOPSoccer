@@ -12,6 +12,7 @@ public class POOPSoccer {
     private Map elements;
 
     private POOPSoccer() {
+        infoMatch = new ScoreBoard();
     }
 
     public static POOPSoccer getGame() {
@@ -26,6 +27,30 @@ public class POOPSoccer {
                           String nameP2, String teamP2) {
 
 
+    }
+
+    public boolean isGameOver() {
+        return infoMatch.isGameOver();
+    }
+
+    public Side checkWinner() {
+        return infoMatch.checkWinner();
+    }
+
+    public int getGoalsP1() {
+        return infoMatch.getGoalsP1();
+    }
+
+    public int getGoalsP2() {
+        return infoMatch.getGoalsP2();
+    }
+
+    public float getRemainingTime() {
+        return infoMatch.getRemainingTime();
+    }
+
+    public boolean isGameFinished() {
+        return false;
     }
 
     public void resumeGame() {

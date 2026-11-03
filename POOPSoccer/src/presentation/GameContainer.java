@@ -12,10 +12,10 @@ import java.io.File;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
-/**
+/**Ayudado a organizar por Gemini 3.8 Flash
  * Contenedor central de vistas (JPanel con CardLayout).
  */
-public class GameContainer extends JPanel {
+public class GameContainer extends JPanel implements GamePanelListener {
 
     private CardLayout cardLayout;
     private JPanel cardPanel;
@@ -75,14 +75,6 @@ public class GameContainer extends JPanel {
         setup.setMatchType(matchType);
         setup.setGoalLimit(goalLimit);
         startGame();
-    }
-
-    public void onPlayerConfigConfirmed(String nameP1, String teamP1, String nameP2, String teamP2) {
-        onPlayerConfigConfirmed(nameP1, teamP1, nameP2, teamP2, MatchType.PER_GOALS, 3);
-    }
-
-    public void onPlayerConfigConfirmed(String nameP1, String teamP1) {
-        onPlayerConfigConfirmed(nameP1, teamP1, MatchType.PER_GOALS, 3);
     }
 
     public void startGame() {

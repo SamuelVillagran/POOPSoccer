@@ -2,6 +2,8 @@ package presentation;
 
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.BitSet;
+
 
 /**Ayudado a organizar por Gemini 3.8 Flash
  * Manejador de eventos de teclado para ambos jugadores.
@@ -12,65 +14,47 @@ import java.awt.event.KeyEvent;
  */
 public class KeyHandler extends KeyAdapter {
 
-    // Jugador 1
-    private boolean w, s, a, d, q;
+    private static KeyHandler instance;
+    // BitSet maneja el estado booleano de todas las teclas
+    private final BitSet KEYS = new BitSet();
+    private boolean escToggle = false;
 
-    // Jugador 2
-    private boolean up, down, left, right, ctrlRight;
+    private KeyHandler() {}
 
-    // Control del sistema
-    private boolean esc;
-    private boolean escToggle;
-
-    public KeyHandler() {
-        up = false; down= false; left= false; right= false; ctrlRight= false;
-        esc = false; escToggle = false;
-        w= false; s= false; a= false; d= false; q= false;
+    // Punto de acceso global
+    public static KeyHandler getInstance() {
+        if (instance == null) {
+            instance = new KeyHandler();
+        }
+        return instance;
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
-        int code = e.getKeyCode();
-
-        // Jugador 1
-        if (code == KeyEvent.VK_W) w = true;
-        if (code == KeyEvent.VK_S) s = true;
-        if (code == KeyEvent.VK_A) a = true;
-        if (code == KeyEvent.VK_D) d = true;
-        if (code == KeyEvent.VK_Q) q = true;
-
-        // Jugador 2
-        if (code == KeyEvent.VK_UP) up = true;
-        if (code == KeyEvent.VK_DOWN) down = true;
-        if (code == KeyEvent.VK_LEFT) left = true;
-        if (code == KeyEvent.VK_RIGHT) right = true;
-        if (code == KeyEvent.VK_CONTROL) ctrlRight = true;
-
-        if (code == KeyEvent.VK_ESCAPE) esc = true;
+        // Pone la tecla en true con una sola línea
+        KEYS.set(e.getKeyCode());
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
         int code = e.getKeyCode();
 
-        // Jugador 1
-        if (code == KeyEvent.VK_W) w = false;
-        if (code == KeyEvent.VK_S) s = false;
-        if (code == KeyEvent.VK_A) a = false;
-        if (code == KeyEvent.VK_D) d = false;
-        if (code == KeyEvent.VK_Q) q = false;
-
-        // Jugador 2
-        if (code == KeyEvent.VK_UP) up = false;
-        if (code == KeyEvent.VK_DOWN) down = false;
-        if (code == KeyEvent.VK_LEFT) left = false;
-        if (code == KeyEvent.VK_RIGHT) right = false;
-        if (code == KeyEvent.VK_CONTROL) ctrlRight = false;
+        // Pone la tecla en false
+        KEYS.clear(code);
 
         if (code == KeyEvent.VK_ESCAPE) {
-            esc = false;
             escToggle = true;
         }
+    }
+
+
+    public void setKeyState(int keyCode, boolean state) {
+        KEYS.set(keyCode, state);// Cambiar manualmente el estado de cualquier tecla si lo necesitas
+    }
+
+
+    public void toggleKey(int keyCode) {
+        KEYS.flip(keyCode); // Alternar el estado (de true a false, o de false a true)
     }
 
     public boolean consumeEscToggle() {
@@ -79,15 +63,16 @@ public class KeyHandler extends KeyAdapter {
         return fired;
     }
 
-    public boolean getW() { return w; }
-    public boolean getS() { return s; }
-    public boolean getA() { return a; }
-    public boolean getD() { return d; }
-    public boolean getQ() { return q; }
+    // Getters consultando directamente el estado booleano en el BitSet
+    public boolean getW() { return KEYS.get(KeyEvent.VK_W); }
+    public boolean getS() { return KEYS.get(KeyEvent.VK_S); }
+    public boolean getA() { return KEYS.get(KeyEvent.VK_A); }
+    public boolean getD() { return KEYS.get(KeyEvent.VK_D); }
+    public boolean getQ() { return KEYS.get(KeyEvent.VK_Q); }
 
-    public boolean getUp() { return up; }
-    public boolean getDown() { return down; }
-    public boolean getLeft() { return left; }
-    public boolean getRigth() { return right; }
-    public boolean getCtrlRight() { return ctrlRight; }
+    public boolean getUp() { return KEYS.get(KeyEvent.VK_UP); }
+    public boolean getDown() { return KEYS.get(KeyEvent.VK_DOWN); }
+    public boolean getLeft() { return KEYS.get(KeyEvent.VK_LEFT); }
+    public boolean getRight() { return KEYS.get(KeyEvent.VK_RIGHT); }
+    public boolean getCtrlRight() { return KEYS.get(KeyEvent.VK_CONTROL); }
 }

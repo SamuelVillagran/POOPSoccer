@@ -12,8 +12,10 @@ public class Player extends ItemSoccer {
     private Effect effect;
     private Vector2D respawn;
     private Player rival;
+    private NumberPlayer numberPlayer;
 
-    public Player(PlayerType type, String name, int number) {
+    public Player(NumberPlayer numPlayer, PlayerType type, String name, int number) {
+        this.numberPlayer = numberPlayer;
     }
 
     private void createInitialState(PlayerType type) {
@@ -47,6 +49,10 @@ public class Player extends ItemSoccer {
     }
 
     public void usePower(Effect power) {
+    }
+
+    public String getName() {
+        return "";
     }
 
     public Player getRival() {

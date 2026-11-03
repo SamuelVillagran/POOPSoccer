@@ -13,7 +13,7 @@ import javax.swing.SwingUtilities;
  */
 public class POOPSoccerGUI {
 
-    private Window window;
+    private static Window window;
 
     public POOPSoccerGUI() {
         try {
