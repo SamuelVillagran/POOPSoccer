@@ -13,7 +13,7 @@ public enum NumberPlayer {
     }
 
     public int getNumber() {
-        return 0;
+        return number;
     }
 
     public Side getInitialSide() {

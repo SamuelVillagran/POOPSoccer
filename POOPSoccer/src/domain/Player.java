@@ -8,16 +8,16 @@ public class Player extends ItemSoccer {
     private int speed;
     private boolean isStuned;
     private Team team;
+    private int jumpFrames = 0;
 
     private PlayerType type;
     private Effect effect;
     private Player rival;
     private NumberPlayer numberPlayer;
 
-    public Player(NumberPlayer numPlayer, PlayerType type,
-                  String name, Team team) {
-        this.position = new Vector2D();
+    public Player(PlayerType type, String name, Team team, NumberPlayer numberPlayer) {
         this.numberPlayer = numberPlayer;
+        this.position = new Vector2D();
         this.type = type;
         this.name = name;
         this.team = team;
@@ -26,14 +26,6 @@ public class Player extends ItemSoccer {
         }
     }
 
-    private void createInitialState(PlayerType type) {
-    }
-
-    public void setAttributes(int newRespawnX, int newRespawnY) {
-    }
-
-    public void setType(PlayerType type) {
-    }
 
     public void move(char direction) throws InterruptedException {
         this.speed = team.getSpeed();
@@ -61,14 +53,18 @@ public class Player extends ItemSoccer {
     }
 
     private void jump() throws InterruptedException {
-        final int sizeJump = 50;
-        for (int i = 0; i < sizeJump; i++) {
-            move(0, -1);
+        if (jumpFrames == 0) jumpFrames = 1;
+    }
+
+    public void update() {
+        if (jumpFrames == 0) return;           // no está saltando, no hace nada
+        if (jumpFrames <= 20) {
+            move(0, -6);                       // sube
+        } else {
+            move(0, 6);                        // baja
         }
-        Thread.sleep(1000);
-        for (int i = 0; i < sizeJump; i++) {
-            move(0, 1);
-        }
+        jumpFrames++;
+        if (jumpFrames > 40) jumpFrames = 0;   // terminó el salto
     }
 
     private void move(int deltaX, int deltaY) {
@@ -84,7 +80,7 @@ public class Player extends ItemSoccer {
 
     @Override
     public float getHeight() {
-        return 60.0f;
+        return 70.0f;
     }
 
     @Override
@@ -101,6 +97,10 @@ public class Player extends ItemSoccer {
 
     public Team getTeam() {
         return team;
+    }
+
+    public int getNumberPlayerInt() {
+        return numberPlayer == null ? 0 : numberPlayer.getNumber();
     }
 
     public Player getRival() {

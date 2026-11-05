@@ -18,14 +18,18 @@ public enum Team {// Idea inspirada por Claude Sonnet 4.6 IA, se consultó
         this.force = force;
     }
 
-    public static Team fromDisplayName(String name) {
-        if (name == null) return COLOMBIA;
-        for (Team team : Team.values()) {
-            if (team.getDisplayName().equalsIgnoreCase(name.trim())) {
-                return team;
-            }
+    public static Team fromDisplayName(String name) {//Ayudado con Claude Sonnet 4.6 IA
+        if (name == null) throw new IllegalArgumentException("Equipo nulo");
+        String wanted = normalize(name);
+        for (Team team : values()) {
+            if (normalize(team.displayName).equals(wanted)) return team;
         }
-        return COLOMBIA;
+        throw new IllegalArgumentException("Equipo desconocido: [" + name + "]");
+    }
+
+    private static String normalize(String s) {//Ayudado con Claude Sonnet 4.6 IA
+        return java.text.Normalizer.normalize(s.trim(), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "").toLowerCase();
     }
 
     public String getDisplayName() { return displayName; }

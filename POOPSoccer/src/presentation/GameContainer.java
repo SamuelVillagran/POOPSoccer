@@ -8,6 +8,7 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.io.File;
+import java.util.Locale;
 
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -88,9 +89,9 @@ public class GameContainer extends JPanel implements GamePanelListener {
                     setup.getMatchType(),
                     setup.getGoalLimit(),
                     setup.getNameP1(),
-                    setup.getTeamP1(),
+                    setup.getTeamP1().toLowerCase(),
                     setup.getNameP2(),
-                    setup.getTeamP2()
+                    setup.getTeamP2().toLowerCase()
             );
             if (activeGamePanel != null) {
                 activeGamePanel.stopThread();

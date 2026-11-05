@@ -130,6 +130,8 @@ public class GamePanel extends JPanel implements Runnable {
         if (KeyHandler.getInstance().getDown()) POOPSoccer.getGame().movePlayer2('k');
         if (KeyHandler.getInstance().getLeft()) POOPSoccer.getGame().movePlayer2('l');
         if (KeyHandler.getInstance().getRight()) POOPSoccer.getGame().movePlayer2('r');
+
+        POOPSoccer.getGame().update();
     }
 
     private void showEscapeMenu() {
@@ -183,8 +185,11 @@ public class GamePanel extends JPanel implements Runnable {
         String className = elem.getClass().getSimpleName().toLowerCase();
 
         // Si el elemento es un Player, podemos consultar su variante (equipo) sin usar instanceof para otros tipos
-        if (elem instanceof Player player && player.getTeam() != null) {
-            return "/" + className + "/" + player.getTeam().getDisplayName().toLowerCase() + ".png";
+        if (elem instanceof Player player && player.getTeam() != null
+                && player.getNumberPlayerInt() != 0) {
+            return "/" + className + "/"
+                    + player.getTeam().getDisplayName().toLowerCase() +
+                    player.getNumberPlayerInt() + ".png";
         }
 
         // Para cualquier otro elemento (Ball, etc.)

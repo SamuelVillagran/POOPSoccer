@@ -3,7 +3,6 @@ package domain;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -44,14 +43,24 @@ public class POOPSoccer {
         PlayerType typeP2 = (gameMode == GameMode.PVP) ? new Normal() : new Machine();
 
         String nameP2Final = (nameP2 != null && !nameP2.isBlank()) ? nameP2 : "CPU";
-
+        if (gameMode == GameMode.MVM) {
+            player1 = new Player(typeP2, nameP1, t1, NumberPlayer.PLAYER1);
+            player2 = new Player(typeP1, nameP2Final, t2, NumberPlayer.PLAYER2);
+        } else if (gameMode == GameMode.PVP) {
+            player1 = new Player(typeP2, nameP1, t1, NumberPlayer.PLAYER1);
+            player2 = new Player(typeP2, nameP2Final, t2, NumberPlayer.PLAYER2);
+        }
         // Crear instancias del dominio
-        player1 = new Player(NumberPlayer.PLAYER1, typeP1, nameP1, t1);
-        player2 = new Player(NumberPlayer.PLAYER2, typeP2, nameP2Final, t2);
+
 
         // Registrar los elementos en el mapa de renderizado/lógica
         elements.clear();
         setElements();
+    }
+
+    public void update() {
+        if (player1 != null) player1.update();
+        if (player2 != null) player2.update();
     }
 
     // Movimiento y acciones Jugador 1
