@@ -1,7 +1,9 @@
 package presentation;
 
+import domain.Element;
 import domain.POOPSoccer;
 import domain.Side;
+import domain.Player;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -15,6 +17,7 @@ import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+
 
 /**Ayudado a organizar por Gemini 3.8 Flash
  * Panel de juego (Lienzo interactivo).
@@ -37,13 +40,11 @@ public class GamePanel extends JPanel implements Runnable {
 
     private volatile Thread gameThread;
     private HashMap<String, BufferedImage> cachedImages;
-    private InfoPanel infoPanel;
     private final GamePanelListener LISTENER;
     private BufferedImage background;
 
-    public GamePanel(InfoPanel infoPanel, GamePanelListener gameContainer) {
-        this.infoPanel = infoPanel;
-        this.LISTENER = gameContainer;
+    public GamePanel(GamePanelListener listener) {
+        this.LISTENER = listener;
         this.cachedImages = new HashMap<>();
 
         setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
@@ -104,12 +105,12 @@ public class GamePanel extends JPanel implements Runnable {
 
     private long updateUI(long refreshTimer) {
         if (refreshTimer >= 100_000_000L) {
+
             String score = POOPSoccer.getGame().getGoalsP1() + " - " + POOPSoccer.getGame().getGoalsP2();
-            SwingUtilities.invokeLater(() -> {
-                infoPanel.updateMatchInfo(POOPSoccer.getGame().getPlayer1().getName(),
-                        score, POOPSoccer.getGame().getRemainingTime(),
-                        POOPSoccer.getGame().getPlayer2().getName());
-            });
+            String p1 = POOPSoccer.getGame().getPlayer1().getName();
+            String p2 = POOPSoccer.getGame().getPlayer2().getName();   // antes pasabas el nombre del jugador 1 dos veces
+            float time = POOPSoccer.getGame().getRemainingTime();
+            SwingUtilities.invokeLater(() -> LISTENER.onMatchInfoChanged(p1, score, time, p2));
             return 0; // Reinicia el contador para la siguiente iteración
         }
         return refreshTimer;// Conserva el acumulado actual
@@ -121,30 +122,14 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         // Lógica de movimiento según teclas activas
-        if (KeyHandler.getInstance().getW()) {
-            // Movimiento arriba P1
-        }
-        if (KeyHandler.getInstance().getS()) {
-            // Movimiento abajo P1
-        }
-        if (KeyHandler.getInstance().getA()) {
-            // Movimiento izquierda P1
-        }
-        if (KeyHandler.getInstance().getD()) {
-            // Movimiento derecha P1
-        }
-        if (KeyHandler.getInstance().getUp()) {
-            // Movimiento arriba P2
-        }
-        if (KeyHandler.getInstance().getDown()) {
-            // Movimiento abajo P2
-        }
-        if (KeyHandler.getInstance().getLeft()) {
-            // Movimiento izquierda P2
-        }
-        if (KeyHandler.getInstance().getRight()) {
-            // Movimiento derecha P2
-        }
+        if (KeyHandler.getInstance().getW()) POOPSoccer.getGame().movePlayer1('j');
+        if (KeyHandler.getInstance().getS()) POOPSoccer.getGame().movePlayer1('k');
+        if (KeyHandler.getInstance().getA()) POOPSoccer.getGame().movePlayer1('l');
+        if (KeyHandler.getInstance().getD()) POOPSoccer.getGame().movePlayer1('r');
+        if (KeyHandler.getInstance().getUp()) POOPSoccer.getGame().movePlayer2('j');
+        if (KeyHandler.getInstance().getDown()) POOPSoccer.getGame().movePlayer2('k');
+        if (KeyHandler.getInstance().getLeft()) POOPSoccer.getGame().movePlayer2('l');
+        if (KeyHandler.getInstance().getRight()) POOPSoccer.getGame().movePlayer2('r');
     }
 
     private void showEscapeMenu() {
@@ -180,15 +165,6 @@ public class GamePanel extends JPanel implements Runnable {
         g2.dispose();
     }
 
-    public void draw(Graphics2D g2) {
-        // Renderizado de elementos de la cancha / juego
-        if (background != null) {
-            g2.drawImage(background, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, null);
-        }
-        // Renderizado de elementos de la cancha / juego
-        g2.drawString("POOBSoccer -o- -o- -o- -o- -o- -o- -o- -o- -o- -o- ", 20, 30);
-    }
-
     private boolean optimizeThread() {
         try {
             Thread.sleep(2);
@@ -196,6 +172,68 @@ public class GamePanel extends JPanel implements Runnable {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
+        }
+    }
+
+    /**
+     * Construye la ruta del recurso dinámicamente basándose en la clase del Elemento.
+     * Convención: /<nombre_clase_minusculas>/<variante_o_default>.png
+     */
+    private String resolveImagePath(Element elem) {
+        String className = elem.getClass().getSimpleName().toLowerCase();
+
+        // Si el elemento es un Player, podemos consultar su variante (equipo) sin usar instanceof para otros tipos
+        if (elem instanceof Player player && player.getTeam() != null) {
+            return "/" + className + "/" + player.getTeam().getDisplayName().toLowerCase() + ".png";
+        }
+
+        // Para cualquier otro elemento (Ball, etc.)
+        return "/" + className + "/normal.png";
+    }
+
+    private BufferedImage getSprite(String path) {
+        if (!cachedImages.containsKey(path)) {
+            try {
+                InputStream is = getClass().getResourceAsStream(path);
+                if (is != null) {
+                    cachedImages.put(path, ImageIO.read(is));
+                } else {
+                    // Fallback visual o log si no se encuentra la skin específica
+                    System.err.println("No se encontró recurso en: " + path);
+                    cachedImages.put(path, null);
+                }
+            } catch (Exception e) {
+                cachedImages.put(path, null);
+            }
+        }
+        return cachedImages.get(path);
+    }
+
+    public void draw(Graphics2D g2) {
+        if (background != null) {
+            g2.drawImage(background, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, null);
+        }
+        // Renderizado de elementos de la cancha / juego
+        g2.drawString("POOBSoccer -o- -o- -o- -o- -o- -o- -o- -o- -o- -o- ", 20, 30);
+
+        if (POOPSoccer.getGame().getElementsToDraw() != null) {
+            for (Element elem : POOPSoccer.getGame().getElementsToDraw().values()) {
+                if (elem == null || elem.getPosition() == null) continue;
+
+                // 1. Resolver ruta dinámicamente sin acoplar el dominio
+                String imagePath = resolveImagePath(elem);
+
+                // 2. Obtener de caché y dibujar
+                BufferedImage sprite = getSprite(imagePath);
+                if (sprite != null) {
+                    int x = (int) elem.getPosition().getX();
+                    int y = (int) elem.getPosition().getY();
+                    int width = (int) elem.getWidth();
+                    int height = (int) elem.getHeight();
+
+                    g2.drawImage(sprite, x, y, width, height, null);
+                }
+            }
         }
     }
 

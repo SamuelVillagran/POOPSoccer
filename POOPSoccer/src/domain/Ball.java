@@ -3,11 +3,12 @@ package domain;
 public class Ball extends ItemSoccer {
     private int weight;
     private Vector2D velocity;
+    private Player lastTouch;
 
     public Ball() {
     }
 
-    public void move(Vector2D force, CollisionChecker cChecker) {
+    public void move(Vector2D force) {
     }
 
     @Override

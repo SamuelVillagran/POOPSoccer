@@ -1,7 +1,7 @@
 package domain;
 
-public enum Team {
-    CANADA("Canadá", new Freeze(), 3, 4, 3),
+public enum Team {// Idea inspirada por Claude Sonnet 4.6 IA, se consultó
+    CANADA("Canada", new Freeze(), 3, 4, 3),
     COLOMBIA("Colombia", new Confusion(), 4, 3, 4),
     ALEMANIA("Alemania", new Shrink(),  3, 3, 4);
 
@@ -16,6 +16,16 @@ public enum Team {
         this.speed = speed;
         this.JUMP = jump;
         this.force = force;
+    }
+
+    public static Team fromDisplayName(String name) {
+        if (name == null) return COLOMBIA;
+        for (Team team : Team.values()) {
+            if (team.getDisplayName().equalsIgnoreCase(name.trim())) {
+                return team;
+            }
+        }
+        return COLOMBIA;
     }
 
     public String getDisplayName() { return displayName; }

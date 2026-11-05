@@ -21,7 +21,7 @@ public class GameContainer extends JPanel implements GamePanelListener {
     private JPanel cardPanel;
     private GameSetup setup;
     private InfoPanel infoPanel;
-    private GamePanel activeGamePanel;
+    private GamePanel activeGamePanel = new GamePanel(this);;
 
     public GameContainer() {
         prepareView();
@@ -46,6 +46,10 @@ public class GameContainer extends JPanel implements GamePanelListener {
 
         cardLayout.show(cardPanel, ScreenView.MENU.name());
         add(cardPanel, BorderLayout.CENTER);
+    }
+
+    public void onMatchInfoChanged(String p1Info, String score, float timeRemaining, String p2Info) {
+        infoPanel.updateMatchInfo(p1Info, score, timeRemaining, p2Info);
     }
 
     public void showView(ScreenView view) {
@@ -92,7 +96,7 @@ public class GameContainer extends JPanel implements GamePanelListener {
                 activeGamePanel.stopThread();
                 cardPanel.remove(activeGamePanel);
             }
-            activeGamePanel = new GamePanel(infoPanel, this);
+            activeGamePanel = new GamePanel(this);
             cardPanel.add(activeGamePanel, ScreenView.GAME.name());
             showView(ScreenView.GAME);
             activeGamePanel.startGameThread();
