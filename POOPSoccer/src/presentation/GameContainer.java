@@ -49,8 +49,9 @@ public class GameContainer extends JPanel implements GamePanelListener {
         add(cardPanel, BorderLayout.CENTER);
     }
 
-    public void onMatchInfoChanged(String p1Info, String score, float timeRemaining, String p2Info) {
-        infoPanel.updateMatchInfo(p1Info, score, timeRemaining, p2Info);
+    public void onMatchInfoChanged(String p1Info, String score, float timeRemaining,
+                                   String p2Info, float hp1, float hp2) {
+        infoPanel.updateMatchInfo(p1Info, score, timeRemaining, p2Info, hp1, hp2);
     }
 
     public void showView(ScreenView view) {
@@ -67,18 +68,20 @@ public class GameContainer extends JPanel implements GamePanelListener {
     }
 
 
-    public void onPlayerConfigConfirmed(String nameP1, String teamP1, MatchType matchType, int goalLimit) {
+    public void onPlayerConfigConfirmed(String nameP1, String teamP1, MatchType matchType, int goalLimit, int timeLimit) {
         setup.setPlayer1(nameP1, teamP1);
         setup.setMatchType(matchType);
         setup.setGoalLimit(goalLimit);
+        setup.setTimeLimit(timeLimit);
         startGame();
     }
 
-    public void onPlayerConfigConfirmed(String nameP1, String teamP1, String nameP2, String teamP2, MatchType matchType, int goalLimit) {
+    public void onPlayerConfigConfirmed(String nameP1, String teamP1, String nameP2, String teamP2, MatchType matchType, int goalLimit, int timeLimit) {
         setup.setPlayer1(nameP1, teamP1);
         setup.setPlayer2(nameP2, teamP2);
         setup.setMatchType(matchType);
         setup.setGoalLimit(goalLimit);
+        setup.setTimeLimit(timeLimit);
         startGame();
     }
 
@@ -88,6 +91,7 @@ public class GameContainer extends JPanel implements GamePanelListener {
                     setup.getGameMode(),
                     setup.getMatchType(),
                     setup.getGoalLimit(),
+                    setup.getTimeLimit(),
                     setup.getNameP1(),
                     setup.getTeamP1().toLowerCase(),
                     setup.getNameP2(),

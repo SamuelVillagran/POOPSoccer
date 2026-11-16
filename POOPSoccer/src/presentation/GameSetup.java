@@ -12,6 +12,7 @@ public class GameSetup {
     private GameMode gameMode;
     private MatchType matchType;
     private int goalLimit;
+    private int timeLimit; // in minutes, used when matchType == PER_TIME
 
     private String nameP1;
     private String teamP1;
@@ -23,6 +24,7 @@ public class GameSetup {
         this.gameMode = GameMode.PVM;
         this.matchType = MatchType.PER_GOALS;
         this.goalLimit = 3;
+        this.timeLimit = 2;
     }
 
     public void setMode(GameMode mode) {
@@ -45,7 +47,13 @@ public class GameSetup {
         return goalLimit;
     }
 
+    public void setTimeLimit(int timeLimit) {
+        this.timeLimit = timeLimit;
+    }
 
+    public int getTimeLimit() {
+        return timeLimit;
+    }
 
     public void setPlayer1(String name, String team) {
         this.nameP1 = name;

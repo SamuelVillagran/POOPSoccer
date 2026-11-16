@@ -1,9 +1,17 @@
 package domain;
 
 /**
- * Tipos de partido de POOBSoccer.
+ * Match types for DOPOSoccer.
  */
 public enum MatchType {
     PER_GOALS,
-    SURVIVAL
+    PER_TIME;
+
+    @Override
+    public String toString() {
+        return switch (this) {
+            case PER_GOALS -> "Por goles";
+            case PER_TIME  -> "Por tiempo";
+        };
+    }
 }

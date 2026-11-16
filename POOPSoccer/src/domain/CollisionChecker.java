@@ -13,15 +13,15 @@ public class CollisionChecker {
 
     // Constantes de física de interacción Jugador - Balón
     private static final float KICK_REACH_PX = 14.0f;
-    private static final float KICK_BASE_VX = 9.0f;
-    private static final float KICK_FORCE_MULTIPLIER = 2.2f;
-    private static final float KICK_SPEED_BONUS = 0.5f;
-    private static final float KICK_BASE_VY = 8.5f;
-    private static final float KICK_LIFT_MULTIPLIER = 1.8f;
+    private static final float KICK_BASE_VX = 11.0f;
+    private static final float KICK_FORCE_MULTIPLIER = 1.7f;
+    private static final float KICK_SPEED_BONUS =  0.3f;
+    private static final float KICK_BASE_VY = 8.5f ;
+    private static final float KICK_LIFT_MULTIPLIER = 1.4f;
 
     private static final float DRIBBLE_BASE_SPEED = 3.2f;
     private static final float DRIBBLE_SPEED_MULTIPLIER = 1.15f;
-    private static final float HEADER_VY = -5.5f;
+    private static final float HEADER_VY = -7.5f;
 
     protected CollisionChecker() {
     }
@@ -55,16 +55,23 @@ public class CollisionChecker {
     }
 
     /**
-     * Evalúa el rango frontal de patada del jugador respecto al balón.
+     * Verify the kick of a player with a object.
      */
-    public boolean checkKickReach(Player player, Ball ball) {
-        if (player == null || ball == null) return false;
+    public boolean checkKickReach(Player player, Element target) {
+        if (player == null || target == null) return false;
         float px = player.getX();
         float reachX = (player.getAttackDirection() == 1) ? px : px - KICK_REACH_PX;
         float reachW = player.getWidth() + KICK_REACH_PX;
 
         return checkCollision(reachX, player.getY(), reachW, player.getHeight(),
-                ball.getX(), ball.getY(), ball.getWidth(), ball.getHeight());
+                target.getX(), target.getY(), target.getWidth(), target.getHeight());
+    }
+
+    public void resolveKickDamage(Player attacker, Player rival) {
+        if (attacker == null || rival == null) return;
+        if (attacker.isKicking() && checkKickReach(attacker, rival)) {
+            attacker.hitWithKick(rival);
+        }
     }
 
     /**
@@ -85,6 +92,7 @@ public class CollisionChecker {
         float bCenterY = ball.getY() + ball.getHeight() * 0.5f;
 
         if (player.isKicking()) {
+            player.markKickUsed();
             float kickVx = attackDir * (KICK_BASE_VX
                     + player.getForce() * KICK_FORCE_MULTIPLIER
                     + player.getSpeed() * KICK_SPEED_BONUS);
@@ -185,7 +193,7 @@ public class CollisionChecker {
 
         if (by + bh >= floorY) {
             by = floorY - bh;
-            if (vy > 1.2f) {
+            if (vy > 0.6f) {
                 vy = -vy * Ball.RESTITUTION;
             } else {
                 vy = 0.0f;
@@ -247,7 +255,7 @@ public class CollisionChecker {
     /**
      * Mantiene al jugador dentro de los límites horizontales y sobre el césped.
      */
-    public void resolvePlayerEnvironmentCollisions(Player player, Collection<Element> elements) {
+    public void resolvePlayerEnvironmentCollisions(Player player) {
         if (player == null) return;
 
         float px = player.getPosition().getX();

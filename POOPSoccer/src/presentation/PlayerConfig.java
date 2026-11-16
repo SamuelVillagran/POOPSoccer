@@ -23,7 +23,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 /**Ayudado a organizar con Claude Sonnet 4.6
- * Pantalla de Configuración de Jugadores y Tipo de Partido.
+ * Pantalla de ConfiguraciÃ³n de Jugadores y Tipo de Partido.
  */
 public class PlayerConfig extends JPanel {
 
@@ -34,9 +34,10 @@ public class PlayerConfig extends JPanel {
     private JTextField nameFieldP2;
     private JComboBox<String> countryComboP2;
 
-    // Configuración del tipo de partido
+    // ConfiguraciÃ³n del tipo de partido
     private JComboBox<MatchType> matchTypeCombo;
     private JComboBox<Integer> goalLimitCombo;
+    private JComboBox<Integer> timeLimitCombo;
 
     private JButton startBtn;
     private BufferedImage background;
@@ -75,20 +76,20 @@ public class PlayerConfig extends JPanel {
         JPanel formPanel = new JPanel(new GridLayout(0, 1, 10, 10));
         formPanel.setBackground(new Color(255, 255, 255, 120));
 
-        // 1. Configuración de Jugadores
+        // 1. ConfiguraciÃ³n de Jugadores
         prepareViewSettingPlayer(formPanel);
 
-        // 2. Configuración del Partido (Por Goles vs Supervivencia)
+        // 2. ConfiguraciÃ³n del Partido (Por Goles vs Supervivencia)
         prepareViewMatchSettings(formPanel);
 
         add(formPanel, BorderLayout.CENTER);
 
-        // 3. Botón Iniciar
+        // 3. BotÃ³n Iniciar
         prepareViewStartButton();
     }
 
     private void prepareViewSettingPlayer(JPanel formPanel) {
-        JLabel titleP1 = new JLabel("Configuración Jugador 1:");
+        JLabel titleP1 = new JLabel("ConfiguraciÃ³n Jugador 1:");
         titleP1.setFont(new Font("Arial", Font.BOLD, 15));
         formPanel.add(titleP1);
 
@@ -96,45 +97,49 @@ public class PlayerConfig extends JPanel {
         formPanel.add(new JLabel("Nombre:"));
         formPanel.add(nameFieldP1);
 
-        String[] possibleCountries = new String[] { "Canadá", "Colombia", "Alemania" };
+        String[] possibleCountries = java.util.Arrays.stream(domain.Team.values())
+                .map(domain.Team::getDisplayName)
+                .toArray(String[]::new);
         countryComboP1 = new JComboBox<>(possibleCountries);
-        formPanel.add(new JLabel("País / Poder:"));
+        formPanel.add(new JLabel("PaÃ­s / Poder:"));
         formPanel.add(countryComboP1);
 
-        // Si es PvP o MvM, agregar configuración de Jugador 2
+        // Si es PvP o MvM, agregar configuraciÃ³n de Jugador 2
         if (mode == GameMode.PVP || mode == GameMode.MVM) {
-            JLabel titleP2 = new JLabel("Configuración Jugador 2:");
+            JLabel titleP2 = new JLabel("ConfiguraciÃ³n Jugador 2:");
             titleP2.setFont(new Font("Arial", Font.BOLD, 15));
             formPanel.add(titleP2);
 
-            nameFieldP2 = new JTextField(mode == GameMode.MVM ? "Máquina 2" : "Jugador 2");
+            nameFieldP2 = new JTextField(mode == GameMode.MVM ? "MÃ¡quina 2" : "Jugador 2");
             formPanel.add(new JLabel("Nombre:"));
             formPanel.add(nameFieldP2);
 
             countryComboP2 = new JComboBox<>(possibleCountries);
-            formPanel.add(new JLabel("País / Poder:"));
+            formPanel.add(new JLabel("PaÃ­s / Poder:"));
             formPanel.add(countryComboP2);
         }
     }
 
-    private void prepareViewMatchSettings(JPanel formPanel) {// Hecho con Gemini Flash 3.8
-        JLabel titleMatch = new JLabel("Configuración del Partido:");
+    private void prepareViewMatchSettings(JPanel formPanel) {
+        JLabel titleMatch = new JLabel("Configuracion del Partido:");
         titleMatch.setFont(new Font("Arial", Font.BOLD, 15));
         formPanel.add(titleMatch);
 
-        // Regla: Supervivencia solo disponible en modalidad PvsM
-        if (mode == GameMode.PVM) {
-            matchTypeCombo = new JComboBox<>(new MatchType[] { MatchType.PER_GOALS, MatchType.SURVIVAL });
-        } else {
-            matchTypeCombo = new JComboBox<>(new MatchType[] { MatchType.PER_GOALS });
-        }
+        // Both modes support per-goals and per-time
+        matchTypeCombo = new JComboBox<>(new MatchType[] { MatchType.PER_GOALS, MatchType.PER_TIME });
         formPanel.add(new JLabel("Tipo de partido:"));
         formPanel.add(matchTypeCombo);
 
-        // Límite de goles (3, 5 o 7 según especificación)
+        // Goal limit (3, 5 or 7) - only used for PER_GOALS
         goalLimitCombo = new JComboBox<>(new Integer[] { 3, 5, 7 });
         formPanel.add(new JLabel("Goles para ganar (si es por goles):"));
         formPanel.add(goalLimitCombo);
+
+        // Time limit in minutes - only used for PER_TIME
+        timeLimitCombo = new JComboBox<>(new Integer[] { 1, 2, 3, 5 });
+        timeLimitCombo.setVisible(false);
+        formPanel.add(new JLabel("Minutos (si es por tiempo):"));
+        formPanel.add(timeLimitCombo);
     }
 
     private void prepareViewStartButton() {
@@ -152,10 +157,11 @@ public class PlayerConfig extends JPanel {
 
     private void prepareController() {
         prepareControllerStartButton();
-        // Si selecciona Supervivencia, se desactiva el límite de goles
+        // Si selecciona Supervivencia, se desactiva el lÃ­mite de goles
         matchTypeCombo.addActionListener(e -> {
             boolean isPerGoals = matchTypeCombo.getSelectedItem() == MatchType.PER_GOALS;
-            goalLimitCombo.setEnabled(isPerGoals);
+            goalLimitCombo.setVisible(isPerGoals);
+            timeLimitCombo.setVisible(!isPerGoals);
         });
     }
 
@@ -169,6 +175,7 @@ public class PlayerConfig extends JPanel {
             String p1Country = (String) countryComboP1.getSelectedItem();
             MatchType selectedMatchType = (MatchType) matchTypeCombo.getSelectedItem();
             int goalLimit = (Integer) goalLimitCombo.getSelectedItem();
+            int timeLimit = (Integer) timeLimitCombo.getSelectedItem();
 
             if (mode == GameMode.PVP || mode == GameMode.MVM) {
                 String p2Name = nameFieldP2.getText().trim();
@@ -177,9 +184,9 @@ public class PlayerConfig extends JPanel {
                     return;
                 }
                 String p2Country = (String) countryComboP2.getSelectedItem();
-                container.onPlayerConfigConfirmed(p1Name, p1Country, p2Name, p2Country, selectedMatchType, goalLimit);
+                container.onPlayerConfigConfirmed(p1Name, p1Country, p2Name, p2Country, selectedMatchType, goalLimit, timeLimit);
             } else {
-                container.onPlayerConfigConfirmed(p1Name, p1Country, selectedMatchType, goalLimit);
+                container.onPlayerConfigConfirmed(p1Name, p1Country, selectedMatchType, goalLimit, timeLimit);
             }
         });
     }

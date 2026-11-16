@@ -110,7 +110,9 @@ public class GamePanel extends JPanel implements Runnable {
             String p1 = POOPSoccer.getGame().getPlayer1().getName();
             String p2 = POOPSoccer.getGame().getPlayer2().getName();   // antes pasabas el nombre del jugador 1 dos veces
             float time = POOPSoccer.getGame().getRemainingTime();
-            SwingUtilities.invokeLater(() -> LISTENER.onMatchInfoChanged(p1, score, time, p2));
+            float hp1 = POOPSoccer.getGame().getPlayer1().getHealthPercent();
+            float hp2 = POOPSoccer.getGame().getPlayer2().getHealthPercent();
+            SwingUtilities.invokeLater(() -> LISTENER.onMatchInfoChanged(p1, score, time, p2, hp1, hp2));
             return 0; // Reinicia el contador para la siguiente iteración
         }
         return refreshTimer;// Conserva el acumulado actual
@@ -187,8 +189,10 @@ public class GamePanel extends JPanel implements Runnable {
         // Si el elemento es un Player, podemos consultar su variante (equipo) sin usar instanceof para otros tipos
         if (elem instanceof Player player && player.getTeam() != null
                 && player.getNumberPlayerInt() != 0) {
+            String teamKey = java.text.Normalizer.normalize(player.getTeam().getDisplayName().trim(), java.text.Normalizer.Form.NFD)
+                    .replaceAll("\\p{M}|\\s+", "").toLowerCase();
             return "/" + className + "/"
-                    + player.getTeam().getDisplayName().toLowerCase() +
+                    + teamKey +
                     player.getNumberPlayerInt() + ".png";
         }
 

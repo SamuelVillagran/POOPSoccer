@@ -13,6 +13,11 @@ public class POOPSoccer {
     private Ball ball;
     private int goalLimit;
 
+    // Timer fields
+    private MatchType matchType;
+    private float remainingTimeSeconds; // counts down from timeLimit * 60
+    private boolean suddenDeath;        // true when time ran out and score is tied
+
     private int currentLevel;
     private CollisionChecker cChecker;
     private Map<Integer, Element> elements;
@@ -31,17 +36,18 @@ public class POOPSoccer {
         return game;
     }
 
-    public void startGame(GameMode gameMode, MatchType matchType, int goalLimit,
+    public void startGame(GameMode gameMode, MatchType matchType, int goalLimit, int timeLimitMinutes,
                           String nameP1, String teamP1,
                           String nameP2, String teamP2) {
         this.goalLimit = goalLimit;
+        this.matchType = matchType;
+        this.remainingTimeSeconds = timeLimitMinutes * 60f;
+        this.suddenDeath = false;
         this.isPaused = false;
 
-        // Mapear los strings de equipo a enums del dominio
         Team t1 = Team.fromDisplayName(teamP1);
         Team t2 = Team.fromDisplayName(teamP2);
 
-        // Asignar el tipo de jugador según la modalidad de juego
         PlayerType typeP1 = (gameMode == GameMode.MVM) ? new Machine() : new Normal();
         PlayerType typeP2 = (gameMode == GameMode.PVP) ? new Normal() : new Machine();
 
@@ -49,28 +55,41 @@ public class POOPSoccer {
         if (gameMode == GameMode.MVM) {
             player1 = new Player(typeP2, nameP1, t1, NumberPlayer.PLAYER1);
             player2 = new Player(typeP1, nameP2Final, t2, NumberPlayer.PLAYER2);
-        } else if (gameMode == GameMode.PVP) {
+        } else {
             player1 = new Player(typeP2, nameP1, t1, NumberPlayer.PLAYER1);
             player2 = new Player(typeP2, nameP2Final, t2, NumberPlayer.PLAYER2);
         }
-        // Crear instancias del dominio
 
-
-        // Registrar los elementos en el mapa de renderizado/lógica
         elements.clear();
+        goalPlayers.clear();
         setElements();
     }
+
+    private static final float DELTA_TIME = 1.0f / 60.0f; // 60 FPS
 
     public void update() {
         if (isPaused) return;
 
+        // Advance timer for PER_TIME matches
+        if (matchType == MatchType.PER_TIME && !suddenDeath) {
+            remainingTimeSeconds -= DELTA_TIME;
+            if (remainingTimeSeconds <= 0f) {
+                remainingTimeSeconds = 0f;
+                // Check tie -> sudden death
+                if (player1.getGoals() == player2.getGoals()) {
+                    suddenDeath = true;
+                }
+                // If not tied, isGameFinished() will return true
+            }
+        }
+
         if (player1 != null) {
             player1.update();
-            cChecker.resolvePlayerEnvironmentCollisions(player1, elements.values());
+            cChecker.resolvePlayerEnvironmentCollisions(player1);
         }
         if (player2 != null) {
             player2.update();
-            cChecker.resolvePlayerEnvironmentCollisions(player2, elements.values());
+            cChecker.resolvePlayerEnvironmentCollisions(player2);
         }
         if (ball != null) {
             ball.update();
@@ -81,33 +100,37 @@ public class POOPSoccer {
         checkGoal();
     }
 
-    // Movimiento y acciones Jugador 1
+    // Player 1 controls
     public void movePlayer1(char direction) {
         if (player1 != null && !isPaused) {
             try {
                 player1.move(direction);
-                cChecker.resolvePlayerEnvironmentCollisions(player1, elements.values());
+                cChecker.resolvePlayerEnvironmentCollisions(player1);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }
     }
 
-    public Side checkWinner() {
-        if (cChecker.isGoal(ball, goalPlayers.get(1)) ) {
-            return Side.RIGTH;
-        } else if (cChecker.isGoal(ball, goalPlayers.get(2))) {
-            return Side.LEFT;
+    // Player 2 controls
+    public void movePlayer2(char direction) {
+        if (player2 != null && !isPaused) {
+            try {
+                player2.move(direction);
+                cChecker.resolvePlayerEnvironmentCollisions(player2);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
-        return null;
     }
 
     public void checkGoal() {
+        if (ball == null) return;
         if (cChecker.isGoal(ball, goalPlayers.get(1))) {
-            player2.doGoal(); // Gol en arco izquierdo -> suma el de la DERECHA
+            player2.doGoal(); // left goal -> right player scores
             resetRound();
         } else if (cChecker.isGoal(ball, goalPlayers.get(2))) {
-            player1.doGoal(); // Gol en arco derecho -> suma el de la IZQUIERDA
+            player1.doGoal(); // right goal -> left player scores
             resetRound();
         }
     }
@@ -115,16 +138,16 @@ public class POOPSoccer {
     public Player getWinner() {
         if (player1.getGoals() > player2.getGoals()) return player1;
         if (player2.getGoals() > player1.getGoals()) return player2;
-        return null; // Empate
+        return null; // tie
     }
 
     void resetRound() {
-        // 1. Frenar y recolocar balón en el centro
         if (ball != null) {
             ball.setVelocity(0.0f, 0.0f);
-            ball.setPositions(400.0f, 250.0f); // o las coordenadas iniciales de tu mapa
+            ball.setPositions(400.0f, 250.0f);
         }
-        // 2. Devolver a los jugadores a sus posiciones de saque
+        cChecker.resolveKickDamage(player1, player2);
+        cChecker.resolveKickDamage(player2, player1);
         if (player1 != null) {
             player1.setPositions(200.0f, 515.0f - player1.getHeight());
         }
@@ -133,7 +156,7 @@ public class POOPSoccer {
         }
     }
 
-    void resetMatch () {
+    public void resetMatch() {
         game = null;
         game = new POOPSoccer();
     }
@@ -150,26 +173,29 @@ public class POOPSoccer {
         return player2.getGoals();
     }
 
-    // Movimiento y acciones Jugador 2
-    public void movePlayer2(char direction) {
-        if (player2 != null && !isPaused) {
-            try {
-                player2.move(direction);
-                cChecker.resolvePlayerEnvironmentCollisions(player2, elements.values());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
-
     public boolean isGameFinished() {
-        return player1.getGoals() == goalLimit || player2.getGoals() == goalLimit;
+        if (matchType == MatchType.PER_GOALS) {
+            return player1.getGoals() >= goalLimit || player2.getGoals() >= goalLimit;
+        }
+        // PER_TIME: finished when time is up AND it's not sudden death (or sudden death goal scored)
+        if (remainingTimeSeconds <= 0f && !suddenDeath) {
+            return true; // someone leads, game over
+        }
+        // In sudden death, game ends the moment someone scores (goals differ after a checkGoal)
+        if (suddenDeath && player1.getGoals() != player2.getGoals()) {
+            return true;
+        }
+        return false;
     }
 
+    /** Returns remaining seconds (shown in HUD). */
     public float getRemainingTime() {
-        return 0.0f;
+        return remainingTimeSeconds;
     }
 
+    public boolean isSuddenDeath() {
+        return suddenDeath;
+    }
 
     public Map<Integer, Element> getElementsToDraw() {
         return elements;
@@ -188,8 +214,7 @@ public class POOPSoccer {
             BufferedReader br = new BufferedReader(new InputStreamReader(is));
             String line;
             int row = 0;
-            // 1 y 2 reservados para jugadores
-            int posX = 0, posY = 0, indexElements = 0;
+            int posX = 0, posY = 0;
             while ((line = br.readLine()) != null) {
                 String[] tokens = line.trim().split("\\s+");
 
@@ -197,7 +222,6 @@ public class POOPSoccer {
                     String token = tokens[col];
                     posX = col * TILE_SIZE;
                     posY = row * TILE_SIZE;
-                    indexElements = 3 + elements.size();
                     switch (token) {
                         case "1":
                             player1.setPositions(posX, posY);
@@ -211,7 +235,7 @@ public class POOPSoccer {
                             break;
                         case "0":
                             this.ball = new Ball();
-                            this.ball.setPositions(posX+TILE_SIZE/2, posY);
+                            this.ball.setPositions(posX + TILE_SIZE / 2, posY);
                             elements.put(0, this.ball);
                             break;
                         case ".":
@@ -223,7 +247,7 @@ public class POOPSoccer {
                             break;
                         case "5":
                             Pitch pRight = new Pitch(Side.RIGTH);
-                            pRight.setPositions(posX+5.0f, posY);
+                            pRight.setPositions(posX + 5.0f, posY);
                             elements.put(nextId++, pRight);
                             break;
                         case "6":
@@ -235,11 +259,10 @@ public class POOPSoccer {
                         case "7":
                             Goal goalR = new Goal(Side.RIGTH, player2);
                             if (goalPlayers.get(2) == null) goalPlayers.put(2, goalR);
-                            goalR.setPositions(posX+5.0f, posY);
+                            goalR.setPositions(posX + 5.0f, posY);
                             elements.put(nextId++, goalR);
                             break;
                         default:
-                            // Espacio vacío, no hacemos nada
                             break;
                     }
                 }
@@ -251,10 +274,21 @@ public class POOPSoccer {
         }
     }
 
+    // Legacy overload without timeLimit (defaults to 2 minutes) — keeps old callers compiling
+    public void startGame(GameMode gameMode, MatchType matchType, int goalLimit,
+                          String nameP1, String teamP1,
+                          String nameP2, String teamP2) {
+        startGame(gameMode, matchType, goalLimit, 2, nameP1, teamP1, nameP2, teamP2);
+    }
+
+    public Side checkWinner() {
+        if (ball == null) return null;
+        if (cChecker.isGoal(ball, goalPlayers.get(1))) return Side.RIGTH;
+        if (cChecker.isGoal(ball, goalPlayers.get(2))) return Side.LEFT;
+        return null;
+    }
+
     public Player getPlayer1() { return player1; }
-
     public Player getPlayer2() { return player2; }
-
-    public Ball getBall() { return ball; };
-
+    public Ball getBall() { return ball; }
 }

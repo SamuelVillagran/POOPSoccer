@@ -1,11 +1,11 @@
 package domain;
 
 public class Ball extends ItemSoccer {
-    public static final float GRAVITY = 0.5f;
-    public static final float AIR_DRAG = 0.992f;
-    public static final float GROUND_FRICTION = 0.98f;
+    public static final float GRAVITY = 0.65f;
+    public static final float AIR_DRAG = 0.995f;
+    public static final float GROUND_FRICTION = 0.988f;
     public static final float RESTITUTION = 0.55f;
-    public static final float MAX_SPEED = 20.0f;
+    public static final float MAX_SPEED = 16.0f;
     private static final float STOP_THRESHOLD = 0.15f;
 
     private int weight;
