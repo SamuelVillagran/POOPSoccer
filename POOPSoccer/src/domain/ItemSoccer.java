@@ -1,7 +1,7 @@
 package domain;
 
 public abstract class ItemSoccer implements Element {
-    protected Vector2D position;
+    protected Vector2D position = new Vector2D();
     @Override
     public float getWidth() {
         return 50.0f;

@@ -17,8 +17,8 @@ public class Stunned implements Effect {
     }
 
     @Override
-    public float getSpeed() {
-        return 0.0f;
+    public int getSpeed() {
+        return 1;
     }
 
     @Override

@@ -6,17 +6,17 @@ public class NormalEffect implements Effect {
 
     @Override
     public boolean canJump() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean canKick() {
-        return false;
+        return true;
     }
 
     @Override
-    public float getSpeed() {
-        return 0.0f;
+    public int getSpeed() {
+        return 1;
     }
 
     @Override

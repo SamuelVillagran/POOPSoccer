@@ -5,6 +5,13 @@ public class Vector2D {
     private float y;
 
     public Vector2D() {
+        this.x = 0.0f;
+        this.y = 0.0f;
+    }
+
+    public Vector2D(float x, float y) {
+        this.x = x;
+        this.y = y;
     }
 
     public float getX() {
@@ -15,14 +22,32 @@ public class Vector2D {
         return y;
     }
 
-    public void add(Vector2D vector) {
-        float newXPos = x+vector.getX(),
-                newYPos = y+vector.getY();
-        setPositions(newXPos, newYPos);
-    }
-
     public void setPositions(float newX, float newY) {
         this.x = newX;
         this.y = newY;
+    }
+
+    public void add(Vector2D vector) {
+        if (vector != null) {
+            this.x += vector.getX();
+            this.y += vector.getY();
+        }
+    }
+
+    public void scale(float factor) {
+        this.x *= factor;
+        this.y *= factor;
+    }
+
+    public float magnitude() {
+        return (float) Math.sqrt(x * x + y * y);
+    }
+
+    public Vector2D normalize() {
+        float mag = magnitude();
+        if (mag == 0.0f) {
+            return new Vector2D(0.0f, 0.0f);
+        }
+        return new Vector2D(x / mag, y / mag);
     }
 }

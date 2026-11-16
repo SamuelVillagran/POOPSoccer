@@ -9,4 +9,6 @@ public class Machine extends PlayerType {
 
     public void action() {
     }
+
+
 }

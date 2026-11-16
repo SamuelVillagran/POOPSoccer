@@ -17,13 +17,13 @@ public class ConfusionEffect implements Effect {
     }
 
     @Override
-    public float getSpeed() {
-        return 0.0f;
+    public int getSpeed() {
+        return 0;
     }
 
     @Override
     public float getSize() {
-        return 0.0f;
+        return 0.6f;
     }
 
     @Override

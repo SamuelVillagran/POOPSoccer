@@ -1,13 +1,39 @@
 package domain;
 
+import presentation.KeyHandler;
+
 import java.awt.Rectangle;
+import java.util.Collection;
 
 public class CollisionChecker {
+    public static CollisionChecker instance = null;
+    public static final int FIELD_WIDTH = 800;
+    public static final int FIELD_HEIGHT = 600;
+    public static final float DEFAULT_FLOOR_Y = 515.0f;
 
-    public CollisionChecker(Rectangle ballHitBox) {
+    // Constantes de física de interacción Jugador - Balón
+    private static final float KICK_REACH_PX = 14.0f;
+    private static final float KICK_BASE_VX = 9.0f;
+    private static final float KICK_FORCE_MULTIPLIER = 2.2f;
+    private static final float KICK_SPEED_BONUS = 0.5f;
+    private static final float KICK_BASE_VY = 8.5f;
+    private static final float KICK_LIFT_MULTIPLIER = 1.8f;
+
+    private static final float DRIBBLE_BASE_SPEED = 3.2f;
+    private static final float DRIBBLE_SPEED_MULTIPLIER = 1.15f;
+    private static final float HEADER_VY = -5.5f;
+
+    protected CollisionChecker() {
     }
 
-    public boolean checkCollision(float x1, float y1, float w1, float h1,
+    public static CollisionChecker getInstance() {
+        if (instance == null) {
+            instance = new CollisionChecker();
+        }
+        return instance;
+    }
+
+    private boolean checkCollision(float x1, float y1, float w1, float h1,
                                   float x2, float y2, float w2, float h2) {
         return x1 < x2 + w2 &&
                 x1 + w1 > x2 &&
@@ -15,29 +41,233 @@ public class CollisionChecker {
                 y1 + h1 > y2;
     }
 
-
-
-    public boolean canMovePlayer(Rectangle hitBoxPy, Rectangle destinataton) {
-        return false;
+    public boolean canMovePlayer(Rectangle hitBoxPy, Rectangle destination) {
+        return destination.x >= 0 &&
+                destination.x + destination.width <= FIELD_WIDTH &&
+                destination.y >= 0 &&
+                destination.y + destination.height <= FIELD_HEIGHT;
     }
 
     public boolean checkContactPyWithBall(Player player, Ball ball) {
+        if (player == null || ball == null) return false;
+        return checkCollision(player.getX(), player.getY(), player.getWidth(), player.getHeight(),
+                ball.getX(), ball.getY(), ball.getWidth(), ball.getHeight());
+    }
+
+    /**
+     * Evalúa el rango frontal de patada del jugador respecto al balón.
+     */
+    public boolean checkKickReach(Player player, Ball ball) {
+        if (player == null || ball == null) return false;
+        float px = player.getX();
+        float reachX = (player.getAttackDirection() == 1) ? px : px - KICK_REACH_PX;
+        float reachW = player.getWidth() + KICK_REACH_PX;
+
+        return checkCollision(reachX, player.getY(), reachW, player.getHeight(),
+                ball.getX(), ball.getY(), ball.getWidth(), ball.getHeight());
+    }
+
+    /**
+     * Resuelve la colisión o patada entre un jugador y el balón.
+     */
+    public void resolvePlayerBallInteraction(Player player, Ball ball) {
+        if (player == null || ball == null) return;
+
+        boolean touching = checkContactPyWithBall(player, ball);
+        boolean inKickZone = player.isKicking() && checkKickReach(player, ball);
+
+        if (!touching && !inKickZone) return;
+
+        int attackDir = player.getAttackDirection();
+        float pCenterX = player.getX() + player.getWidth() * 0.5f;
+        float pCenterY = player.getY() + player.getHeight() * 0.5f;
+        float bCenterX = ball.getX() + ball.getWidth() * 0.5f;
+        float bCenterY = ball.getY() + ball.getHeight() * 0.5f;
+
+        if (player.isKicking()) {
+            float kickVx = attackDir * (KICK_BASE_VX
+                    + player.getForce() * KICK_FORCE_MULTIPLIER
+                    + player.getSpeed() * KICK_SPEED_BONUS);
+            float kickVy = -(KICK_BASE_VY + player.getForce() * KICK_LIFT_MULTIPLIER);
+
+            ball.setVelocity(0.0f, 0.0f);
+            ball.move(new Vector2D(kickVx, kickVy));
+            ball.setLastTouch(player);
+            ball.setOnGround(false);
+
+            float safeX = (attackDir == 1)
+                    ? player.getX() + player.getWidth() + 4.0f
+                    : player.getX() - ball.getWidth() - 4.0f;
+            float safeY = ball.getY() - 4.0f;
+            ball.setPositions(safeX, safeY);
+        } else {
+            float dirX = (bCenterX >= pCenterX) ? 1.0f : -1.0f;
+            float pushVx = dirX * (DRIBBLE_BASE_SPEED + player.getSpeed() * DRIBBLE_SPEED_MULTIPLIER);
+
+            boolean isHeader = (bCenterY < player.getY() + player.getHeight() * 0.35f)
+                    || player.isJumping();
+            float pushVy = isHeader
+                    ? HEADER_VY - (player.getJumpStat() * 0.4f)
+                    : Math.min(ball.getVy(), -2.2f);
+
+            ball.setVelocity(pushVx, pushVy);
+            ball.setLastTouch(player);
+
+            resolveAABBOverlap(player, ball, dirX);
+        }
+    }
+
+    private void resolveAABBOverlap(Player player, Ball ball, float dirX) {
         float px = player.getPosition().getX();
         float py = player.getPosition().getY();
         float bx = ball.getPosition().getX();
         float by = ball.getPosition().getY();
 
-        return px < bx + ball.getWidth() &&
-                px + player.getWidth() > bx &&
-                py < by + ball.getHeight() &&
-                py + player.getHeight() > by;
+        float overlapX = (dirX > 0)
+                ? (px + player.getWidth()) - bx
+                : (bx + ball.getWidth()) - px;
+        float overlapY = Math.min(
+                (py + player.getHeight()) - by,
+                (by + ball.getHeight()) - py
+        );
+
+        if (overlapX > 0 && overlapY > 0) {
+            if (overlapX < overlapY) {
+                float newBx = (dirX > 0) ? px + player.getWidth() + 1.0f : px - ball.getWidth() - 1.0f;
+                ball.getPosition().setPositions(newBx, by);
+            } else {
+                float newBy = (by < py) ? py - ball.getHeight() - 1.0f : py + player.getHeight() + 1.0f;
+                ball.getPosition().setPositions(bx, newBy);
+            }
+        }
     }
 
-    public boolean isGoal(Goal goal) {
-        return false;
+    public boolean checkContactBallWithPitch(Ball ball, Pitch pitch) {
+        if (ball == null || pitch == null || pitch.getPosition() == null) return false;
+        if (pitch.getWidth() <= 0 || pitch.getHeight() <= 0) return false;
+
+        return checkCollision(
+                ball.getPosition().getX(), ball.getPosition().getY(), ball.getWidth(), ball.getHeight(),
+                pitch.getPosition().getX(), pitch.getPosition().getY(), pitch.getWidth(), pitch.getHeight()
+        );
     }
 
-    public boolean checkContactBallWithPitch(Pitch pitch) {
-        return false;
+    /**
+     * Rebotes del balón contra objetos Pitch y contra los límites de la pantalla (800x600).
+     */
+    public void resolveBallEnvironmentCollisions(Ball ball, Collection<Element> elements) {
+        if (ball == null) return;
+
+        float bx = ball.getPosition().getX();
+        float by = ball.getPosition().getY();
+        float bw = ball.getWidth();
+        float bh = ball.getHeight();
+        float vx = ball.getVelocity().getX();
+        float vy = ball.getVelocity().getY();
+
+        // 1. Paredes laterales
+        if (bx <= 0.0f) {
+            bx = 0.0f;
+            vx = Math.abs(vx) * Ball.RESTITUTION;
+        } else if (bx + bw >= FIELD_WIDTH) {
+            bx = FIELD_WIDTH - bw;
+            vx = -Math.abs(vx) * Ball.RESTITUTION;
+        }
+
+        // 2. Techo
+        if (by <= 0.0f) {
+            by = 0.0f;
+            vy = Math.abs(vy) * Ball.RESTITUTION;
+        }
+
+        // 3. Colisión con superficies Pitch (suelo)
+        float floorY = DEFAULT_FLOOR_Y;
+
+        if (by + bh >= floorY) {
+            by = floorY - bh;
+            if (vy > 1.2f) {
+                vy = -vy * Ball.RESTITUTION;
+            } else {
+                vy = 0.0f;
+            }
+            ball.setOnGround(true);
+        }
+
+        ball.getPosition().setPositions(bx, by);
+        ball.setVelocity(vx, vy);
+        resolveBallPitchCollisions(ball, elements);
+    }
+
+    private void resolveBallPitchCollisions(Ball ball, Collection<Element> elements) {
+        if (elements == null) return;
+        for (Element elem : elements) {
+            // Acá está el error conceptual: no alcanza con !elem.isMovible()
+            if (!elem.isMovible() && elem.hasCollision() &&
+                    checkCollision(ball.getX(), ball.getY(), ball.getWidth(), ball.getHeight(),
+                    elem.getX(), elem.getY(), elem.getWidth(), elem.getHeight())) {
+                hitBallWithSolid(ball, elem);
+            }
+        }
+    }
+
+    private void hitBallWithSolid(Ball ball, Element solid) {
+        float bx = ball.getX();
+        float by = ball.getY();
+        float bw = ball.getWidth();
+        float bh = ball.getHeight();
+
+        float px = solid.getX();
+        float py = solid.getY();
+        float pw = solid.getWidth();
+        float ph = solid.getHeight();
+
+        float overlapLeft = (bx + bw) - px;
+        float overlapRight = (px + pw) - bx;
+        float overlapTop = (by + bh) - py;
+        float overlapBottom = (py + ph) - by;
+
+        float minOverlapX = Math.min(overlapLeft, overlapRight);
+        float minOverlapY = Math.min(overlapTop, overlapBottom);
+
+        float vx = ball.getVx();
+        float vy = ball.getVy();
+
+        if (minOverlapX < minOverlapY) {
+            bx = (overlapLeft < overlapRight) ? px - bw : px + pw;
+            vx = -vx * Ball.RESTITUTION;
+        } else {
+            by = (overlapTop < overlapBottom) ? py - bh : py + ph;
+            vy = -vy * Ball.RESTITUTION;
+        }
+
+        ball.setPositions(bx, by);
+        ball.setVelocity(vx, vy);
+    }
+
+    /**
+     * Mantiene al jugador dentro de los límites horizontales y sobre el césped.
+     */
+    public void resolvePlayerEnvironmentCollisions(Player player, Collection<Element> elements) {
+        if (player == null) return;
+
+        float px = player.getPosition().getX();
+        float py = player.getPosition().getY();
+        float pw = player.getWidth();
+        float ph = player.getHeight();
+
+        if (px < 0.0f) px = 0.0f;
+        if (px + pw > FIELD_WIDTH) px = FIELD_WIDTH - pw;
+
+        float floorY = DEFAULT_FLOOR_Y;
+        if (!player.isJumping() && py + ph != floorY) {
+            py = floorY - ph;
+            player.setGroundY(py);
+        }
+        player.getPosition().setPositions(px, py);
+    }
+
+    public boolean isGoal(Ball ball, Goal goal) {
+        return checkCollision(ball.getX(), ball.getY(), ball.getWidth(),ball.getHeight(),
+                goal.getX(), goal.getY(), goal.getWidth(), goal.getHeight());
     }
 }

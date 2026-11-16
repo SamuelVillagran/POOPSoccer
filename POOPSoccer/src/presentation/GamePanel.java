@@ -243,16 +243,16 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void verifyGame() {
-        if (POOPSoccer.getGame().isGameOver()) {
-            gameThread = null;
-            if (POOPSoccer.getGame().isGameFinished() ) {
-                String message = POOPSoccer.getGame().checkWinner() == Side.LEFT ?
-                        "Winner " + POOPSoccer.getGame().getPlayer1().getName() :
-                        POOPSoccer.getGame().checkWinner() == Side.RIGTH ?
-                                "Winner " + POOPSoccer.getGame().getPlayer2().getName() :
-                                "TIE!!!";
-                JOptionPane.showMessageDialog(this, message, "Game Finished",  JOptionPane.INFORMATION_MESSAGE);
-            }
+        if (POOPSoccer.getGame().isGameFinished()) {
+            stopThread();
+            SwingUtilities.invokeLater(() -> {
+                Player winner = POOPSoccer.getGame().getWinner();
+                String message = (winner != null)
+                        ? "¡Ganador: " + winner.getName() + "!"
+                        : "¡EMPATE!";
+                JOptionPane.showMessageDialog(this, message, "Fin del Partido", JOptionPane.INFORMATION_MESSAGE);
+                LISTENER.goToMenu(); // Vuelve prolijamente al menú
+            });
         }
     }
 }
