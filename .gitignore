@@ -30,9 +30,9 @@ doc/
 package.bluej
 
 # Archivos de salida y compilación (Build Artifacts)
-/out/
-/target/
-/bin/
+out/
+target/
+bin/
 *.class
 
 # Archivos de configuración de IntelliJ IDEA
