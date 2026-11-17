@@ -49,7 +49,7 @@ public class Ball extends ItemSoccer {
 
     @Override
     public boolean hasShotAura() {
-        return hasActivePowerShot();
+        return activePowerShot != null && activePowerShot.showsShotAura();
     }
 
     public boolean hasPowerShotAgainst(Player target) {

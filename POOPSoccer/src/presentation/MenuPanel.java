@@ -1,7 +1,5 @@
 package presentation;
 
-import domain.GameMode;
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -16,8 +14,8 @@ import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 
-/**Ayudado a organizar por Gemini 3.8 Flash
- * Pantalla del Menú Principal.
+/**
+ * Main menu screen where the user selects the game mode.
  */
 public class MenuPanel extends JPanel {
 
@@ -72,9 +70,10 @@ public class MenuPanel extends JPanel {
     }
 
     private void prepareActions(GameContainer container) {
-        btnPvP.addActionListener(e -> container.onModeSelected(GameMode.PVP));
-        btnPvM.addActionListener(e -> container.onModeSelected(GameMode.PVM));
-        btnMvM.addActionListener(e -> container.onModeSelected(GameMode.MVM));
+        // Envía el identificador de la modalidad al contenedor sin acoplarse a enums del dominio
+        btnPvP.addActionListener(e -> container.onModeSelected("PVP"));
+        btnPvM.addActionListener(e -> container.onModeSelected("PVM"));
+        btnMvM.addActionListener(e -> container.onModeSelected("MVM"));
     }
 
     private JButton createButton(String text) {

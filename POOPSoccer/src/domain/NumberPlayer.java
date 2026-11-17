@@ -17,6 +17,6 @@ public enum NumberPlayer {
     }
 
     public Side getInitialSide() {
-        return null;
+        return initialSide;
     }
 }

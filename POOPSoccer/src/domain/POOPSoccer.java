@@ -26,7 +26,6 @@ public class POOPSoccer implements Serializable {
     private float remainingTimeSeconds; // counts down from timeLimit * 60
     private boolean suddenDeath;        // true when time ran out and score is tied
 
-    private int currentLevel;
     private CollisionChecker cChecker;
     private Map<Integer, Element> elements;
     private Map<Integer, Goal> goalPlayers;
@@ -47,6 +46,14 @@ public class POOPSoccer implements Serializable {
             game = new POOPSoccer();
         }
         return game;
+    }
+
+    public void startGame(String gameMode, String matchType, int goalLimit, int timeLimitMinutes,
+                          String nameP1, String teamP1,
+                          String nameP2, String teamP2) {
+        // Traduce los textos de presentación a los enums internos del dominio
+        startGame(GameMode.fromName(gameMode), MatchType.fromDisplayName(matchType),
+                goalLimit, timeLimitMinutes, nameP1, teamP1, nameP2, teamP2);
     }
 
     public void startGame(GameMode gameMode, MatchType matchType, int goalLimit, int timeLimitMinutes,
@@ -307,6 +314,25 @@ public class POOPSoccer implements Serializable {
                 .toArray(String[]::new);
     }
 
+    public String[] getAvailableMachineProfiles() {
+        // Obtiene los nombres de todos los perfiles de máquina definidos en el enum
+        return Arrays.stream(MachineProfile.values())
+                .map(MachineProfile::getDisplayName)
+                .toArray(String[]::new);
+    }
+
+    public boolean isMachineProfileAvailable(String profileName) {
+        // Consulta en el enum si el perfil seleccionado ya se encuentra implementado
+        return MachineProfile.fromDisplayName(profileName).isAvailable();
+    }
+
+    public String[] getAvailableMatchTypes() {
+        // Obtiene los nombres de los tipos de partido disponibles en el dominio
+        return Arrays.stream(MatchType.values())
+                .map(MatchType::getDisplayName)
+                .toArray(String[]::new);
+    }
+
     public void awardMatchPoints() {
         if (pointsAwarded || !isGameFinished()) return;
         pointsAwarded = true;
@@ -453,7 +479,7 @@ public class POOPSoccer implements Serializable {
      */
     public void save(File file) throws POOPSoccerException {
         if (file == null) throw new POOPSoccerException(POOPSoccerException.INVALID_FILE);
-        // Escribimos la instancia actual del juego en el archivo binario
+        // Escribe la instancia actual del juego en el archivo binario
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
             out.writeObject(this);
         } catch (Exception e) {
@@ -467,7 +493,7 @@ public class POOPSoccer implements Serializable {
      */
     public void open(File file) throws POOPSoccerException {
         if (file == null || !file.exists()) throw new POOPSoccerException(POOPSoccerException.INVALID_FILE);
-        // Leemos el partido guardado y actualizamos el singleton con el estado recuperado
+        // Lee el partido guardado y actualiza el singleton con el estado recuperado
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             POOPSoccer loadedGame = (POOPSoccer) in.readObject();
             loadedGame.isPaused = false;

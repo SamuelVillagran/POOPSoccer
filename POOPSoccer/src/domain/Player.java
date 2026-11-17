@@ -47,6 +47,9 @@ public class Player extends ItemSoccer {
     public Player(PlayerType type, String name, Team team, NumberPlayer numberPlayer) {
         this.numberPlayer = numberPlayer;
         this.type = type;
+        if (this.type != null) {
+            this.type.setPlayer(this);
+        }
         this.name = name;
         this.team = team;
         this.speed = Math.round(BASE_SPEED);
@@ -104,9 +107,17 @@ public class Player extends ItemSoccer {
         updatePowerCharge();
         updateEffect();
         if (updateStun()) return;
+        updateTypeAction();
         updatePush();
         updateKick();
         updateJump();
+    }
+
+    private void updateTypeAction() {
+        if (type != null) {
+            // Ejecuta el comportamiento automático cuando el jugador es controlado por la máquina
+            type.action();
+        }
     }
 
     private void updatePowerCharge() {

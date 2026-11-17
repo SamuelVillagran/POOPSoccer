@@ -2,16 +2,21 @@ package domain;
 
 import java.io.Serializable;
 
+/**
+ * Base class that defines whether a player is controlled by a person or by the machine.
+ */
 public abstract class PlayerType implements Serializable {
-    private Player player;
+    protected Player player;
     private Power power;
 
     public PlayerType() {
     }
 
-    public void getSpeed() {
+    public void setPlayer(Player player) {
+        this.player = player;
     }
 
-    public void getPower() {
+    public void action() {
+        // Por defecto un jugador humano no ejecuta acciones automáticas
     }
 }

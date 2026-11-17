@@ -29,6 +29,11 @@ public abstract class Power implements Serializable {
         return 0.0f;
     }
 
+    public boolean showsShotAura() {
+        // Oculta el aura del balón cuando existen balones señuelo para que todos se vean idénticos
+        return getDecoyBallCount() == 0;
+    }
+
     public void use(Player owner, Player target) {
         if (target == null) return;
         target.takeDamage(getDamage() * owner.getKickMultiplier());   // DamageShot x kickMultiplier

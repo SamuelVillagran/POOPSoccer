@@ -5,23 +5,18 @@ import java.awt.event.KeyEvent;
 import java.util.BitSet;
 
 
-/**Ayudado a organizar por Gemini 3.8 Flash
- * Manejador de eventos de teclado para ambos jugadores.
- * 
- * Controles de especificación:
- * Jugador 1: A (izq), D (der), W (salto), S (patear), Q (usar poder)
- * Jugador 2: Flecha Izq, Flecha Der, Flecha Arriba, Flecha Abajo, Ctrl Derecho (poder)
+/**
+ * Keyboard input handler for both players using a BitSet to track active keys.
  */
 public class KeyHandler extends KeyAdapter {
 
     private static KeyHandler instance;
-    // BitSet maneja el estado booleano de todas las teclas
+    // Almacena el estado booleano de cada tecla presionada
     private final BitSet KEYS = new BitSet();
     private boolean escToggle = false;
 
     private KeyHandler() {}
 
-    // Punto de acceso global
     public static KeyHandler getInstance() {
         if (instance == null) {
             instance = new KeyHandler();
@@ -31,15 +26,14 @@ public class KeyHandler extends KeyAdapter {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        // Pone la tecla en true con una sola línea
+        // Marca la tecla como activa cuando el jugador la presiona
         KEYS.set(e.getKeyCode());
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
         int code = e.getKeyCode();
-
-        // Pone la tecla en false
+        // Desmarca la tecla cuando el jugador la suelta
         KEYS.clear(code);
 
         if (code == KeyEvent.VK_ESCAPE) {
@@ -47,14 +41,14 @@ public class KeyHandler extends KeyAdapter {
         }
     }
 
-
     public void setKeyState(int keyCode, boolean state) {
-        KEYS.set(keyCode, state);// Cambiar manualmente el estado de cualquier tecla si lo necesitas
+        // Cambia manualmente el estado de una tecla específica
+        KEYS.set(keyCode, state);
     }
 
-
     public void toggleKey(int keyCode) {
-        KEYS.flip(keyCode); // Alternar el estado (de true a false, o de false a true)
+        // Invierte el estado actual de la tecla indicada
+        KEYS.flip(keyCode);
     }
 
     public boolean consumeEscToggle() {

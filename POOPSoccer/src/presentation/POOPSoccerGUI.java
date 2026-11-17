@@ -2,14 +2,8 @@ package presentation;
 
 import javax.swing.SwingUtilities;
 
-/**Ayudado a organizar por Gemini 3.8 Flash
- * Punto de entrada principal (Main) de la aplicación en la capa de presentación.
- * 
- * Arquitectura:
- * - Esta clase coordina el arranque de la interfaz gráfica en el hilo de despacho de eventos de Swing (EDT).
- * - Delega la creación y visualización de la ventana principal a la clase {@link Window} (JFrame).
- * - Resuelve el problema arquitectónico de la versión original donde un JPanel se llamaba '...GUI'
- *   y la ventana secundaria contenía el método main.
+/**
+ * Main entry point of the application in the presentation layer.
  */
 public class POOPSoccerGUI {
 
@@ -24,7 +18,7 @@ public class POOPSoccerGUI {
     }
 
     /**
-     * Muestra la ventana principal del juego.
+     * Shows the main window of the game.
      */
     public void start() {
         if (window != null) {
@@ -33,9 +27,9 @@ public class POOPSoccerGUI {
     }
 
     /**
-     * Método principal de ejecución.
+     * Main execution method that starts the UI on the Swing event dispatch thread.
      */
-    public static void main(String[] args) { //Ayudado con Gemini Flash 3.8 IA
+    public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             POOPSoccerGUI gui = new POOPSoccerGUI();
             gui.start();

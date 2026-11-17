@@ -1,7 +1,5 @@
 package presentation;
 
-import domain.GameMode;
-import domain.MatchType;
 import domain.POOPSoccer;
 
 import java.awt.BorderLayout;
@@ -25,20 +23,22 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-/**Ayudado a organizar con Claude Sonnet 4.6
- * Pantalla de ConfiguraciÃ³n de Jugadores y Tipo de Partido.
+/**
+ * Configuration screen for players, stats upgrades, match type, and pitch resolution.
  */
 public class PlayerConfig extends JPanel {
 
-    private GameMode mode;
+    private String mode;
     private GameContainer container;
     private JTextField nameFieldP1;
     private JComboBox<String> countryComboP1;
+    private JComboBox<String> machineProfileComboP1;
     private JTextField nameFieldP2;
     private JComboBox<String> countryComboP2;
+    private JComboBox<String> machineProfileComboP2;
 
     // Configuración del tipo de partido
-    private JComboBox<MatchType> matchTypeCombo;
+    private JComboBox<String> matchTypeCombo;
     private JLabel limitLabel;
     private JComboBox<Integer> goalLimitCombo;
     private JComboBox<Integer> timeLimitCombo;
@@ -49,7 +49,7 @@ public class PlayerConfig extends JPanel {
     private JButton startBtn;
     private BufferedImage background;
 
-    public PlayerConfig(GameContainer container, GameMode mode) {
+    public PlayerConfig(GameContainer container, String mode) {
         this.mode = mode;
         this.container = container;
         loadBackground();
@@ -92,56 +92,78 @@ public class PlayerConfig extends JPanel {
         formPanel.setBackground(new Color(255, 255, 255, 130));
         formPanel.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
 
-        // 1. Configuración de Jugadores
+        // Configura los jugadores, el partido y el botón de inicio
         prepareViewSettingPlayer(formPanel);
-
-        // 2. Configuración del Partido
         prepareViewMatchSettings(formPanel);
-
         add(formPanel, BorderLayout.CENTER);
-
-        // 3. Botón Iniciar
         prepareViewStartButton();
     }
 
     private void prepareViewSettingPlayer(JPanel formPanel) {
+        String[] possibleCountries = POOPSoccer.getGame().getAvailableTeams();
+        String[] machineProfiles = POOPSoccer.getGame().getAvailableMachineProfiles();
+        boolean isP1Machine = "MVM".equals(mode);
+        boolean isP2Machine = "PVM".equals(mode) || "MVM".equals(mode);
+
+        // Configura los controles del primer jugador pidiendo los datos a la fachada POOPSoccer
         JLabel titleP1 = new JLabel("Configuración Jugador 1:");
         titleP1.setFont(new Font("Arial", Font.BOLD, 15));
         formPanel.add(titleP1);
 
-        nameFieldP1 = new JTextField("Jugador 1");
+        nameFieldP1 = new JTextField(isP1Machine ? "Máquina 1" : "Jugador 1");
         formPanel.add(new JLabel("Nombre:"));
         formPanel.add(nameFieldP1);
 
-        String[] possibleCountries = POOPSoccer.getGame().getAvailableTeams();
         countryComboP1 = new JComboBox<>(possibleCountries);
-        formPanel.add(new JLabel("País / Poder:"));
-        formPanel.add(countryComboP1);
+        if (isP1Machine) {
+            machineProfileComboP1 = new JComboBox<>(machineProfiles);
+            addCountryAndProfileRow(formPanel, countryComboP1, machineProfileComboP1);
+        } else {
+            formPanel.add(new JLabel("País / Poder:"));
+            formPanel.add(countryComboP1);
+        }
         addStatsUpgradeRow(formPanel, 1);
 
-        // Si es PvP o MvM, agregar configuración de Jugador 2
-        if (mode == GameMode.PVP || mode == GameMode.MVM) {
-            JLabel titleP2 = new JLabel("Configuración Jugador 2:");
-            titleP2.setFont(new Font("Arial", Font.BOLD, 15));
-            formPanel.add(titleP2);
+        // Configura los controles del segundo jugador pidiendo países y perfiles a POOPSoccer
+        JLabel titleP2 = new JLabel(!isP2Machine ? "Configuración Jugador 2:" : "Configuración Máquina (Jugador 2):");
+        titleP2.setFont(new Font("Arial", Font.BOLD, 15));
+        formPanel.add(titleP2);
 
-            nameFieldP2 = new JTextField(mode == GameMode.MVM ? "Máquina 2" : "Jugador 2");
-            formPanel.add(new JLabel("Nombre:"));
-            formPanel.add(nameFieldP2);
+        nameFieldP2 = new JTextField(!isP2Machine ? "Jugador 2" : "Máquina 2");
+        formPanel.add(new JLabel("Nombre:"));
+        formPanel.add(nameFieldP2);
 
-            countryComboP2 = new JComboBox<>(possibleCountries);
+        countryComboP2 = new JComboBox<>(possibleCountries);
+        if (isP2Machine) {
+            machineProfileComboP2 = new JComboBox<>(machineProfiles);
+            addCountryAndProfileRow(formPanel, countryComboP2, machineProfileComboP2);
+        } else {
             formPanel.add(new JLabel("País / Poder:"));
             formPanel.add(countryComboP2);
-            addStatsUpgradeRow(formPanel, 2);
         }
+        addStatsUpgradeRow(formPanel, 2);
+    }
+
+    private void addCountryAndProfileRow(JPanel formPanel, JComboBox<String> countryCombo, JComboBox<String> profileCombo) {
+        // Agrupa país y perfil de máquina en dos columnas para no recargar la altura del formulario
+        JPanel labelsRow = new JPanel(new GridLayout(1, 2, 8, 0));
+        labelsRow.setOpaque(false);
+        labelsRow.add(new JLabel("País / Poder:"));
+        labelsRow.add(new JLabel("Perfil de máquina:"));
+        formPanel.add(labelsRow);
+
+        JPanel combosRow = new JPanel(new GridLayout(1, 2, 8, 0));
+        combosRow.setOpaque(false);
+        combosRow.add(countryCombo);
+        combosRow.add(profileCombo);
+        formPanel.add(combosRow);
     }
 
     private void addStatsUpgradeRow(JPanel formPanel, int playerNum) {
-        POOPSoccer game = POOPSoccer.getGame();
         JPanel row = new JPanel(new BorderLayout(8, 0));
         row.setOpaque(false);
 
-        JLabel pointsLbl = new JLabel("Puntos: " + game.getPoints(playerNum) + "  ");
+        JLabel pointsLbl = new JLabel("Puntos: " + POOPSoccer.getGame().getPoints(playerNum) + "  ");
         pointsLbl.setFont(new Font("Arial", Font.BOLD, 12));
         row.add(pointsLbl, BorderLayout.WEST);
 
@@ -157,25 +179,23 @@ public class PlayerConfig extends JPanel {
     }
 
     private JButton createStatButton(int playerNum, String statKey, String label, JLabel pointsLbl) {
-        POOPSoccer game = POOPSoccer.getGame();
         JButton btn = new JButton();
         btn.setFont(new Font("Arial", Font.BOLD, 11));
         updateStatButtonText(btn, playerNum, statKey, label);
         btn.addActionListener(e -> {
-            if (!game.upgradeStat(playerNum, statKey)) {
-                int cost = game.getUpgradeCost(playerNum, statKey);
+            if (!POOPSoccer.getGame().upgradeStat(playerNum, statKey)) {
+                int cost = POOPSoccer.getGame().getUpgradeCost(playerNum, statKey);
                 JOptionPane.showMessageDialog(this, "Necesitás " + cost + " puntos (o ya está al máximo nivel 10).");
             }
-            pointsLbl.setText("Puntos: " + game.getPoints(playerNum) + "  ");
+            pointsLbl.setText("Puntos: " + POOPSoccer.getGame().getPoints(playerNum) + "  ");
             updateStatButtonText(btn, playerNum, statKey, label);
         });
         return btn;
     }
 
     private void updateStatButtonText(JButton btn, int playerNum, String statKey, String label) {
-        POOPSoccer game = POOPSoccer.getGame();
-        int lvl = game.getStatLevel(playerNum, statKey);
-        int cost = game.getUpgradeCost(playerNum, statKey);
+        int lvl = POOPSoccer.getGame().getStatLevel(playerNum, statKey);
+        int cost = POOPSoccer.getGame().getUpgradeCost(playerNum, statKey);
         btn.setText(label + " Nv." + lvl + " (+)");
         btn.setToolTipText(lvl < 10 ? "Mejorar por " + cost + " pts" : "Nivel máximo (10)");
     }
@@ -185,7 +205,8 @@ public class PlayerConfig extends JPanel {
         titleMatch.setFont(new Font("Arial", Font.BOLD, 15));
         formPanel.add(titleMatch);
 
-        matchTypeCombo = new JComboBox<>(new MatchType[] { MatchType.PER_GOALS, MatchType.PER_TIME });
+        // Consulta los tipos de partido disponibles directamente desde la fachada POOPSoccer
+        matchTypeCombo = new JComboBox<>(POOPSoccer.getGame().getAvailableMatchTypes());
         formPanel.add(new JLabel("Tipo de partido:"));
         formPanel.add(matchTypeCombo);
 
@@ -243,7 +264,7 @@ public class PlayerConfig extends JPanel {
     private void prepareController() {
         prepareControllerStartButton();
         matchTypeCombo.addActionListener(e -> {
-            boolean isPerGoals = matchTypeCombo.getSelectedItem() == MatchType.PER_GOALS;
+            boolean isPerGoals = matchTypeCombo.getSelectedIndex() == 0;
             limitLabel.setText(isPerGoals ? "Goles para ganar:" : "Minutos del partido:");
             limitComboHolder.removeAll();
             limitComboHolder.add(isPerGoals ? goalLimitCombo : timeLimitCombo, BorderLayout.CENTER);
@@ -254,29 +275,36 @@ public class PlayerConfig extends JPanel {
 
     private void prepareControllerStartButton() {
         startBtn.addActionListener(e -> {
+            if (!validateMachineProfiles()) {
+                return;
+            }
             String p1Name = nameFieldP1.getText().trim();
-            if (p1Name.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Debe ingresar el nombre del Jugador 1");
+            String p2Name = nameFieldP2.getText().trim();
+            if (p1Name.isEmpty() || p2Name.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Debe ingresar el nombre de ambos jugadores");
                 return;
             }
             String p1Country = (String) countryComboP1.getSelectedItem();
-            MatchType selectedMatchType = (MatchType) matchTypeCombo.getSelectedItem();
+            String p2Country = (String) countryComboP2.getSelectedItem();
+            String selectedMatchType = (String) matchTypeCombo.getSelectedItem();
             int goalLimit = (Integer) goalLimitCombo.getSelectedItem();
             int timeLimit = (Integer) timeLimitCombo.getSelectedItem();
             container.setResolution(resolveSelectedDimension());
-
-            if (mode == GameMode.PVP || mode == GameMode.MVM) {
-                String p2Name = nameFieldP2.getText().trim();
-                if (p2Name.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "Debe ingresar el nombre del Jugador 2");
-                    return;
-                }
-                String p2Country = (String) countryComboP2.getSelectedItem();
-                container.onPlayerConfigConfirmed(p1Name, p1Country, p2Name, p2Country, selectedMatchType, goalLimit, timeLimit);
-            } else {
-                container.onPlayerConfigConfirmed(p1Name, p1Country, selectedMatchType, goalLimit, timeLimit);
-            }
+            container.onPlayerConfigConfirmed(p1Name, p1Country, p2Name, p2Country, selectedMatchType, goalLimit, timeLimit);
         });
+    }
+
+    private boolean validateMachineProfiles() {
+        // Consulta a la fachada POOPSoccer si el perfil de máquina elegido está disponible
+        if (machineProfileComboP1 != null && !POOPSoccer.getGame().isMachineProfileAvailable((String) machineProfileComboP1.getSelectedItem())) {
+            JOptionPane.showMessageDialog(this, "Tipo de máquina en construcción, elija máquina torpe");
+            return false;
+        }
+        if (machineProfileComboP2 != null && !POOPSoccer.getGame().isMachineProfileAvailable((String) machineProfileComboP2.getSelectedItem())) {
+            JOptionPane.showMessageDialog(this, "Tipo de máquina en construcción, elija máquina torpe");
+            return false;
+        }
+        return true;
     }
 
     private Dimension resolveSelectedDimension() {

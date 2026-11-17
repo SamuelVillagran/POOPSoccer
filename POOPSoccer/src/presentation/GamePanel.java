@@ -19,18 +19,9 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 
-/**Ayudado a organizar por Gemini 3.8 Flash
- * Panel de juego (Lienzo interactivo).
- * 
- * Responsabilidades:
- * 1. Ejecutar el Game Loop a 60 FPS mediante un hilo dedicado (Runnable).
- * 2. Capturar entradas de teclado a través de {@link KeyHandler}.
- * 3. Actualizar el estado y repintar los elementos gráficos en cada frame.
- * 4. Gestionar el menú de pausa (Escape).
- * 
- * Nota de diseño: En el proyecto original esta clase se llamaba confusamente 'TheDOPOHardestGameGUI',
- * a pesar de ser un JPanel interno y no la ventana principal. Renombrarla a GamePanel restaura
- * la semántica correcta del diseño orientado a objetos en Swing.
+/**
+ * Interactive game canvas that runs the 60 FPS game loop, captures keyboard input,
+ * and renders the pitch and its elements.
  */
 public class GamePanel extends JPanel implements Runnable {
 
@@ -69,11 +60,11 @@ public class GamePanel extends JPanel implements Runnable {
             if (is != null) {
                 background = ImageIO.read(is);
             } else {
-                // Te avisará en consola si la carpeta map no está bien configurada
+                // Informa por consola si no se encuentra la imagen de fondo del mapa
                 System.err.println("Error: No se encontró la imagen en /map/1.jpg");
             }
         } catch (Exception e) {
-            e.printStackTrace(); // Muestra el error real sin silenciarlo
+            e.printStackTrace();
         }
     }
 
@@ -116,18 +107,16 @@ public class GamePanel extends JPanel implements Runnable {
 
     private long updateUI(long refreshTimer) {
         if (refreshTimer >= 100_000_000L) {
-            POOPSoccer game = POOPSoccer.getGame();
-
-            String score = game.getGoalsP1() + " - " + game.getGoalsP2();
-            String p1 = game.getDisplayInfoP1();
-            String p2 = game.getDisplayInfoP2();
-            float time = game.getRemainingTime();
-            float hp1 = game.getHealthPercentP1();
-            float hp2 = game.getHealthPercentP2();
-            float pow1 = game.getPowerPercentP1();
-            float pow2 = game.getPowerPercentP2();
-            String activePow1 = game.getActivePowerNameP1();
-            String activePow2 = game.getActivePowerNameP2();
+            String score = POOPSoccer.getGame().getGoalsP1() + " - " + POOPSoccer.getGame().getGoalsP2();
+            String p1 = POOPSoccer.getGame().getDisplayInfoP1();
+            String p2 = POOPSoccer.getGame().getDisplayInfoP2();
+            float time = POOPSoccer.getGame().getRemainingTime();
+            float hp1 = POOPSoccer.getGame().getHealthPercentP1();
+            float hp2 = POOPSoccer.getGame().getHealthPercentP2();
+            float pow1 = POOPSoccer.getGame().getPowerPercentP1();
+            float pow2 = POOPSoccer.getGame().getPowerPercentP2();
+            String activePow1 = POOPSoccer.getGame().getActivePowerNameP1();
+            String activePow2 = POOPSoccer.getGame().getActivePowerNameP2();
 
             SwingUtilities.invokeLater(() -> LISTENER.onMatchInfoChanged(
                     p1, score, time, p2, hp1, hp2, pow1, pow2, activePow1, activePow2));
@@ -175,10 +164,9 @@ public class GamePanel extends JPanel implements Runnable {
             case 0 -> LISTENER.goToMenu();
             case 1 -> LISTENER.restartFromLevel1();
             default -> {
+                // Limpia las teclas retenidas, reanuda el partido en el dominio y devuelve el foco a la cancha
                 KeyHandler.getInstance().clearAllKeys();
-                // 1. Le avisas al dominio que continúe el partido
                 POOPSoccer.getGame().resumeGame();
-                // 2. FUNDAMENTAL en Swing: le devolves el foco del teclado a la cancha
                 requestFocusInWindow();
             }
         }
@@ -207,8 +195,7 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     /**
-     * Construye la ruta del recurso dinámicamente basándose en la clase del Elemento.
-     * Convención: /<nombre_clase_minusculas>/<variante_o_default>.png
+     * Builds the resource path dynamically from the element class name and variant.
      */
     private String resolveImagePath(Element elem) {
         String className = elem.getClass().getSimpleName().toLowerCase();
@@ -237,17 +224,13 @@ public class GamePanel extends JPanel implements Runnable {
         if (background != null) {
             g2.drawImage(background, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, null);
         }
-        // Renderizado de elementos de la cancha / juego
-        g2.drawString("POOBSoccer -o- -o- -o- -o- -o- -o- -o- -o- -o- -o- ", 20, 30);
 
         if (POOPSoccer.getGame().getElementsToDraw() != null) {
             for (Element elem : POOPSoccer.getGame().getElementsToDraw().values()) {
                 if (elem == null || elem.getPosition() == null) continue;
 
-                // 1. Resolver ruta dinámicamente sin acoplar el dominio
+                // Resuelve la ruta de la imagen de forma dinámica y la dibuja desde la caché
                 String imagePath = resolveImagePath(elem);
-
-                // 2. Obtener de caché y dibujar
                 BufferedImage sprite = getSprite(imagePath);
                 if (sprite != null) {
                     int x = (int) elem.getX();
@@ -289,11 +272,10 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void verifyGame() {
-        POOPSoccer game = POOPSoccer.getGame();
-        if (game.isGameFinished()) {
+        if (POOPSoccer.getGame().isGameFinished()) {
             stopThread();
             SwingUtilities.invokeLater(() -> {
-                String message = game.getMatchSummaryMessage();
+                String message = POOPSoccer.getGame().getMatchSummaryMessage();
                 JOptionPane.showMessageDialog(this, message, "Fin del Partido", JOptionPane.INFORMATION_MESSAGE);
                 LISTENER.goToMenu(); // Vuelve prolijamente al menú
             });

@@ -1,20 +1,16 @@
 package presentation;
 
-import domain.GameMode;
-import domain.MatchType;
-
 import java.awt.Dimension;
 
-/**Ayudado a organizar por Gemini 3.8 Flash
- * Almacena los parámetros de configuración seleccionados en los menús
- * antes de instanciar e iniciar el partido.
+/**
+ * Stores the configuration parameters selected in the menus before starting a match.
  */
 public class GameSetup {
 
-    private GameMode gameMode;
-    private MatchType matchType;
+    private String gameMode;
+    private String matchType;
     private int goalLimit;
-    private int timeLimit; // in minutes, used when matchType == PER_TIME
+    private int timeLimit;
     private Dimension resolution;
 
     private String nameP1;
@@ -24,11 +20,15 @@ public class GameSetup {
     private String teamP2;
 
     public GameSetup() {
-        this.gameMode = GameMode.PVM;
-        this.matchType = MatchType.PER_GOALS;
+        this.gameMode = "PVM";
+        this.matchType = "Por goles";
         this.goalLimit = 3;
         this.timeLimit = 2;
         this.resolution = new Dimension(800, 600);
+        this.nameP1 = "Jugador 1";
+        this.teamP1 = "Corea del Sur";
+        this.nameP2 = "Máquina";
+        this.teamP2 = "Camerún";
     }
 
     public void setResolution(Dimension resolution) {
@@ -41,15 +41,15 @@ public class GameSetup {
         return resolution;
     }
 
-    public void setMode(GameMode mode) {
+    public void setMode(String mode) {
         this.gameMode = mode;
     }
 
-    public void setMatchType(MatchType matchType) {
+    public void setMatchType(String matchType) {
         this.matchType = matchType;
     }
 
-    public MatchType getMatchType() {
+    public String getMatchType() {
         return matchType;
     }
 
@@ -83,5 +83,5 @@ public class GameSetup {
     public String getTeamP1() { return teamP1; }
     public String getNameP2() { return nameP2; }
     public String getTeamP2() { return teamP2; }
-    public GameMode getGameMode() { return gameMode; }
+    public String getGameMode() { return gameMode; }
 }
