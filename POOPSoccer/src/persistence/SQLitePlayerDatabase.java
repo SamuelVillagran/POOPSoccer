@@ -19,7 +19,7 @@ import java.util.List;
  */
 public class SQLitePlayerDatabase implements PlayerDataGateway {
 
-    private static final String DEFAULT_DB_PATH = "savedGames/poopsoccer.db";
+    private static final String DEFAULT_DB_NAME = "poopsoccer.db";
     private static final String CREATE_PLAYERS_TABLE_SQL = """
             CREATE TABLE IF NOT EXISTS players (
                 profile_key TEXT PRIMARY KEY,
@@ -72,11 +72,13 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {
     private transient boolean schemaReady = false;
 
     public SQLitePlayerDatabase() {
-        this(new File(DEFAULT_DB_PATH));
+        this(new File(Log.getDataSubdirectory("database"), DEFAULT_DB_NAME));
     }
 
     public SQLitePlayerDatabase(File databaseFile) {
-        this.dbPath = databaseFile != null ? databaseFile.getPath() : DEFAULT_DB_PATH;
+        this.dbPath = databaseFile != null
+                ? databaseFile.getPath()
+                : new File(Log.getDataSubdirectory("database"), DEFAULT_DB_NAME).getPath();
     }
 
     @Override

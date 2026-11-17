@@ -15,8 +15,6 @@ import javax.swing.filechooser.FileNameExtensionFilter;
  */
 public class Window extends JFrame {
 
-    private static final String SAVED_GAMES_DIR = "savedGames";
-
     private JMenuBar menuBar;
     private JMenu menu;
     private JMenuItem optionNew;
@@ -120,8 +118,13 @@ public class Window extends JFrame {
     }
 
     private JFileChooser createSaveFileChooser() {
-        // Dirige el selector de archivos al directorio dedicado de partidas guardadas
-        File savesDir = new File(SAVED_GAMES_DIR);
+        // Dirige el selector de archivos a la subcarpeta data/saves/ ubicada al mismo nivel que Docs/
+        File dataDir = new File("../Docs").isDirectory() ? new File("../data") : new File("data");
+        File savesDir = new File(dataDir, "saves");
+        try {
+            savesDir = savesDir.getCanonicalFile();
+        } catch (Exception ignored) {
+        }
         if (!savesDir.exists()) {
             savesDir.mkdirs();
         }

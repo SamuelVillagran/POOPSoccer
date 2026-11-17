@@ -13,12 +13,12 @@ import java.util.Map;
  */
 public class PlayerDatabase implements PlayerDataGateway {
 
-    private static final String DEFAULT_DB_PATH = "savedGames/players_db.csv";
+    private static final String DEFAULT_DB_NAME = "players_db.csv";
     private static final String HEADER = "name;points;speed;jump;kick;survival";
     private final File databaseFile;
 
     public PlayerDatabase() {
-        this(new File(DEFAULT_DB_PATH));
+        this(new File(Log.getDataSubdirectory("database"), DEFAULT_DB_NAME));
     }
 
     public PlayerDatabase(File databaseFile) {

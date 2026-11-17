@@ -1,44 +1,56 @@
 package domain;
 
 import java.io.File;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
- * Utility class that records unexpected errors into a log file inside the logs folder.
+ * Utility class that records unexpected errors into a human-readable text log file.
  */
 public class Log {
-    public static final String LOG_FOLDER = "logs";
-    public static final String LOG_NAME = "POOPSoccer";
+    private static final String LOG_FILE_NAME = "POOPSoccer_log.txt";
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * Records an exception into logs/POOPSoccer.log with date, time, and stack trace.
+     * Resolves the shared data directory at the repository root alongside Docs/.
+     */
+    public static File getDataDirectory() {
+        // Ubica la carpeta data junto a Docs cuando se ejecuta desde la subcarpeta del módulo
+        return new File("../Docs").isDirectory() ? new File("../data") : new File("data");
+    }
+
+    /**
+     * Resolves a named subfolder inside the shared data directory.
+     */
+    public static File getDataSubdirectory(String subfolder) {
+        return new File(getDataDirectory(), subfolder);
+    }
+
+    /**
+     * Records an exception into data/logs/POOPSoccer_log.txt in plain readable text.
      */
     public static void record(Exception e) {
+        if (e == null) return;
         try {
-            // Verifica que exista la carpeta "logs" al mismo nivel que "src"
-            File folder = new File(LOG_FOLDER);
+            // Garantiza que exista la subcarpeta logs dentro de data/
+            File folder = getDataSubdirectory("logs");
             if (!folder.exists()) {
                 folder.mkdirs();
             }
-
-            // Obtiene el logger del juego y desactiva la salida por consola repetida
-            Logger logger = Logger.getLogger(LOG_NAME);
-            logger.setUseParentHandlers(false);
-
-            // Abre el archivo dentro de la carpeta "logs" en modo append (true) para conservar registros previos
-            String filePath = LOG_FOLDER + File.separator + LOG_NAME + ".log";
-            FileHandler file = new FileHandler(filePath, true);
-
-            // Aplica un formato de texto simple y legible con fecha, hora y detalle del error
-            file.setFormatter(new SimpleFormatter());
-            logger.addHandler(file);
-
-            // Escribe el error grave junto con toda su traza y cierra el archivo
-            logger.log(Level.SEVERE, e.toString(), e);
-            file.close();
+            File logFile = new File(folder, LOG_FILE_NAME);
+            // Escribe el error en texto plano legible con fecha, clase, mensaje y traza completa
+            try (PrintWriter out = new PrintWriter(new FileWriter(logFile, true))) {
+                out.println("============================================================");
+                out.println("Fecha y hora : " + LocalDateTime.now().format(DATE_FORMAT));
+                out.println("Excepción    : " + e.getClass().getName());
+                out.println("Mensaje      : " + (e.getMessage() != null ? e.getMessage() : "Sin mensaje"));
+                out.println("Traza (Stack Trace):");
+                e.printStackTrace(out);
+                out.println("============================================================");
+                out.println();
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
