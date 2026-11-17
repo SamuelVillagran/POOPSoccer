@@ -49,9 +49,19 @@ public class GameContainer extends JPanel implements GamePanelListener {
         add(cardPanel, BorderLayout.CENTER);
     }
 
+    @Override
     public void onMatchInfoChanged(String p1Info, String score, float timeRemaining,
                                    String p2Info, float hp1, float hp2) {
         infoPanel.updateMatchInfo(p1Info, score, timeRemaining, p2Info, hp1, hp2);
+    }
+
+    @Override
+    public void onMatchInfoChanged(String p1Info, String score, float timeRemaining,
+                                   String p2Info, float hp1, float hp2,
+                                   float power1, float power2,
+                                   String activePower1, String activePower2) {
+        infoPanel.updateMatchInfo(p1Info, score, timeRemaining, p2Info, hp1, hp2,
+                power1, power2, activePower1, activePower2);
     }
 
     public void showView(ScreenView view) {

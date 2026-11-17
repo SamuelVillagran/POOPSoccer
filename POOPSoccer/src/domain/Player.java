@@ -11,6 +11,10 @@ public class Player extends ItemSoccer {
     private static final float BASE_JUMP = 3.0f;
     private static final float BALL_KICK_FORCE = 3.0f;
     private static final float BASE_KICK_DAMAGE = 10.0f;
+    private static final float MAX_POWER = 100.0f;
+    private static final int POWER_CHARGE_FRAMES = 600; // 10s at 60FPS
+    private static final float POWER_RECHARGE_PER_FRAME = MAX_POWER / POWER_CHARGE_FRAMES;
+    private static final float GOAL_CONCEDED_POWER_BONUS = MAX_POWER * 0.25f; // +1/4 on goal received
     private boolean kickAlreadyHit = false;
 
     private int speedStat = 1;
@@ -24,6 +28,8 @@ public class Player extends ItemSoccer {
     private boolean isStuned;
     private int stunFramesLeft = 0;
     private float currentHealth;
+    private float currentPower = 0.0f;
+    private boolean powerActive = false;
     private Team team;
     private int jumpFrames = 0;
     private int kickFrames = 0;
@@ -36,7 +42,6 @@ public class Player extends ItemSoccer {
 
     public Player(PlayerType type, String name, Team team, NumberPlayer numberPlayer) {
         this.numberPlayer = numberPlayer;
-        this.position = new Vector2D();
         this.type = type;
         this.name = name;
         this.team = team;
@@ -46,8 +51,16 @@ public class Player extends ItemSoccer {
 
     public void move(char direction) throws InterruptedException {
         if (isStuned) return; // stunned players can't move
+        if (effect != null && effect.getSpeedFactor() <= 0.0f && (direction == 'r' || direction == 'l')) {
+            return;
+        }
         this.speed = Math.round(getSpeed());
-        switch (direction) {
+        char effectiveDir = direction;
+        if (effect != null && effect.isDirectionInverted()) {
+            if (direction == 'r') effectiveDir = 'l';
+            else if (direction == 'l') effectiveDir = 'r';
+        }
+        switch (effectiveDir) {
             case 'r':
                 move(this.speed, 0);
                 break;
@@ -60,12 +73,16 @@ public class Player extends ItemSoccer {
             case 'k':
                 kick();
                 break;
+            case 'p':
+                activatePower();
+                break;
             default:
                 break;
         }
     }
 
     private void kick() {
+        if (effect != null && !effect.canKick()) return;
         if (kickFrames == 0) {
             kickFrames = KICK_ACTIVE_FRAMES;
             kickAlreadyHit = false;   // new kick, it can hurt again
@@ -73,10 +90,22 @@ public class Player extends ItemSoccer {
     }
 
     private void jump() throws InterruptedException {
+        if (effect != null && !effect.canJump()) return;
         if (jumpFrames == 0) jumpFrames = 1;
     }
 
     public void update() {
+        if (currentPower < MAX_POWER) {
+            currentPower = Math.min(MAX_POWER, currentPower + POWER_RECHARGE_PER_FRAME);
+        }
+
+        if (effect != null) {
+            effect.update(1.0f / 60.0f);
+            if (effect.isFinished()) {
+                effect = null;
+            }
+        }
+
         // Stun countdown
         if (isStuned) {
             stunFramesLeft--;
@@ -85,6 +114,11 @@ public class Player extends ItemSoccer {
                 currentHealth = getMaxLife(); // restore health after stun
             }
             return; // skip movement while stunned
+        }
+
+        if (effect != null && effect.isPushed()) {
+            // Empuje: el rival es lanzado hacia su propio arco (-getAttackDirection())
+            move(-getAttackDirection() * Math.round(BASE_SPEED * 1.6f), 0);
         }
 
         if (kickFrames > 0) {
@@ -136,6 +170,76 @@ public class Player extends ItemSoccer {
         return currentHealth;
     }
 
+    /** Returns power charge as a 0.0–1.0 fraction for the HUD bar. */
+    public float getPowerPercent() {
+        return currentPower / MAX_POWER;
+    }
+
+    public float getCurrentPower() {
+        return currentPower;
+    }
+
+    public float getMaxPower() {
+        return MAX_POWER;
+    }
+
+    public boolean isPowerFull() {
+        return currentPower >= MAX_POWER - 0.001f;
+    }
+
+    public boolean isPowerActive() {
+        return powerActive;
+    }
+
+    public void activatePower() {
+        if (isStuned || !isPowerFull() || powerActive) return;
+        powerActive = true;
+        currentPower = 0.0f;
+    }
+
+    /** Rule 1: When a player receives a goal, their power bar increases by 1/4 (25%). */
+    public void onGoalConceded() {
+        currentPower = Math.min(MAX_POWER, currentPower + GOAL_CONCEDED_POWER_BONUS);
+    }
+
+    public void triggerActivePowerOnBallHit(Ball ball) {
+        if (!powerActive) return;
+        powerActive = false;
+        if (team != null && ball != null) {
+            team.launchPowerShot(this, ball);
+        }
+    }
+
+    public void triggerActivePowerOnBallHit() {
+        if (!powerActive) return;
+        powerActive = false;
+        if (team != null && rival != null) {
+            team.usePower(this, rival);
+        }
+    }
+
+    public boolean hasActiveEffect() {
+        return effect != null && !effect.isFinished();
+    }
+
+    public String getActiveEffectName() {
+        return hasActiveEffect() ? effect.getClass().getSimpleName().replace("Effect", "") : "";
+    }
+
+    public String getActivePowerName() {
+        if (team == null || !powerActive) return "Ninguno";
+        return team.getPowerName();
+    }
+
+    public String getTeamDisplayName() {
+        return team != null ? team.getDisplayName() : "";
+    }
+
+    public String getDisplayInfo() {
+        if (team == null) return name;
+        return name + " (" + team.getDisplayName() + ")";
+    }
+
     private void move(int deltaX, int deltaY) {
         position.setPositions(position.getX()+deltaX,
                 position.getY()+deltaY);
@@ -157,7 +261,8 @@ public class Player extends ItemSoccer {
     }
 
     public float getSpeed() {
-        return BASE_SPEED * (1 + 0.10f * (speedStat - 1));
+        float factor = (effect != null) ? effect.getSpeedFactor() : 1.0f;
+        return BASE_SPEED * (1 + 0.10f * (speedStat - 1)) * factor;
     }
 
     public int getForce() {
@@ -195,20 +300,30 @@ public class Player extends ItemSoccer {
     }
 
     @Override
-    public Vector2D getPosition() {
-        return position;
+    public String getVariantName() {
+        if (getTeamDisplayName().isEmpty() || getNumberPlayerInt() == 0) {
+            return "normal";
+        }
+        String teamKey = java.text.Normalizer.normalize(getTeamDisplayName().trim(), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}|\\s+", "").toLowerCase();
+        String suffix = isKicking() ? "_kick" : "";
+        return teamKey + getNumberPlayerInt() + suffix;
     }
 
-    public float getX() {
-        return position.getX();
+    @Override
+    public boolean hasPowerAura() {
+        return isPowerActive();
     }
 
-    public float getY() {
-        return position.getY();
+    @Override
+    public boolean isStunnedStatus() {
+        return isStuned();
     }
 
-    public void setPositions(float x, float y) {
-        position.setPositions(x, y);
+    @Override
+    public String getStatusText() {
+        if (isStuned) return "¡ATURDIDO!";
+        return getActiveEffectName();
     }
 
     @Override
@@ -266,7 +381,12 @@ public class Player extends ItemSoccer {
         kickAlreadyHit = true;
     }
 
-    public void applyEffect(Effect newEffect) {   // same as in the previous step
-        if (newEffect != null) effect = newEffect;
+    public void applyEffect(Effect newEffect) {   // Rule 8: new effect replaces previous one
+        if (newEffect != null) {
+            effect = newEffect;
+            if (newEffect.launchesIntoAir() && !isStuned && jumpFrames == 0) {
+                jumpFrames = 1;
+            }
+        }
     }
 }

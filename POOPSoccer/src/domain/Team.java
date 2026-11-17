@@ -25,12 +25,13 @@ public enum Team {
         if (name == null) throw new IllegalArgumentException("Equipo nulo");
         String wanted = normalize(name);
         for (Team team : values()) {
-            if (normalize(team.displayName).equals(wanted) || normalize(team.name()).equals(wanted)) return team;
+            String normDisplay = normalize(team.displayName);
+            String normEnum = normalize(team.name());
+            if (normDisplay.equals(wanted) || normEnum.equals(wanted)
+                    || wanted.contains(normDisplay) || wanted.contains(normEnum)) {
+                return team;
+            }
         }
-        if (wanted.contains("korea") || wanted.contains("corea")) return COREA_DEL_SUR;
-        if (wanted.contains("cameroon") || wanted.contains("camerun")) return CAMEROON;
-        if (wanted.contains("nigeria")) return NIGERIA;
-        if (wanted.contains("usa") || wanted.contains("estadosunidos")) return USA;
         throw new IllegalArgumentException("Equipo desconocido: [" + name + "]");
     }
 
@@ -41,6 +42,17 @@ public enum Team {
 
     public String getDisplayName() { return displayName; }
     public Power getPower() { return POWER; }
+    public String getPowerName() { return POWER != null ? POWER.getName() : "Ninguno"; }
+    public void usePower(Player owner, Player target) {
+        if (POWER != null) {
+            POWER.use(owner, target);
+        }
+    }
+    public void launchPowerShot(Player owner, Ball ball) {
+        if (POWER != null && ball != null) {
+            ball.activatePowerShot(owner, POWER);
+        }
+    }
     public int getSpeed() { return speed; }
     public int getJump() { return JUMP; }
     public int getForce() { return force; }

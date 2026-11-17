@@ -2,6 +2,7 @@ package presentation;
 
 import domain.GameMode;
 import domain.MatchType;
+import domain.POOPSoccer;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -97,9 +98,7 @@ public class PlayerConfig extends JPanel {
         formPanel.add(new JLabel("Nombre:"));
         formPanel.add(nameFieldP1);
 
-        String[] possibleCountries = java.util.Arrays.stream(domain.Team.values())
-                .map(domain.Team::getDisplayName)
-                .toArray(String[]::new);
+        String[] possibleCountries = POOPSoccer.getGame().getAvailableTeams();
         countryComboP1 = new JComboBox<>(possibleCountries);
         formPanel.add(new JLabel("PaÃ­s / Poder:"));
         formPanel.add(countryComboP1);

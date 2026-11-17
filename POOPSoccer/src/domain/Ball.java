@@ -12,12 +12,62 @@ public class Ball extends ItemSoccer {
     private Vector2D velocity;
     private Player lastTouch;
     private boolean onGround;
+    private Power activePowerShot;
+    private Player powerShotOwner;
+    private int pendingDecoyCount = 0;
+    private float pendingDecoyDuration = 0.0f;
 
     public Ball() {
-        this.position = new Vector2D();
         this.velocity = new Vector2D();
         this.weight = 1;
         this.onGround = false;
+    }
+
+    public void activatePowerShot(Player owner, Power power) {
+        this.powerShotOwner = owner;
+        this.activePowerShot = power;
+        if (power != null && owner != null) {
+            power.launchBall(this, owner.getAttackDirection());
+            this.pendingDecoyCount = power.getDecoyBallCount();
+            this.pendingDecoyDuration = power.getDecoyDurationSeconds();
+        }
+    }
+
+    public int consumePendingDecoyCount() {
+        int count = pendingDecoyCount;
+        pendingDecoyCount = 0;
+        return count;
+    }
+
+    public float getPendingDecoyDuration() {
+        return pendingDecoyDuration;
+    }
+
+    public boolean hasActivePowerShot() {
+        return activePowerShot != null;
+    }
+
+    @Override
+    public boolean hasShotAura() {
+        return hasActivePowerShot();
+    }
+
+    public boolean hasPowerShotAgainst(Player target) {
+        return activePowerShot != null && powerShotOwner != null && powerShotOwner != target;
+    }
+
+    public void impactPlayerWithPowerShot(Player target) {
+        if (!hasPowerShotAgainst(target)) return;
+        Power shot = activePowerShot;
+        Player owner = powerShotOwner;
+        clearPowerShot();
+        shot.use(owner, target);
+    }
+
+    public void clearPowerShot() {
+        this.activePowerShot = null;
+        this.powerShotOwner = null;
+        this.pendingDecoyCount = 0;
     }
 
     /**
@@ -38,6 +88,10 @@ public class Ball extends ItemSoccer {
     public void update() {
         // Aplicar gravedad (+Y hacia abajo)
         velocity.setPositions(velocity.getX(), velocity.getY() + GRAVITY);
+
+        if (activePowerShot != null) {
+            activePowerShot.updateBallFlight(this);
+        }
 
         // Aplicar resistencia del aire o fricción de césped
         float damping = onGround ? GROUND_FRICTION : AIR_DRAG;
@@ -111,20 +165,11 @@ public class Ball extends ItemSoccer {
         return 30.0f;
     }
 
-    @Override
-    public Vector2D getPosition() {
-        return position;
-    }
-
     public float getVx() {
         return velocity.getX();
     }
 
     public float getVy() {
         return velocity.getY();
-    }
-
-    public void setPositions(float x, float y) {
-        position.setPositions(x, y);
     }
 }

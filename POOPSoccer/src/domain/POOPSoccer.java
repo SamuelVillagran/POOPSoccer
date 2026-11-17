@@ -3,6 +3,7 @@ package domain;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -22,6 +23,8 @@ public class POOPSoccer {
     private CollisionChecker cChecker;
     private Map<Integer, Element> elements;
     private Map<Integer, Goal> goalPlayers;
+    private float decoyTimerSeconds = 0.0f;
+    private static final int DECOY_START_ID = 100;
 
     private POOPSoccer() {
         elements = new TreeMap<>();
@@ -41,9 +44,10 @@ public class POOPSoccer {
                           String nameP2, String teamP2) {
         this.goalLimit = goalLimit;
         this.matchType = matchType;
-        this.remainingTimeSeconds = timeLimitMinutes * 60f;
+        this.remainingTimeSeconds = (matchType == MatchType.PER_TIME) ? timeLimitMinutes * 60f : 0f;
         this.suddenDeath = false;
         this.isPaused = false;
+        this.decoyTimerSeconds = 0.0f;
 
         Team t1 = Team.fromDisplayName(teamP1);
         Team t2 = Team.fromDisplayName(teamP2);
@@ -59,6 +63,8 @@ public class POOPSoccer {
             player1 = new Player(typeP2, nameP1, t1, NumberPlayer.PLAYER1);
             player2 = new Player(typeP2, nameP2Final, t2, NumberPlayer.PLAYER2);
         }
+        player1.setRival(player2);
+        player2.setRival(player1);
 
         elements.clear();
         goalPlayers.clear();
@@ -95,9 +101,52 @@ public class POOPSoccer {
             ball.update();
             cChecker.resolvePlayerBallInteraction(player1, ball);
             cChecker.resolvePlayerBallInteraction(player2, ball);
+            spawnDecoyBallsIfNeeded();
             cChecker.resolveBallEnvironmentCollisions(ball, elements.values());
         }
+        updateDecoyBalls();
+        cChecker.resolveKickDamage(player1, player2);
+        cChecker.resolveKickDamage(player2, player1);
+        cChecker.resolvePlayersOverlap(player1, player2);
         checkGoal();
+    }
+
+    private void spawnDecoyBallsIfNeeded() {
+        if (ball == null) return;
+        int count = ball.consumePendingDecoyCount();
+        if (count <= 0) return;
+
+        clearDecoyBalls();
+        decoyTimerSeconds = ball.getPendingDecoyDuration();
+        float dir = (ball.getVx() >= 0f) ? 1.0f : -1.0f;
+        for (int i = 0; i < count; i++) {
+            Ball decoy = new Ball();
+            decoy.setPositions(ball.getX(), ball.getY());
+            float vx = dir * (7.5f + (i * 1.2f));
+            float vy = -3.0f - ((i % 4) * 2.2f);
+            decoy.setVelocity(vx, vy);
+            elements.put(DECOY_START_ID + i, decoy);
+        }
+    }
+
+    private void updateDecoyBalls() {
+        if (decoyTimerSeconds <= 0.0f) return;
+        decoyTimerSeconds -= DELTA_TIME;
+        if (decoyTimerSeconds <= 0.0f) {
+            clearDecoyBalls();
+            return;
+        }
+        for (Map.Entry<Integer, Element> entry : elements.entrySet()) {
+            if (entry.getKey() >= DECOY_START_ID && entry.getValue() instanceof Ball decoy) {
+                decoy.update();
+                cChecker.resolveBallEnvironmentCollisions(decoy, elements.values());
+            }
+        }
+    }
+
+    private void clearDecoyBalls() {
+        decoyTimerSeconds = 0.0f;
+        elements.keySet().removeIf(id -> id >= DECOY_START_ID);
     }
 
     // Player 1 controls
@@ -105,6 +154,9 @@ public class POOPSoccer {
         if (player1 != null && !isPaused) {
             try {
                 player1.move(direction);
+                if (direction == 'l' || direction == 'r') {
+                    cChecker.resolvePlayerMovementCollision(player1, player2);
+                }
                 cChecker.resolvePlayerEnvironmentCollisions(player1);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -117,6 +169,9 @@ public class POOPSoccer {
         if (player2 != null && !isPaused) {
             try {
                 player2.move(direction);
+                if (direction == 'l' || direction == 'r') {
+                    cChecker.resolvePlayerMovementCollision(player2, player1);
+                }
                 cChecker.resolvePlayerEnvironmentCollisions(player2);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -128,9 +183,11 @@ public class POOPSoccer {
         if (ball == null) return;
         if (cChecker.isGoal(ball, goalPlayers.get(1))) {
             player2.doGoal(); // left goal -> right player scores
+            player1.onGoalConceded(); // left player receives goal -> +25% power bar
             resetRound();
         } else if (cChecker.isGoal(ball, goalPlayers.get(2))) {
             player1.doGoal(); // right goal -> left player scores
+            player2.onGoalConceded(); // right player receives goal -> +25% power bar
             resetRound();
         }
     }
@@ -142,12 +199,12 @@ public class POOPSoccer {
     }
 
     void resetRound() {
+        clearDecoyBalls();
         if (ball != null) {
+            ball.clearPowerShot();
             ball.setVelocity(0.0f, 0.0f);
             ball.setPositions(400.0f, 250.0f);
         }
-        cChecker.resolveKickDamage(player1, player2);
-        cChecker.resolveKickDamage(player2, player1);
         if (player1 != null) {
             player1.setPositions(200.0f, 515.0f - player1.getHeight());
         }
@@ -161,7 +218,12 @@ public class POOPSoccer {
         game = new POOPSoccer();
     }
 
+    public void pauseGame() {
+        isPaused = true;
+    }
+
     public boolean resumeGame() {
+        isPaused = false;
         return isPaused;
     }
 
@@ -171,6 +233,49 @@ public class POOPSoccer {
 
     public int getGoalsP2() {
         return player2.getGoals();
+    }
+
+    public String getDisplayInfoP1() {
+        return player1 != null ? player1.getDisplayInfo() : "";
+    }
+
+    public String getDisplayInfoP2() {
+        return player2 != null ? player2.getDisplayInfo() : "";
+    }
+
+    public float getHealthPercentP1() {
+        return player1 != null ? player1.getHealthPercent() : 0f;
+    }
+
+    public float getHealthPercentP2() {
+        return player2 != null ? player2.getHealthPercent() : 0f;
+    }
+
+    public float getPowerPercentP1() {
+        return player1 != null ? player1.getPowerPercent() : 0f;
+    }
+
+    public float getPowerPercentP2() {
+        return player2 != null ? player2.getPowerPercent() : 0f;
+    }
+
+    public String getActivePowerNameP1() {
+        return player1 != null ? player1.getActivePowerName() : "Ninguno";
+    }
+
+    public String getActivePowerNameP2() {
+        return player2 != null ? player2.getActivePowerName() : "Ninguno";
+    }
+
+    public String getWinnerName() {
+        Player winner = getWinner();
+        return winner != null ? winner.getName() : null;
+    }
+
+    public String[] getAvailableTeams() {
+        return Arrays.stream(Team.values())
+                .map(Team::getDisplayName)
+                .toArray(String[]::new);
     }
 
     public boolean isGameFinished() {

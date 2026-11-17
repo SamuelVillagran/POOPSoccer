@@ -19,11 +19,6 @@ public class Goal extends ItemSoccer {
     public float getHeight() { return 115.0f; }
 
     @Override
-    public Vector2D getPosition() {
-        return position;
-    }
-
-    @Override
     public boolean isMovible(){
         return false;
     }
@@ -31,10 +26,6 @@ public class Goal extends ItemSoccer {
     @Override
     public boolean hasCollision() {
         return false;
-    }
-
-    public void setPositions(float x, float y) {
-        position.setPositions(x, y);
     }
 
     public Side getSide() {

@@ -9,58 +9,78 @@ import java.awt.RenderingHints;
 
 import javax.swing.JPanel;
 
-/**Ayudado a organizar por Gemini 3.8 Flash
- * Top HUD bar: player names, health bars, score and timer.
+/**
+ * Top HUD bar: player identification (name + country), health bars,
+ * power recharge bars, active power status, score and timer.
  */
 public class InfoPanel extends JPanel {
 
-    private static final Font FONT_HUD   = new Font("Arial", Font.BOLD, 13);
-    private static final Font FONT_SCORE = new Font("Arial", Font.BOLD, 18);
+    private static final Font FONT_HUD   = new Font("Arial", Font.BOLD, 12);
+    private static final Font FONT_POWER = new Font("Arial", Font.PLAIN, 11);
+    private static final Font FONT_SCORE = new Font("Arial", Font.BOLD, 20);
+    private static final Font FONT_TIMER = new Font("Arial", Font.BOLD, 13);
 
-    private static final Color BAR_BG    = new Color(60, 10, 10);
-    private static final Color BAR_HIGH  = new Color(50, 200, 50);   // > 50%
-    private static final Color BAR_MID   = new Color(220, 180, 0);   // 25-50%
-    private static final Color BAR_LOW   = new Color(200, 40, 40);   // <= 25%
+    private static final Color BAR_BG         = new Color(45, 45, 55);
+    private static final Color HP_HIGH        = new Color(50, 200, 50);   // > 50%
+    private static final Color HP_MID         = new Color(220, 180, 0);   // 25-50%
+    private static final Color HP_LOW         = new Color(200, 40, 40);   // <= 25%
+    private static final Color POWER_CHARGING = new Color(0, 170, 255);   // charging
+    private static final Color POWER_READY    = new Color(255, 215, 0);   // 100% full
 
     // State updated each frame from GamePanel
-    private String p1Name  = "P1";
-    private String p2Name  = "P2";
-    private String score   = "0 - 0";
-    private String timer   = "0.0s";
-    private float  hp1     = 1.0f;  // 0.0 - 1.0
-    private float  hp2     = 1.0f;
+    private String p1Name       = "P1";
+    private String p2Name       = "P2";
+    private String score        = "0 - 0";
+    private String timer        = "";
+    private float  hp1          = 1.0f;  // 0.0 - 1.0
+    private float  hp2          = 1.0f;
+    private float  power1       = 0.0f;  // 0.0 - 1.0
+    private float  power2       = 0.0f;
+    private String activePower1 = "Ninguno";
+    private String activePower2 = "Ninguno";
 
     public InfoPanel() {
-        setPreferredSize(new Dimension(800, 50));
+        setPreferredSize(new Dimension(800, 68));
         setBackground(new Color(20, 20, 25));
         setOpaque(true);
     }
 
     /**
-     * Called from the game loop (via SwingUtilities.invokeLater).
-     * @param p1Info  player 1 name
-     * @param score   "X - Y"
-     * @param timeRemaining seconds left (or 0 for per-goals mode)
-     * @param p2Info  player 2 name
-     * @param hp1Pct  player 1 health 0.0-1.0
-     * @param hp2Pct  player 2 health 0.0-1.0
+     * Full HUD update with health, power recharge progress, and active power.
      */
     public void updateMatchInfo(String p1Info, String score, float timeRemaining,
-                                String p2Info, float hp1Pct, float hp2Pct) {
-        this.p1Name = p1Info;
-        this.p2Name = p2Info;
-        this.score  = score;
-        this.timer  = timeRemaining > 0f
+                                String p2Info, float hp1Pct, float hp2Pct,
+                                float pow1Pct, float pow2Pct,
+                                String activePow1, String activePow2) {
+        this.p1Name       = p1Info;
+        this.p2Name       = p2Info;
+        this.score        = score;
+        this.timer        = timeRemaining > 0f
                 ? String.format("%.0fs", Math.ceil(timeRemaining))
                 : "";
-        this.hp1 = Math.max(0f, Math.min(1f, hp1Pct));
-        this.hp2 = Math.max(0f, Math.min(1f, hp2Pct));
+        this.hp1          = clamp01(hp1Pct);
+        this.hp2          = clamp01(hp2Pct);
+        this.power1       = clamp01(pow1Pct);
+        this.power2       = clamp01(pow2Pct);
+        this.activePower1 = (activePow1 != null) ? activePow1 : "Ninguno";
+        this.activePower2 = (activePow2 != null) ? activePow2 : "Ninguno";
         repaint();
     }
 
-    /** Legacy overload used by older callers (no health data). */
+    /** Overload preserving compatibility with 6-parameter callers. */
+    public void updateMatchInfo(String p1Info, String score, float timeRemaining,
+                                String p2Info, float hp1Pct, float hp2Pct) {
+        updateMatchInfo(p1Info, score, timeRemaining, p2Info, hp1Pct, hp2Pct,
+                power1, power2, activePower1, activePower2);
+    }
+
+    /** Legacy overload used by older callers (no health/power data). */
     public void updateMatchInfo(String p1Info, String score, float timeRemaining, String p2Info) {
         updateMatchInfo(p1Info, score, timeRemaining, p2Info, hp1, hp2);
+    }
+
+    private float clamp01(float value) {
+        return Math.max(0f, Math.min(1f, value));
     }
 
     @Override
@@ -70,50 +90,96 @@ public class InfoPanel extends JPanel {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         int w = getWidth();
-        int h = getHeight();
 
         // ---- Layout constants ----
-        int barW  = 220;
-        int barH  = 14;
-        int barY  = (h - barH) / 2 + 6;
-        int nameY = barY - 2;
+        int barW   = 230;
+        int hpBarH = 11;
+        int pwBarH = 9;
 
-        int p1BarX = 10;
-        int p2BarX = w - 10 - barW;
+        int nameY  = 15;
+        int hpBarY = 20;
+        int pwBarY = 34;
+        int powerTextY = 58;
 
-        // ---- Player 1 (left, bar grows right) ----
+        int p1BarX = 12;
+        int p2BarX = w - 12 - barW;
+
+        // ---- Player 1 (left, bars grow right) ----
         g2.setFont(FONT_HUD);
         g2.setColor(Color.CYAN);
         g2.drawString(p1Name, p1BarX, nameY);
 
-        drawBar(g2, p1BarX, barY + 4, barW, barH, hp1, false);
+        drawBar(g2, p1BarX, hpBarY, barW, hpBarH, hp1, resolveHpColor(hp1), false);
+        drawBar(g2, p1BarX, pwBarY, barW, pwBarH, power1, resolvePowerColor(power1), false);
+
+        g2.setFont(FONT_POWER);
+        g2.setColor(resolvePowerTextColor(activePower1, power1));
+        String p1PowerLabel = formatPowerLabel(activePower1, power1);
+        g2.drawString(p1PowerLabel, p1BarX, powerTextY);
 
         // ---- Score + Timer (center) ----
         g2.setFont(FONT_SCORE);
         g2.setColor(Color.YELLOW);
-        String center = timer.isEmpty() ? score : score + "  |  " + timer;
-        int centerX = (w - g2.getFontMetrics().stringWidth(center)) / 2;
-        g2.drawString(center, centerX, h - 10);
+        int scoreX = (w - g2.getFontMetrics().stringWidth(score)) / 2;
+        g2.drawString(score, scoreX, 34);
 
-        // ---- Player 2 (right, bar grows left) ----
+        if (!timer.isEmpty()) {
+            g2.setFont(FONT_TIMER);
+            g2.setColor(Color.LIGHT_GRAY);
+            String timerLabel = "Tiempo: " + timer;
+            int timerX = (w - g2.getFontMetrics().stringWidth(timerLabel)) / 2;
+            g2.drawString(timerLabel, timerX, 55);
+        }
+
+        // ---- Player 2 (right, bars grow left) ----
         g2.setFont(FONT_HUD);
         g2.setColor(Color.ORANGE);
         int p2NameX = p2BarX + barW - g2.getFontMetrics().stringWidth(p2Name);
         g2.drawString(p2Name, p2NameX, nameY);
 
-        drawBar(g2, p2BarX, barY + 4, barW, barH, hp2, true);
+        drawBar(g2, p2BarX, hpBarY, barW, hpBarH, hp2, resolveHpColor(hp2), true);
+        drawBar(g2, p2BarX, pwBarY, barW, pwBarH, power2, resolvePowerColor(power2), true);
+
+        g2.setFont(FONT_POWER);
+        g2.setColor(resolvePowerTextColor(activePower2, power2));
+        String p2PowerLabel = formatPowerLabel(activePower2, power2);
+        int p2PowerX = p2BarX + barW - g2.getFontMetrics().stringWidth(p2PowerLabel);
+        g2.drawString(p2PowerLabel, p2PowerX, powerTextY);
+    }
+
+    private Color resolveHpColor(float pct) {
+        return pct > 0.50f ? HP_HIGH : pct > 0.25f ? HP_MID : HP_LOW;
+    }
+
+    private Color resolvePowerColor(float pct) {
+        return pct >= 0.999f ? POWER_READY : POWER_CHARGING;
+    }
+
+    private Color resolvePowerTextColor(String activePower, float powerPct) {
+        if (!"Ninguno".equals(activePower) || powerPct >= 0.999f) {
+            return POWER_READY;
+        }
+        return Color.LIGHT_GRAY;
+    }
+
+    private String formatPowerLabel(String activePower, float powerPct) {
+        if (!"Ninguno".equals(activePower)) {
+            return "Poder activo: " + activePower;
+        }
+        if (powerPct >= 0.999f) {
+            return "Poder activo: Ninguno (¡Barra llena!)";
+        }
+        return "Poder activo: Ninguno";
     }
 
     private void drawBar(Graphics2D g2, int x, int y, int w, int h,
-                         float pct, boolean rightToLeft) {
+                         float pct, Color fillColor, boolean rightToLeft) {
         // Background
         g2.setColor(BAR_BG);
         g2.fillRoundRect(x, y, w, h, 6, 6);
 
-        // Fill color based on percentage
-        Color fill = pct > 0.50f ? BAR_HIGH : pct > 0.25f ? BAR_MID : BAR_LOW;
-        g2.setColor(fill);
-
+        // Fill
+        g2.setColor(fillColor);
         int fillW = (int) (w * pct);
         if (fillW > 0) {
             if (rightToLeft) {

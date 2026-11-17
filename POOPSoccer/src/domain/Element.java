@@ -17,4 +17,24 @@ public interface Element {
     default float getY() {
         return getPosition() != null ? getPosition().getY() : 0.0f;
     }
+
+    default String getVariantName() {
+        return "normal";
+    }
+
+    default boolean hasPowerAura() {
+        return false;
+    }
+
+    default boolean hasShotAura() {
+        return false;
+    }
+
+    default boolean isStunnedStatus() {
+        return false;
+    }
+
+    default String getStatusText() {
+        return "";
+    }
 }

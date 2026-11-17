@@ -63,6 +63,12 @@ public class KeyHandler extends KeyAdapter {
         return fired;
     }
 
+    /** Clears all pressed keys to prevent stuck inputs when focus is lost or paused. */
+    public void clearAllKeys() {
+        KEYS.clear();
+        escToggle = false;
+    }
+
     // Getters consultando directamente el estado booleano en el BitSet
     public boolean getW() { return KEYS.get(KeyEvent.VK_W); }
     public boolean getS() { return KEYS.get(KeyEvent.VK_S); }

@@ -217,4 +217,117 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         assertEquals(0f, p2.getCurrentHealth(), DELTA);
         assertTrue(p2.isStuned());
     }
+
+    // ---------------------------------------------------------------
+    // Power recharge bar and HUD state
+    // ---------------------------------------------------------------
+
+    @Test
+    void bothPlayersStartWithEmptyPowerBar() {
+        assertEquals(0f, p1.getPowerPercent(), DELTA);
+        assertEquals(0f, p2.getPowerPercent(), DELTA);
+        assertFalse(p1.isPowerFull());
+        assertFalse(p1.isPowerActive());
+        assertEquals("Ninguno", p1.getActivePowerName());
+    }
+
+    @Test
+    void powerBarRechargesOverTimeUntilFull() {
+        playFrames(300); // half of 600 frames (5 seconds)
+        assertEquals(0.5f, p1.getPowerPercent(), DELTA);
+        assertFalse(p1.isPowerFull());
+
+        playFrames(300); // 600 frames total (10 seconds)
+        assertEquals(1.0f, p1.getPowerPercent(), DELTA);
+        assertTrue(p1.isPowerFull());
+    }
+
+    @Test
+    void powerCannotBeActivatedBeforeBarIsFull() {
+        playFrames(200);
+        game.movePlayer1('p');
+
+        assertFalse(p1.isPowerActive());
+        assertEquals("Ninguno", p1.getActivePowerName());
+    }
+
+    @Test
+    void powerCanBeActivatedWhenFullAndShowsActivePowerName() {
+        playFrames(600);
+        game.movePlayer1('p');
+
+        assertTrue(p1.isPowerActive());
+        assertEquals(0f, p1.getPowerPercent(), DELTA);
+        assertEquals("Lightning", p1.getActivePowerName());
+    }
+
+    @Test
+    void concedingAGoalIncreasesPowerBarByOneQuarter() {
+        p1.onGoalConceded();
+        assertEquals(0.25f, p1.getPowerPercent(), DELTA);
+        assertEquals(0f, p2.getPowerPercent(), DELTA);
+    }
+
+    @Test
+    void electrocutedPlayerCannotJumpAndMovesAtHalfSpeed() {
+        p1.getTeam().getPower().use(p1, p2); // Cameroon -> ElectrocutedEffect (3s)
+
+        float normalSpeed = p1.getSpeed();
+        assertEquals(normalSpeed * 0.5f, p2.getSpeed(), DELTA);
+
+        game.movePlayer2('j');
+        assertFalse(p2.isJumping());
+    }
+
+    @Test
+    void unconsciousPlayerIsLaunchedAndCannotMoveJumpOrKick() {
+        Player nigeriaPlayer = new Player(new Normal(), "Obi", Team.NIGERIA, NumberPlayer.PLAYER1);
+        nigeriaPlayer.getTeam().getPower().use(nigeriaPlayer, p2); // Tornado -> UnconsciousEffect (3s)
+
+        assertTrue(p2.isJumping(), "Launched into the air on impact");
+        float xBefore = p2.getX();
+        game.movePlayer2('l');
+        game.movePlayer2('k');
+        assertEquals(xBefore, p2.getX(), DELTA);
+        assertFalse(p2.isKicking());
+    }
+
+    @Test
+    void pushEffectMovesRivalTowardOwnGoal() {
+        Player koreaPlayer = new Player(new Normal(), "Son", Team.COREA_DEL_SUR, NumberPlayer.PLAYER1);
+        koreaPlayer.getTeam().getPower().use(koreaPlayer, p2); // BlueAura -> PushEffect (1.5s)
+
+        float xBefore = p2.getX();
+        playFrames(5);
+        // Player 2's own goal is to the right (+X)
+        assertTrue(p2.getX() > xBefore);
+    }
+
+    @Test
+    void illusionPowerSpawnsSevenDecoyBallsOnBallTouch() {
+        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 5,
+                "Alex", "Estados Unidos", "Luis", "Nigeria");
+        p1 = game.getPlayer1();
+        playFrames(600);
+        game.movePlayer1('p'); // activate aura
+
+        // Touch the ball
+        game.getBall().setPositions(p1.getX(), p1.getY());
+        playFrames(1);
+
+        long ballCount = game.getElementsToDraw().values().stream()
+                .filter(e -> e instanceof Ball)
+                .count();
+        assertEquals(8L, ballCount, "1 real ball + 7 decoy balls");
+    }
+
+    @Test
+    void playersCannotWalkThroughEachOtherOnGround() {
+        float floorY = CollisionChecker.DEFAULT_FLOOR_Y - p1.getHeight();
+        p1.setPositions(340f, floorY);
+        p2.setPositions(400f, floorY); // touching edge-to-edge (340 + 60 = 400)
+
+        game.movePlayer1('r');
+        assertEquals(340f, p1.getX(), DELTA, "Player 1 is blocked by Player 2 on the ground");
+    }
 }

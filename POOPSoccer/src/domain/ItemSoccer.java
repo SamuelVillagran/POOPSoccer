@@ -16,4 +16,8 @@ public abstract class ItemSoccer implements Element {
     public Vector2D getPosition() {
         return position;
     }
+
+    public void setPositions(float x, float y) {
+        position.setPositions(x, y);
+    }
 }
