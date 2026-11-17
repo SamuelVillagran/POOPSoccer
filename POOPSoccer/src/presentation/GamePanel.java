@@ -160,21 +160,13 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void showEscapeMenu() {
-        String[] options = { "Volver al menú", "Reiniciar", "Continuar" };
-        int choice = JOptionPane.showOptionDialog(
-                this,
-                "¿Qué deseas hacer?",
-                "Juego pausado",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[2]);
+        String score = controller.getGoalsP1() + " - " + controller.getGoalsP2();
+        PauseDialog.Choice choice = PauseDialog.showDialog(this, score);
 
         switch (choice) {
-            case 0 -> LISTENER.goToMenu();
-            case 1 -> LISTENER.restartFromLevel1();
-            default -> {
+            case MENU -> LISTENER.goToMenu();
+            case RESTART -> LISTENER.restartFromLevel1();
+            case RESUME -> {
                 // Limpia las teclas retenidas, reanuda el partido y devuelve el foco a la cancha
                 KeyHandler.getInstance().clearAllKeys();
                 controller.resumeGame();
