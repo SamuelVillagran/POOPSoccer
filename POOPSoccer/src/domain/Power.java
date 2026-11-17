@@ -1,6 +1,8 @@
 package domain;
 
-public abstract class Power {
+import java.io.Serializable;
+
+public abstract class Power implements Serializable {
     public abstract Effect createEffect();
     public abstract int getDamage();            // base damage from Annex 1
 

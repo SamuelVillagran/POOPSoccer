@@ -1,6 +1,8 @@
 package domain;
 
-public abstract class PlayerType {
+import java.io.Serializable;
+
+public abstract class PlayerType implements Serializable {
     private Player player;
     private Power power;
 

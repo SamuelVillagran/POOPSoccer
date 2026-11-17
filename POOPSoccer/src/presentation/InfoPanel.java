@@ -91,8 +91,8 @@ public class InfoPanel extends JPanel {
 
         int w = getWidth();
 
-        // ---- Layout constants ----
-        int barW   = 230;
+        // ---- Layout constants (proportional to current width) ----
+        int barW   = Math.max(160, Math.min(240, (int) (w * 0.29)));
         int hpBarH = 11;
         int pwBarH = 9;
 

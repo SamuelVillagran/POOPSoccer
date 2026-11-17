@@ -1,6 +1,8 @@
 package domain;
 
-public interface Effect {
+import java.io.Serializable;
+
+public interface Effect extends Serializable {
     default boolean canJump() { return true; }
     default boolean canKick() { return true; }
     default int getSpeed() { return 1; }

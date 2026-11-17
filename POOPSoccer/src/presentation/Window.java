@@ -103,7 +103,10 @@ public class Window extends JFrame {
                 selectedFile = new File(selectedFile.getAbsolutePath() + ".dat");
             }
             try {
-                // Delegar guardado al contenedor / dominio
+                // Delegamos el guardado al contenedor principal y avisamos al usuario
+                if (gameContainer != null) {
+                    gameContainer.saveCurrentGame(selectedFile);
+                }
                 JOptionPane.showMessageDialog(this, "Partida guardada en: " + selectedFile.getName());
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error al guardar archivo:\n" + ex.getMessage(), "Error",

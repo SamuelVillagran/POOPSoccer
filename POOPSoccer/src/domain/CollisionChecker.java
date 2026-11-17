@@ -3,9 +3,10 @@ package domain;
 import presentation.KeyHandler;
 
 import java.awt.Rectangle;
+import java.io.Serializable;
 import java.util.Collection;
 
-public class CollisionChecker {
+public class CollisionChecker implements Serializable {
     public static CollisionChecker instance = null;
     public static final int FIELD_WIDTH = 800;
     public static final int FIELD_HEIGHT = 600;
@@ -79,80 +80,77 @@ public class CollisionChecker {
      */
     public void resolvePlayerBallInteraction(Player player, Ball ball) {
         if (player == null || ball == null) return;
-
         boolean touching = checkContactPyWithBall(player, ball);
         boolean inKickZone = player.isKicking() && checkKickReach(player, ball);
-
         if (!touching && !inKickZone) return;
 
-        // Rule 5: If the ball carries an active power shot from the rival, apply damage and effect
-        if (ball.hasPowerShotAgainst(player)) {
-            ball.impactPlayerWithPowerShot(player);
-            if (player.isStuned()) {
-                return;
-            }
-        }
+        if (applyIncomingPowerShot(player, ball)) return;
+        if (launchPlayerPowerShot(player, ball)) return;
 
-        // Rule 4: When a player with active power touches the ball, launch the power shot and clear aura
-        if (player.isPowerActive()) {
-            if (player.isKicking()) {
-                player.markKickUsed();
-            }
-            int attackDir = player.getAttackDirection();
-            float safeX = (attackDir == 1)
-                    ? player.getX() + player.getWidth() + 4.0f
-                    : player.getX() - ball.getWidth() - 4.0f;
-            ball.setPositions(safeX, ball.getY() - 2.0f);
-            ball.setLastTouch(player);
-            ball.setOnGround(false);
-            player.triggerActivePowerOnBallHit(ball);
-            return;
+        if (player.isKicking()) {
+            applyKickToBall(player, ball);
+        } else {
+            applyBodyContactToBall(player, ball);
         }
+    }
 
+    private boolean applyIncomingPowerShot(Player player, Ball ball) {
+        if (!ball.hasPowerShotAgainst(player)) return false;
+        ball.impactPlayerWithPowerShot(player);
+        return player.isStuned();
+    }
+
+    private boolean launchPlayerPowerShot(Player player, Ball ball) {
+        if (!player.isPowerActive()) return false;
+        if (player.isKicking()) player.markKickUsed();
+        placeBallInFrontOfPlayer(player, ball, 2.0f);
+        ball.setLastTouch(player);
+        ball.setOnGround(false);
+        player.triggerActivePowerOnBallHit(ball);
+        return true;
+    }
+
+    private void applyKickToBall(Player player, Ball ball) {
+        player.markKickUsed();
         int attackDir = player.getAttackDirection();
+        float kickVx = attackDir * (KICK_BASE_VX
+                + player.getForce() * KICK_FORCE_MULTIPLIER
+                + player.getSpeed() * KICK_SPEED_BONUS);
+        float kickVy = -(KICK_BASE_VY + player.getForce() * KICK_LIFT_MULTIPLIER);
+
+        ball.setVelocity(0.0f, 0.0f);
+        ball.move(new Vector2D(kickVx, kickVy));
+        ball.setLastTouch(player);
+        ball.setOnGround(false);
+        placeBallInFrontOfPlayer(player, ball, 4.0f);
+    }
+
+    private void placeBallInFrontOfPlayer(Player player, Ball ball, float liftY) {
+        float safeX = (player.getAttackDirection() == 1)
+                ? player.getX() + player.getWidth() + 4.0f
+                : player.getX() - ball.getWidth() - 4.0f;
+        ball.setPositions(safeX, ball.getY() - liftY);
+    }
+
+    private void applyBodyContactToBall(Player player, Ball ball) {
         float pCenterX = player.getX() + player.getWidth() * 0.5f;
         float pCenterY = player.getY() + player.getHeight() * 0.5f;
         float bCenterX = ball.getX() + ball.getWidth() * 0.5f;
         float bCenterY = ball.getY() + ball.getHeight() * 0.5f;
+        float dirX = (bCenterX >= pCenterX) ? 1.0f : -1.0f;
 
-        if (player.isKicking()) {
-            player.markKickUsed();
-            float kickVx = attackDir * (KICK_BASE_VX
-                    + player.getForce() * KICK_FORCE_MULTIPLIER
-                    + player.getSpeed() * KICK_SPEED_BONUS);
-            float kickVy = -(KICK_BASE_VY + player.getForce() * KICK_LIFT_MULTIPLIER);
+        float incomingVx = ball.getVx();
+        float pushVx = (Math.abs(incomingVx) > 2.0f)
+                ? dirX * Math.min(2.2f, Math.abs(incomingVx) * 0.30f)
+                : dirX * 1.5f;
 
-            ball.setVelocity(0.0f, 0.0f);
-            ball.move(new Vector2D(kickVx, kickVy));
-            ball.setLastTouch(player);
-            ball.setOnGround(false);
+        float pushVy = (player.isJumping() && bCenterY < pCenterY)
+                ? -5.0f - (player.getJumpStat() * 0.25f)
+                : (ball.getVy() > 0.0f) ? -ball.getVy() * 0.25f : ball.getVy() * 0.5f;
 
-            float safeX = (attackDir == 1)
-                    ? player.getX() + player.getWidth() + 4.0f
-                    : player.getX() - ball.getWidth() - 4.0f;
-            float safeY = ball.getY() - 4.0f;
-            ball.setPositions(safeX, safeY);
-        } else {
-            float dirX = (bCenterX >= pCenterX) ? 1.0f : -1.0f;
-
-            // Amortiguar el balón al chocar con el cuerpo sin patear (control realista)
-            float incomingVx = ball.getVx();
-            float pushVx = (Math.abs(incomingVx) > 2.0f)
-                    ? dirX * Math.min(2.2f, Math.abs(incomingVx) * 0.30f)
-                    : dirX * 1.5f;
-
-            float pushVy;
-            if (player.isJumping() && bCenterY < pCenterY) {
-                pushVy = -5.0f - (player.getJumpStat() * 0.25f);
-            } else {
-                pushVy = (ball.getVy() > 0.0f) ? -ball.getVy() * 0.25f : ball.getVy() * 0.5f;
-            }
-
-            ball.setVelocity(pushVx, pushVy);
-            ball.setLastTouch(player);
-
-            resolveAABBOverlap(player, ball, dirX);
-        }
+        ball.setVelocity(pushVx, pushVy);
+        ball.setLastTouch(player);
+        resolveAABBOverlap(player, ball, dirX);
     }
 
     private void resolveAABBOverlap(Player player, Ball ball, float dirX) {

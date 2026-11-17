@@ -5,8 +5,11 @@ public class Player extends ItemSoccer {
     private static final int KICK_ACTIVE_FRAMES = 10;
     private static final int JUMP_HALF_FRAMES = 18;
     private static final int STUN_FRAMES = 180; // 3s at 60FPS
+    private static final int KICK_COOLDOWN_FRAMES = 30;
+    private int kickCooldown = 0;
 
     private static final int MAX_STAT = 10;
+    private static final int BASE_UPGRADE_COST = 500;
     private static final float BASE_SPEED = 3.0f;
     private static final float BASE_JUMP = 3.0f;
     private static final float BALL_KICK_FORCE = 3.0f;
@@ -21,6 +24,7 @@ public class Player extends ItemSoccer {
     private int jumpStat = 1;
     private int kickStat = 1;
     private int survivalStat = 1;
+    private int points = 0;
 
     private String name;
     private int goals = 0;
@@ -83,10 +87,12 @@ public class Player extends ItemSoccer {
 
     private void kick() {
         if (effect != null && !effect.canKick()) return;
-        if (kickFrames == 0) {
+        if (kickFrames == 0 && kickCooldown == 0) {
             kickFrames = KICK_ACTIVE_FRAMES;
+            kickCooldown = KICK_COOLDOWN_FRAMES;
             kickAlreadyHit = false;   // new kick, it can hurt again
         }
+
     }
 
     private void jump() throws InterruptedException {
@@ -95,50 +101,60 @@ public class Player extends ItemSoccer {
     }
 
     public void update() {
+        updatePowerCharge();
+        updateEffect();
+        if (updateStun()) return;
+        updatePush();
+        updateKick();
+        updateJump();
+    }
+
+    private void updatePowerCharge() {
         if (currentPower < MAX_POWER) {
             currentPower = Math.min(MAX_POWER, currentPower + POWER_RECHARGE_PER_FRAME);
         }
+    }
 
+    private void updateEffect() {
         if (effect != null) {
             effect.update(1.0f / 60.0f);
             if (effect.isFinished()) {
                 effect = null;
             }
         }
+    }
 
-        // Stun countdown
-        if (isStuned) {
-            stunFramesLeft--;
-            if (stunFramesLeft <= 0) {
-                isStuned = false;
-                currentHealth = getMaxLife(); // restore health after stun
-            }
-            return; // skip movement while stunned
+    private boolean updateStun() {
+        if (!isStuned) return false;
+        stunFramesLeft--;
+        if (stunFramesLeft <= 0) {
+            isStuned = false;
+            currentHealth = getMaxLife();
         }
+        return true;
+    }
 
+    private void updatePush() {
         if (effect != null && effect.isPushed()) {
-            // Empuje: el rival es lanzado hacia su propio arco (-getAttackDirection())
             move(-getAttackDirection() * Math.round(BASE_SPEED * 1.6f), 0);
         }
+    }
 
-        if (kickFrames > 0) {
-            kickFrames--;
-        }
+    private void updateKick() {
+        if (kickFrames > 0) kickFrames--;
+        if (kickCooldown > 0) kickCooldown--;
+    }
 
-        if (jumpFrames > 0) {
-            float jumpStep = 4.5f + (getJumpStat() * 0.6f);
-            if (jumpFrames <= JUMP_HALF_FRAMES) {
-                move(0, (int) -jumpStep);
-            } else {
-                move(0, (int) jumpStep);
-            }
-            jumpFrames++;
+    private void updateJump() {
+        if (jumpFrames <= 0) return;
+        float jumpStep = 4.5f + (getJumpStat() * 0.6f);
+        move(0, (int) (jumpFrames <= JUMP_HALF_FRAMES ? -jumpStep : jumpStep));
+        jumpFrames++;
 
-            if (jumpFrames > JUMP_HALF_FRAMES * 2) {
-                jumpFrames = 0;
-                if (groundY >= 0.0f) {
-                    position.setPositions(position.getX(), groundY);
-                }
+        if (jumpFrames > JUMP_HALF_FRAMES * 2) {
+            jumpFrames = 0;
+            if (groundY >= 0.0f) {
+                position.setPositions(position.getX(), groundY);
             }
         }
     }
@@ -279,6 +295,58 @@ public class Player extends ItemSoccer {
 
     public float getJumpStat() {
         return BASE_JUMP * (1 + 0.10f * (jumpStat - 1));
+    }
+
+    public int getPoints() {
+        return points;
+    }
+
+    public void addPoints(int amount) {
+        if (amount > 0) points += amount;
+    }
+
+    public int getStatLevel(String stat) {
+        return switch (stat.toLowerCase()) {
+            case "speed" -> speedStat;
+            case "jump" -> jumpStat;
+            case "kick" -> kickStat;
+            case "survival" -> survivalStat;
+            default -> 1;
+        };
+    }
+
+    public int getUpgradeCost(String stat) {
+        int level = getStatLevel(stat);
+        return BASE_UPGRADE_COST * (int) Math.pow(2, level - 1);
+    }
+
+    public boolean upgradeStat(String stat) {
+        int level = getStatLevel(stat);
+        int cost = getUpgradeCost(stat);
+        if (level >= MAX_STAT || points < cost) return false;
+        points -= cost;
+        incrementStat(stat);
+        currentHealth = getMaxLife();
+        return true;
+    }
+
+    private void incrementStat(String stat) {
+        switch (stat.toLowerCase()) {
+            case "speed" -> speedStat++;
+            case "jump" -> jumpStat++;
+            case "kick" -> kickStat++;
+            case "survival" -> survivalStat++;
+        }
+    }
+
+    public void copyProgressFrom(Player previous) {
+        if (previous == null) return;
+        this.points = previous.points;
+        this.speedStat = previous.speedStat;
+        this.jumpStat = previous.jumpStat;
+        this.kickStat = previous.kickStat;
+        this.survivalStat = previous.survivalStat;
+        this.currentHealth = getMaxLife();
     }
 
     public void setGroundY(float groundY) {

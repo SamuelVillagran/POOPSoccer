@@ -1,13 +1,20 @@
 package domain;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
-public class POOPSoccer {
+public class POOPSoccer implements Serializable {
     private static POOPSoccer game;
     private boolean isPaused;
     private Player player1, player2;
@@ -24,12 +31,15 @@ public class POOPSoccer {
     private Map<Integer, Element> elements;
     private Map<Integer, Goal> goalPlayers;
     private float decoyTimerSeconds = 0.0f;
+    private boolean pointsAwarded = false;
     private static final int DECOY_START_ID = 100;
 
     private POOPSoccer() {
         elements = new TreeMap<>();
         cChecker = CollisionChecker.getInstance();
         goalPlayers = new TreeMap<>();
+        player1 = new Player(new Normal(), "Jugador 1", Team.COREA_DEL_SUR, NumberPlayer.PLAYER1);
+        player2 = new Player(new Normal(), "Jugador 2", Team.CAMEROON, NumberPlayer.PLAYER2);
     }
 
     public static POOPSoccer getGame() {
@@ -42,30 +52,38 @@ public class POOPSoccer {
     public void startGame(GameMode gameMode, MatchType matchType, int goalLimit, int timeLimitMinutes,
                           String nameP1, String teamP1,
                           String nameP2, String teamP2) {
+        initMatchState(matchType, goalLimit, timeLimitMinutes);
+        initPlayers(gameMode, nameP1, teamP1, nameP2, teamP2);
+        initFieldElements();
+    }
+
+    private void initMatchState(MatchType matchType, int goalLimit, int timeLimitMinutes) {
         this.goalLimit = goalLimit;
         this.matchType = matchType;
         this.remainingTimeSeconds = (matchType == MatchType.PER_TIME) ? timeLimitMinutes * 60f : 0f;
         this.suddenDeath = false;
         this.isPaused = false;
         this.decoyTimerSeconds = 0.0f;
+        this.pointsAwarded = false;
+    }
 
-        Team t1 = Team.fromDisplayName(teamP1);
-        Team t2 = Team.fromDisplayName(teamP2);
+    private void initPlayers(GameMode gameMode, String nameP1, String teamP1, String nameP2, String teamP2) {
+        Player prevP1 = this.player1;
+        Player prevP2 = this.player2;
 
         PlayerType typeP1 = (gameMode == GameMode.MVM) ? new Machine() : new Normal();
         PlayerType typeP2 = (gameMode == GameMode.PVP) ? new Normal() : new Machine();
-
         String nameP2Final = (nameP2 != null && !nameP2.isBlank()) ? nameP2 : "CPU";
-        if (gameMode == GameMode.MVM) {
-            player1 = new Player(typeP2, nameP1, t1, NumberPlayer.PLAYER1);
-            player2 = new Player(typeP1, nameP2Final, t2, NumberPlayer.PLAYER2);
-        } else {
-            player1 = new Player(typeP2, nameP1, t1, NumberPlayer.PLAYER1);
-            player2 = new Player(typeP2, nameP2Final, t2, NumberPlayer.PLAYER2);
-        }
+
+        player1 = new Player(typeP1, nameP1, Team.fromDisplayName(teamP1), NumberPlayer.PLAYER1);
+        player2 = new Player(typeP2, nameP2Final, Team.fromDisplayName(teamP2), NumberPlayer.PLAYER2);
+        player1.copyProgressFrom(prevP1);
+        player2.copyProgressFrom(prevP2);
         player1.setRival(player2);
         player2.setRival(player1);
+    }
 
+    private void initFieldElements() {
         elements.clear();
         goalPlayers.clear();
         setElements();
@@ -75,28 +93,32 @@ public class POOPSoccer {
 
     public void update() {
         if (isPaused) return;
+        timerUpdate();
+        playersUpdate();
+        ballUpdate();
+        collisionsUpdate();
+        checkGoal();
+    }
 
-        // Advance timer for PER_TIME matches
+    private void timerUpdate() {
         if (matchType == MatchType.PER_TIME && !suddenDeath) {
             remainingTimeSeconds -= DELTA_TIME;
             if (remainingTimeSeconds <= 0f) {
                 remainingTimeSeconds = 0f;
-                // Check tie -> sudden death
                 if (player1.getGoals() == player2.getGoals()) {
                     suddenDeath = true;
                 }
-                // If not tied, isGameFinished() will return true
             }
         }
+    }
 
-        if (player1 != null) {
-            player1.update();
-            cChecker.resolvePlayerEnvironmentCollisions(player1);
-        }
-        if (player2 != null) {
-            player2.update();
-            cChecker.resolvePlayerEnvironmentCollisions(player2);
-        }
+    private void collisionsUpdate() {
+        cChecker.resolveKickDamage(player1, player2);
+        cChecker.resolveKickDamage(player2, player1);
+        cChecker.resolvePlayersOverlap(player1, player2);
+    }
+
+    private void ballUpdate() {
         if (ball != null) {
             ball.update();
             cChecker.resolvePlayerBallInteraction(player1, ball);
@@ -105,10 +127,17 @@ public class POOPSoccer {
             cChecker.resolveBallEnvironmentCollisions(ball, elements.values());
         }
         updateDecoyBalls();
-        cChecker.resolveKickDamage(player1, player2);
-        cChecker.resolveKickDamage(player2, player1);
-        cChecker.resolvePlayersOverlap(player1, player2);
-        checkGoal();
+    }
+
+    private void playersUpdate() {
+        if (player1 != null) {
+            player1.update();
+            cChecker.resolvePlayerEnvironmentCollisions(player1);
+        }
+        if (player2 != null) {
+            player2.update();
+            cChecker.resolvePlayerEnvironmentCollisions(player2);
+        }
     }
 
     private void spawnDecoyBallsIfNeeded() {
@@ -278,6 +307,52 @@ public class POOPSoccer {
                 .toArray(String[]::new);
     }
 
+    public void awardMatchPoints() {
+        if (pointsAwarded || !isGameFinished()) return;
+        pointsAwarded = true;
+        Player winner = getWinner();
+        if (winner == player1) {
+            player1.addPoints(100);
+            player2.addPoints(25);
+        } else if (winner == player2) {
+            player2.addPoints(100);
+            player1.addPoints(25);
+        }
+    }
+
+    public String getMatchSummaryMessage() {
+        awardMatchPoints();
+        Player winner = getWinner();
+        if (winner == null) return "¡EMPATE!";
+        Player loser = (winner == player1) ? player2 : player1;
+        return "¡Ganador: " + winner.getName() + " (+100 pts | Total: " + winner.getPoints() + " pts)!\n"
+                + "Perdedor: " + loser.getName() + " (+25 pts | Total: " + loser.getPoints() + " pts)";
+    }
+
+    private Player getPlayerByNumber(int playerNum) {
+        return playerNum == 1 ? player1 : player2;
+    }
+
+    public int getPoints(int playerNum) {
+        Player p = getPlayerByNumber(playerNum);
+        return p != null ? p.getPoints() : 0;
+    }
+
+    public int getStatLevel(int playerNum, String stat) {
+        Player p = getPlayerByNumber(playerNum);
+        return p != null ? p.getStatLevel(stat) : 1;
+    }
+
+    public int getUpgradeCost(int playerNum, String stat) {
+        Player p = getPlayerByNumber(playerNum);
+        return p != null ? p.getUpgradeCost(stat) : 500;
+    }
+
+    public boolean upgradeStat(int playerNum, String stat) {
+        Player p = getPlayerByNumber(playerNum);
+        return p != null && p.upgradeStat(stat);
+    }
+
     public boolean isGameFinished() {
         if (matchType == MatchType.PER_GOALS) {
             return player1.getGoals() >= goalLimit || player2.getGoals() >= goalLimit;
@@ -310,73 +385,60 @@ public class POOPSoccer {
         final int TILE_SIZE = 50;
         final String path = "/positionElements/configuration.txt";
         int nextId = 3;
-        try {
-            InputStream is = getClass().getResourceAsStream(path);
-            if (is == null) {
-                throw new IllegalArgumentException("No se encontró el archivo de nivel: " + path);
-            }
-
+        try (InputStream is = getClass().getResourceAsStream(path)) {
+            if (is == null) throw new IllegalArgumentException("No se encontró el archivo de nivel: " + path);
             BufferedReader br = new BufferedReader(new InputStreamReader(is));
             String line;
             int row = 0;
-            int posX = 0, posY = 0;
             while ((line = br.readLine()) != null) {
                 String[] tokens = line.trim().split("\\s+");
-
                 for (int col = 0; col < tokens.length; col++) {
-                    String token = tokens[col];
-                    posX = col * TILE_SIZE;
-                    posY = row * TILE_SIZE;
-                    switch (token) {
-                        case "1":
-                            player1.setPositions(posX, posY);
-                            player1.setGroundY(posY);
-                            elements.put(1, player1);
-                            break;
-                        case "2":
-                            player2.setPositions(posX, posY);
-                            player2.setGroundY(posY);
-                            elements.put(2, player2);
-                            break;
-                        case "0":
-                            this.ball = new Ball();
-                            this.ball.setPositions(posX + TILE_SIZE / 2, posY);
-                            elements.put(0, this.ball);
-                            break;
-                        case ".":
-                            break;
-                        case "4":
-                            Pitch pLeft = new Pitch(Side.LEFT);
-                            pLeft.setPositions(posX, posY);
-                            elements.put(nextId++, pLeft);
-                            break;
-                        case "5":
-                            Pitch pRight = new Pitch(Side.RIGTH);
-                            pRight.setPositions(posX + 5.0f, posY);
-                            elements.put(nextId++, pRight);
-                            break;
-                        case "6":
-                            Goal goalL = new Goal(Side.LEFT, player1);
-                            if (goalPlayers.get(1) == null) goalPlayers.put(1, goalL);
-                            goalL.setPositions(posX, posY);
-                            elements.put(nextId++, goalL);
-                            break;
-                        case "7":
-                            Goal goalR = new Goal(Side.RIGTH, player2);
-                            if (goalPlayers.get(2) == null) goalPlayers.put(2, goalR);
-                            goalR.setPositions(posX + 5.0f, posY);
-                            elements.put(nextId++, goalR);
-                            break;
-                        default:
-                            break;
-                    }
+                    nextId = placeElementToken(tokens[col], col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, nextId);
                 }
                 row++;
             }
-            br.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            // Registramos cualquier fallo al cargar el nivel en la carpeta logs
+            Log.record(e);
         }
+    }
+
+    private int placeElementToken(String token, int posX, int posY, int tileSize, int nextId) {
+        switch (token) {
+            case "1" -> placePlayer(1, player1, posX, posY);
+            case "2" -> placePlayer(2, player2, posX, posY);
+            case "0" -> placeBall(posX + tileSize / 2, posY);
+            case "4" -> placePitch(Side.LEFT, posX, posY, nextId++);
+            case "5" -> placePitch(Side.RIGTH, posX + 5.0f, posY, nextId++);
+            case "6" -> placeGoal(1, Side.LEFT, player1, posX, posY, nextId++);
+            case "7" -> placeGoal(2, Side.RIGTH, player2, posX + 5.0f, posY, nextId++);
+        }
+        return nextId;
+    }
+
+    private void placePlayer(int id, Player player, float x, float y) {
+        player.setPositions(x, y);
+        player.setGroundY(y);
+        elements.put(id, player);
+    }
+
+    private void placeBall(float x, float y) {
+        this.ball = new Ball();
+        this.ball.setPositions(x, y);
+        elements.put(0, this.ball);
+    }
+
+    private void placePitch(Side side, float x, float y, int id) {
+        Pitch pitch = new Pitch(side);
+        pitch.setPositions(x, y);
+        elements.put(id, pitch);
+    }
+
+    private void placeGoal(int goalKey, Side side, Player owner, float x, float y, int id) {
+        Goal goal = new Goal(side, owner);
+        goalPlayers.putIfAbsent(goalKey, goal);
+        goal.setPositions(x, y);
+        elements.put(id, goal);
     }
 
     // Legacy overload without timeLimit (defaults to 2 minutes) — keeps old callers compiling
@@ -386,11 +448,34 @@ public class POOPSoccer {
         startGame(gameMode, matchType, goalLimit, 2, nameP1, teamP1, nameP2, teamP2);
     }
 
-    public Side checkWinner() {
-        if (ball == null) return null;
-        if (cChecker.isGoal(ball, goalPlayers.get(1))) return Side.RIGTH;
-        if (cChecker.isGoal(ball, goalPlayers.get(2))) return Side.LEFT;
-        return null;
+    /**
+     * Saves the current match state to a .dat file.
+     */
+    public void save(File file) throws POOPSoccerException {
+        if (file == null) throw new POOPSoccerException(POOPSoccerException.INVALID_FILE);
+        // Escribimos la instancia actual del juego en el archivo binario
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
+            out.writeObject(this);
+        } catch (Exception e) {
+            Log.record(e);
+            throw new POOPSoccerException(POOPSoccerException.SAVE_ERROR);
+        }
+    }
+
+    /**
+     * Loads a saved match from a .dat file and sets it as the active game.
+     */
+    public void open(File file) throws POOPSoccerException {
+        if (file == null || !file.exists()) throw new POOPSoccerException(POOPSoccerException.INVALID_FILE);
+        // Leemos el partido guardado y actualizamos el singleton con el estado recuperado
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
+            POOPSoccer loadedGame = (POOPSoccer) in.readObject();
+            loadedGame.isPaused = false;
+            game = loadedGame;
+        } catch (Exception e) {
+            Log.record(e);
+            throw new POOPSoccerException(POOPSoccerException.OPEN_ERROR);
+        }
     }
 
     public Player getPlayer1() { return player1; }

@@ -3,6 +3,8 @@ package presentation;
 import domain.GameMode;
 import domain.MatchType;
 
+import java.awt.Dimension;
+
 /**Ayudado a organizar por Gemini 3.8 Flash
  * Almacena los parámetros de configuración seleccionados en los menús
  * antes de instanciar e iniciar el partido.
@@ -13,6 +15,7 @@ public class GameSetup {
     private MatchType matchType;
     private int goalLimit;
     private int timeLimit; // in minutes, used when matchType == PER_TIME
+    private Dimension resolution;
 
     private String nameP1;
     private String teamP1;
@@ -25,6 +28,17 @@ public class GameSetup {
         this.matchType = MatchType.PER_GOALS;
         this.goalLimit = 3;
         this.timeLimit = 2;
+        this.resolution = new Dimension(800, 600);
+    }
+
+    public void setResolution(Dimension resolution) {
+        if (resolution != null) {
+            this.resolution = resolution;
+        }
+    }
+
+    public Dimension getResolution() {
+        return resolution;
     }
 
     public void setMode(GameMode mode) {

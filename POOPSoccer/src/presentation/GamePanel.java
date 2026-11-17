@@ -44,10 +44,14 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage background;
 
     public GamePanel(GamePanelListener listener) {
+        this(listener, new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+    }
+
+    public GamePanel(GamePanelListener listener, Dimension resolution) {
         this.LISTENER = listener;
         this.cachedImages = new HashMap<>();
 
-        setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+        setPreferredSize(resolution != null ? resolution : new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
         setBackground(Color.BLACK);
         setDoubleBuffered(true);
         KeyHandler.getInstance().clearAllKeys();
@@ -185,6 +189,9 @@ public class GamePanel extends JPanel implements Runnable {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
+        double scaleX = (double) getWidth() / SCREEN_WIDTH;
+        double scaleY = (double) getHeight() / SCREEN_HEIGHT;
+        g2.scale(scaleX, scaleY);
         draw(g2);
         g2.dispose();
     }
@@ -286,10 +293,7 @@ public class GamePanel extends JPanel implements Runnable {
         if (game.isGameFinished()) {
             stopThread();
             SwingUtilities.invokeLater(() -> {
-                String winnerName = game.getWinnerName();
-                String message = (winnerName != null)
-                        ? "¡Ganador: " + winnerName + "!"
-                        : "¡EMPATE!";
+                String message = game.getMatchSummaryMessage();
                 JOptionPane.showMessageDialog(this, message, "Fin del Partido", JOptionPane.INFORMATION_MESSAGE);
                 LISTENER.goToMenu(); // Vuelve prolijamente al menú
             });

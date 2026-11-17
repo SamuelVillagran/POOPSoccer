@@ -7,11 +7,13 @@ import domain.POOPSoccer;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
+import java.awt.Window;
 import java.io.File;
 import java.util.Locale;
 
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 /**Ayudado a organizar por Gemini 3.8 Flash
  * Contenedor central de vistas (JPanel con CardLayout).
@@ -66,6 +68,11 @@ public class GameContainer extends JPanel implements GamePanelListener {
 
     public void showView(ScreenView view) {
         infoPanel.setVisible(view == ScreenView.GAME);
+        if (view == ScreenView.GAME) {
+            applyWindowDimension(setup.getResolution(), true);
+        } else {
+            applyWindowDimension(new Dimension(800, 650), false);
+        }
         cardLayout.show(cardPanel, view.name());
         revalidate();
         repaint();
@@ -95,8 +102,26 @@ public class GameContainer extends JPanel implements GamePanelListener {
         startGame();
     }
 
+    public void setResolution(Dimension resolution) {
+        setup.setResolution(resolution);
+    }
+
+    private void applyWindowDimension(Dimension baseDim, boolean includeHud) {
+        int hudHeight = includeHud ? 68 : 0;
+        if (infoPanel != null && includeHud) {
+            infoPanel.setPreferredSize(new Dimension(baseDim.width, hudHeight));
+        }
+        setPreferredSize(new Dimension(baseDim.width, baseDim.height + hudHeight));
+        Window topWindow = SwingUtilities.getWindowAncestor(this);
+        if (topWindow != null) {
+            topWindow.pack();
+            topWindow.setLocationRelativeTo(null);
+        }
+    }
+
     public void startGame() {
         try {
+            // Inicializamos un partido nuevo en la fachada del dominio
             POOPSoccer.getGame().startGame(
                     setup.getGameMode(),
                     setup.getMatchType(),
@@ -107,19 +132,28 @@ public class GameContainer extends JPanel implements GamePanelListener {
                     setup.getNameP2(),
                     setup.getTeamP2().toLowerCase()
             );
-            if (activeGamePanel != null) {
-                activeGamePanel.stopThread();
-                cardPanel.remove(activeGamePanel);
-            }
-            activeGamePanel = new GamePanel(this);
-            cardPanel.add(activeGamePanel, ScreenView.GAME.name());
-            showView(ScreenView.GAME);
-            activeGamePanel.startGameThread();
-            activeGamePanel.requestFocusInWindow();
+            launchGameView();
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error al iniciar el juego: " + e.getMessage());
         }
+    }
+
+    /**
+     * Mounts the game panel and starts the game loop for the active match.
+     */
+    private void launchGameView() {
+        // Si había un panel de juego corriendo, detenemos su hilo y lo quitamos
+        if (activeGamePanel != null) {
+            activeGamePanel.stopThread();
+            cardPanel.remove(activeGamePanel);
+        }
+        // Creamos el nuevo lienzo, mostramos la vista de cancha y arrancamos el hilo
+        activeGamePanel = new GamePanel(this, setup.getResolution());
+        cardPanel.add(activeGamePanel, ScreenView.GAME.name());
+        showView(ScreenView.GAME);
+        activeGamePanel.startGameThread();
+        activeGamePanel.requestFocusInWindow();
     }
 
     public void goToMenu() {
@@ -139,8 +173,20 @@ public class GameContainer extends JPanel implements GamePanelListener {
         startGame();
     }
 
-    public void loadSavedGame(File selectedFile) {
-        JOptionPane.showMessageDialog(this, "Cargando archivo: " + selectedFile.getName());
-        startGame();
+    /**
+     * Saves the current match into the selected file.
+     */
+    public void saveCurrentGame(File selectedFile) throws Exception {
+        // Delegamos el guardado a la fachada del dominio
+        POOPSoccer.getGame().save(selectedFile);
+    }
+
+    /**
+     * Opens a saved match from the selected file and shows the game view.
+     */
+    public void loadSavedGame(File selectedFile) throws Exception {
+        // Cargamos el estado desde el dominio y abrimos la cancha sin reiniciar el partido
+        POOPSoccer.getGame().open(selectedFile);
+        launchGameView();
     }
 }

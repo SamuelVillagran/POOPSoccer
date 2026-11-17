@@ -1,6 +1,8 @@
 package domain;
 
-public interface Element {
+import java.io.Serializable;
+
+public interface Element extends Serializable {
     float getWidth();
     float getHeight();
     Vector2D getPosition();
