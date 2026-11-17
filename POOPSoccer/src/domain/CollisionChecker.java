@@ -112,7 +112,6 @@ public class CollisionChecker implements Serializable {
         // Consume el aura del jugador y lanza el balón con la trayectoria del poder
         if (player.isKicking()) player.markKickUsed();
         placeBallInFrontOfPlayer(player, ball, 2.0f);
-        ball.setLastTouch(player);
         ball.setOnGround(false);
         player.triggerActivePowerOnBallHit(ball);
         return true;
@@ -129,7 +128,6 @@ public class CollisionChecker implements Serializable {
 
         ball.setVelocity(0.0f, 0.0f);
         ball.move(new Vector2D(kickVx, kickVy));
-        ball.setLastTouch(player);
         ball.setOnGround(false);
         placeBallInFrontOfPlayer(player, ball, 4.0f);
     }
@@ -149,7 +147,6 @@ public class CollisionChecker implements Serializable {
         float pushVy = calculateBodyPushVy(player, ball);
 
         ball.setVelocity(pushVx, pushVy);
-        ball.setLastTouch(player);
         separatePlayerAndBall(player, ball, dirX);
     }
 

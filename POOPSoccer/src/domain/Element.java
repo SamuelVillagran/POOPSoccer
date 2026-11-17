@@ -8,6 +8,12 @@ public interface Element extends Serializable {
     Vector2D getPosition();
     boolean isMovible();
 
+    /**
+     * Advances the internal state of this element by one game frame.
+     */
+    default void update() {
+    }
+
     default boolean hasCollision() {
         return true;
     }

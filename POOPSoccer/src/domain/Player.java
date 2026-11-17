@@ -1,7 +1,6 @@
 package domain;
 
 public class Player extends ItemSoccer {
-    public static final int STUNED_TIME = 3;
     private static final int KICK_ACTIVE_FRAMES = 10;
     private static final int JUMP_HALF_FRAMES = 18;
     private static final int STUN_FRAMES = 180; // 3s at 60FPS
@@ -25,10 +24,13 @@ public class Player extends ItemSoccer {
     private int kickStat = 1;
     private int survivalStat = 1;
     private int points = 0;
+    private int matchesPlayed = 0;
+    private int wins = 0;
+    private int goalsFor = 0;
+    private int goalsAgainst = 0;
 
     private String name;
     private int goals = 0;
-    private int speed;
     private boolean isStuned;
     private int stunFramesLeft = 0;
     private float currentHealth;
@@ -41,7 +43,6 @@ public class Player extends ItemSoccer {
 
     private PlayerType type;
     private Effect effect;
-    private Player rival;
     private NumberPlayer numberPlayer;
 
     public Player(PlayerType type, String name, Team team, NumberPlayer numberPlayer) {
@@ -52,7 +53,6 @@ public class Player extends ItemSoccer {
         }
         this.name = name;
         this.team = team;
-        this.speed = Math.round(BASE_SPEED);
         this.currentHealth = getMaxLife();
     }
 
@@ -61,18 +61,13 @@ public class Player extends ItemSoccer {
         if (effect != null && effect.getSpeedFactor() <= 0.0f && (direction == 'r' || direction == 'l')) {
             return;
         }
-        this.speed = Math.round(getSpeed());
-        char effectiveDir = direction;
-        if (effect != null && effect.isDirectionInverted()) {
-            if (direction == 'r') effectiveDir = 'l';
-            else if (direction == 'l') effectiveDir = 'r';
-        }
-        switch (effectiveDir) {
+        int moveSpeed = Math.round(getSpeed());
+        switch (direction) {
             case 'r':
-                move(this.speed, 0);
+                move(moveSpeed, 0);
                 break;
             case 'l':
-                move(-this.speed, 0);
+                move(-moveSpeed, 0);
                 break;
             case 'j':
                 jump();
@@ -103,6 +98,7 @@ public class Player extends ItemSoccer {
         if (jumpFrames == 0) jumpFrames = 1;
     }
 
+    @Override
     public void update() {
         updatePowerCharge();
         updateEffect();
@@ -202,14 +198,6 @@ public class Player extends ItemSoccer {
         return currentPower / MAX_POWER;
     }
 
-    public float getCurrentPower() {
-        return currentPower;
-    }
-
-    public float getMaxPower() {
-        return MAX_POWER;
-    }
-
     public boolean isPowerFull() {
         return currentPower >= MAX_POWER - 0.001f;
     }
@@ -234,14 +222,6 @@ public class Player extends ItemSoccer {
         powerActive = false;
         if (team != null && ball != null) {
             team.launchPowerShot(this, ball);
-        }
-    }
-
-    public void triggerActivePowerOnBallHit() {
-        if (!powerActive) return;
-        powerActive = false;
-        if (team != null && rival != null) {
-            team.usePower(this, rival);
         }
     }
 
@@ -317,12 +297,13 @@ public class Player extends ItemSoccer {
     }
 
     public int getStatLevel(String stat) {
-        return switch (stat.toLowerCase()) {
-            case "speed" -> speedStat;
-            case "jump" -> jumpStat;
-            case "kick" -> kickStat;
-            case "survival" -> survivalStat;
-            default -> 1;
+        PlayerStat resolved = PlayerStat.fromName(stat);
+        if (resolved == null) return 1;
+        return switch (resolved) {
+            case SPEED -> speedStat;
+            case JUMP -> jumpStat;
+            case KICK -> kickStat;
+            case SURVIVAL -> survivalStat;
         };
     }
 
@@ -332,40 +313,92 @@ public class Player extends ItemSoccer {
     }
 
     public boolean upgradeStat(String stat) {
+        PlayerStat resolved = PlayerStat.fromName(stat);
+        if (resolved == null) return false;
         int level = getStatLevel(stat);
         int cost = getUpgradeCost(stat);
         if (level >= MAX_STAT || points < cost) return false;
         points -= cost;
-        incrementStat(stat);
+        incrementStat(resolved);
         currentHealth = getMaxLife();
         return true;
     }
 
-    private void incrementStat(String stat) {
-        switch (stat.toLowerCase()) {
-            case "speed" -> speedStat++;
-            case "jump" -> jumpStat++;
-            case "kick" -> kickStat++;
-            case "survival" -> survivalStat++;
+    private void incrementStat(PlayerStat stat) {
+        switch (stat) {
+            case SPEED -> speedStat++;
+            case JUMP -> jumpStat++;
+            case KICK -> kickStat++;
+            case SURVIVAL -> survivalStat++;
         }
     }
 
     public void copyProgressFrom(Player previous) {
         if (previous == null) return;
-        this.points = previous.points;
-        this.speedStat = previous.speedStat;
-        this.jumpStat = previous.jumpStat;
-        this.kickStat = previous.kickStat;
-        this.survivalStat = previous.survivalStat;
+        loadProgress(previous.points, previous.speedStat, previous.jumpStat, previous.kickStat,
+                previous.survivalStat, previous.matchesPlayed, previous.wins, previous.goalsFor, previous.goalsAgainst);
+    }
+
+    /**
+     * Loads the stored points and stat levels into this player entity.
+     */
+    public void loadProgress(int points, int speed, int jump, int kick, int survival) {
+        loadProgress(points, speed, jump, kick, survival, 0, 0, 0, 0);
+    }
+
+    /**
+     * Loads stored points, stat levels, and career match statistics into this player entity.
+     */
+    public void loadProgress(int points, int speed, int jump, int kick, int survival,
+                             int matchesPlayed, int wins, int goalsFor, int goalsAgainst) {
+        // Restaura los puntos, los niveles de habilidad y el historial acumulado del jugador
+        this.points = Math.max(0, points);
+        this.speedStat = Math.max(1, Math.min(MAX_STAT, speed));
+        this.jumpStat = Math.max(1, Math.min(MAX_STAT, jump));
+        this.kickStat = Math.max(1, Math.min(MAX_STAT, kick));
+        this.survivalStat = Math.max(1, Math.min(MAX_STAT, survival));
+        this.matchesPlayed = Math.max(0, matchesPlayed);
+        this.wins = Math.max(0, wins);
+        this.goalsFor = Math.max(0, goalsFor);
+        this.goalsAgainst = Math.max(0, goalsAgainst);
         this.currentHealth = getMaxLife();
+    }
+
+    /**
+     * Records the outcome and goal totals of a finished match for this player.
+     */
+    public void recordMatchResult(boolean won, int goalsScored, int goalsConceded) {
+        this.matchesPlayed++;
+        if (won) this.wins++;
+        this.goalsFor += Math.max(0, goalsScored);
+        this.goalsAgainst += Math.max(0, goalsConceded);
+    }
+
+    public int getMatchesPlayed() {
+        return matchesPlayed;
+    }
+
+    public int getWins() {
+        return wins;
+    }
+
+    public int getGoalsFor() {
+        return goalsFor;
+    }
+
+    public int getGoalsAgainst() {
+        return goalsAgainst;
+    }
+
+    /**
+     * Resets the progression of this player to the initial level 1 values.
+     */
+    public void resetProgress() {
+        loadProgress(0, 1, 1, 1, 1, 0, 0, 0, 0);
     }
 
     public void setGroundY(float groundY) {
         this.groundY = groundY;
-    }
-
-    public float getGroundY() {
-        return groundY;
     }
 
     @Override
@@ -418,12 +451,14 @@ public class Player extends ItemSoccer {
         return goals;
     }
 
-    public void usePower(Effect power) {
-        this.effect = power;
-    }
-
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        if (name != null && !name.isBlank()) {
+            this.name = name.trim();
+        }
     }
 
     public Team getTeam() {
@@ -432,14 +467,6 @@ public class Player extends ItemSoccer {
 
     public int getNumberPlayerInt() {
         return numberPlayer == null ? 0 : numberPlayer.getNumber();
-    }
-
-    public Player getRival() {
-        return rival;
-    }
-
-    public void setRival(Player rival) {
-        this.rival = rival;
     }
 
     public boolean isStuned() {

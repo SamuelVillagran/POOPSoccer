@@ -8,9 +8,7 @@ public class Ball extends ItemSoccer {
     public static final float MAX_SPEED = 16.0f;
     private static final float STOP_THRESHOLD = 0.15f;
 
-    private int weight;
     private Vector2D velocity;
-    private Player lastTouch;
     private boolean onGround;
     private Power activePowerShot;
     private Player powerShotOwner;
@@ -19,7 +17,6 @@ public class Ball extends ItemSoccer {
 
     public Ball() {
         this.velocity = new Vector2D();
-        this.weight = 1;
         this.onGround = false;
     }
 
@@ -41,10 +38,6 @@ public class Ball extends ItemSoccer {
 
     public float getPendingDecoyDuration() {
         return pendingDecoyDuration;
-    }
-
-    public boolean hasActivePowerShot() {
-        return activePowerShot != null;
     }
 
     @Override
@@ -71,20 +64,18 @@ public class Ball extends ItemSoccer {
     }
 
     /**
-     * Aplica una fuerza instantánea al balón: Δv = F / weight
+     * Applies an instantaneous impulse force to the ball velocity.
      */
     public void move(Vector2D force) {
         if (force == null) return;
-        int effectiveWeight = Math.max(1, weight);
-        float dvX = force.getX() / effectiveWeight;
-        float dvY = force.getY() / effectiveWeight;
-        velocity.setPositions(velocity.getX() + dvX, velocity.getY() + dvY);
+        velocity.add(force);
         clampVelocity();
     }
 
     /**
-     * Actualiza la física continua del balón en cada frame (60 FPS).
+     * Advances the continuous physics of the ball by one frame.
      */
+    @Override
     public void update() {
         // Aplicar gravedad (+Y hacia abajo)
         velocity.setPositions(velocity.getX(), velocity.getY() + GRAVITY);
@@ -126,28 +117,12 @@ public class Ball extends ItemSoccer {
         this.velocity.setPositions(vx, vy);
     }
 
-    public Player getLastTouch() {
-        return lastTouch;
-    }
-
-    public void setLastTouch(Player lastTouch) {
-        this.lastTouch = lastTouch;
-    }
-
     public boolean isOnGround() {
         return onGround;
     }
 
     public void setOnGround(boolean onGround) {
         this.onGround = onGround;
-    }
-
-    public int getWeight() {
-        return weight;
-    }
-
-    public void setWeight(int weight) {
-        this.weight = Math.max(1, weight);
     }
 
     @Override

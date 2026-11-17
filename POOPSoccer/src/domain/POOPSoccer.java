@@ -9,12 +9,30 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.ServiceLoader;
 import java.util.TreeMap;
 
 public class POOPSoccer implements Serializable {
+
+    /**
+     * Immutable visual snapshot of a board element exposed for presentation rendering.
+     */
+    public record RenderElementData(
+            String category,
+            String variant,
+            int x,
+            int y,
+            int width,
+            int height,
+            boolean powerAura,
+            boolean stunned,
+            String statusText,
+            boolean shotAura) {
+    }
     private static POOPSoccer game;
     private boolean isPaused;
     private Player player1, player2;
@@ -27,6 +45,7 @@ public class POOPSoccer implements Serializable {
     private boolean suddenDeath;        // true when time ran out and score is tied
 
     private CollisionChecker cChecker;
+    private PlayerDataGateway dataGateway;
     private Map<Integer, Element> elements;
     private Map<Integer, Goal> goalPlayers;
     private float decoyTimerSeconds = 0.0f;
@@ -34,11 +53,32 @@ public class POOPSoccer implements Serializable {
     private static final int DECOY_START_ID = 100;
 
     private POOPSoccer() {
+        this(resolveDefaultDataGateway());
+    }
+
+    private POOPSoccer(PlayerDataGateway dataGateway) {
         elements = new TreeMap<>();
         cChecker = CollisionChecker.getInstance();
+        this.dataGateway = dataGateway;
         goalPlayers = new TreeMap<>();
         player1 = new Player(new Normal(), "Jugador 1", Team.COREA_DEL_SUR, NumberPlayer.PLAYER1);
         player2 = new Player(new Normal(), "Jugador 2", Team.CAMEROON, NumberPlayer.PLAYER2);
+        if (this.dataGateway != null) {
+            this.dataGateway.loadPlayerProgress(player1);
+            this.dataGateway.loadPlayerProgress(player2);
+        }
+    }
+
+    private static PlayerDataGateway resolveDefaultDataGateway() {
+        // Descubre el adaptador de persistencia registrado sin acoplar el dominio al motor concreto
+        try {
+            return ServiceLoader.load(PlayerDataGateway.class)
+                    .findFirst()
+                    .orElseGet(PlayerDatabase::new);
+        } catch (Throwable e) {
+            Log.record(e instanceof Exception ex ? ex : new RuntimeException(e));
+            return new PlayerDatabase();
+        }
     }
 
     public static POOPSoccer getGame() {
@@ -56,7 +96,7 @@ public class POOPSoccer implements Serializable {
                 goalLimit, timeLimitMinutes, nameP1, teamP1, nameP2, teamP2);
     }
 
-    public void startGame(GameMode gameMode, MatchType matchType, int goalLimit, int timeLimitMinutes,
+    public synchronized void startGame(GameMode gameMode, MatchType matchType, int goalLimit, int timeLimitMinutes,
                           String nameP1, String teamP1,
                           String nameP2, String teamP2) {
         initMatchState(matchType, goalLimit, timeLimitMinutes);
@@ -84,10 +124,19 @@ public class POOPSoccer implements Serializable {
 
         player1 = new Player(typeP1, nameP1, Team.fromDisplayName(teamP1), NumberPlayer.PLAYER1);
         player2 = new Player(typeP2, nameP2Final, Team.fromDisplayName(teamP2), NumberPlayer.PLAYER2);
-        player1.copyProgressFrom(prevP1);
-        player2.copyProgressFrom(prevP2);
-        player1.setRival(player2);
-        player2.setRival(player1);
+        restorePlayerProgress(player1, prevP1);
+        restorePlayerProgress(player2, prevP2);
+    }
+
+    private void restorePlayerProgress(Player current, Player previous) {
+        // Carga el perfil desde el gateway de datos o conserva el progreso previo si es el mismo jugador
+        if (dataGateway != null && dataGateway.loadPlayerProgress(current)) {
+            return;
+        }
+        if (previous != null && previous.getName() != null
+                && previous.getName().trim().equalsIgnoreCase(current.getName().trim())) {
+            current.copyProgressFrom(previous);
+        }
     }
 
     private void initFieldElements() {
@@ -98,12 +147,12 @@ public class POOPSoccer implements Serializable {
 
     private static final float DELTA_TIME = 1.0f / 60.0f; // 60 FPS
 
-    public void update() {
+    public synchronized void update() {
         if (isPaused) return;
         timerUpdate();
-        playersUpdate();
-        ballUpdate();
+        elementsUpdate();
         collisionsUpdate();
+        syncDecoyBalls();
         checkGoal();
     }
 
@@ -119,32 +168,47 @@ public class POOPSoccer implements Serializable {
         }
     }
 
+    private void elementsUpdate() {
+        // Delega la actualización de estado a cada elemento del tablero de forma polimórfica
+        for (Element element : elements.values()) {
+            if (element != null) {
+                element.update();
+            }
+        }
+    }
+
     private void collisionsUpdate() {
+        // Resuelve los límites de los jugadores y luego las interacciones físicas globales
+        cChecker.resolvePlayerEnvironmentCollisions(player1);
+        cChecker.resolvePlayerEnvironmentCollisions(player2);
+        cChecker.resolvePlayerBallInteraction(player1, ball);
+        cChecker.resolvePlayerBallInteraction(player2, ball);
+        cChecker.resolveBallEnvironmentCollisions(ball, elements.values());
+        resolveDecoyEnvironmentCollisions();
         cChecker.resolveKickDamage(player1, player2);
         cChecker.resolveKickDamage(player2, player1);
         cChecker.resolvePlayersOverlap(player1, player2);
     }
 
-    private void ballUpdate() {
-        if (ball != null) {
-            ball.update();
-            cChecker.resolvePlayerBallInteraction(player1, ball);
-            cChecker.resolvePlayerBallInteraction(player2, ball);
-            spawnDecoyBallsIfNeeded();
-            cChecker.resolveBallEnvironmentCollisions(ball, elements.values());
+    private void resolveDecoyEnvironmentCollisions() {
+        if (decoyTimerSeconds <= 0.0f) return;
+        // Rebota los balones falsos activos contra paredes y arcos de la cancha
+        for (Map.Entry<Integer, Element> entry : elements.entrySet()) {
+            if (entry.getKey() >= DECOY_START_ID && entry.getValue() instanceof Ball decoy) {
+                cChecker.resolveBallEnvironmentCollisions(decoy, elements.values());
+            }
         }
-        updateDecoyBalls();
     }
 
-    private void playersUpdate() {
-        if (player1 != null) {
-            player1.update();
-            cChecker.resolvePlayerEnvironmentCollisions(player1);
+    private void syncDecoyBalls() {
+        // Descuenta la duración de los balones falsos y crea nuevos si se activó el poder de ilusión
+        if (decoyTimerSeconds > 0.0f) {
+            decoyTimerSeconds -= DELTA_TIME;
+            if (decoyTimerSeconds <= 0.0f) {
+                clearDecoyBalls();
+            }
         }
-        if (player2 != null) {
-            player2.update();
-            cChecker.resolvePlayerEnvironmentCollisions(player2);
-        }
+        spawnDecoyBallsIfNeeded();
     }
 
     private void spawnDecoyBallsIfNeeded() {
@@ -165,50 +229,29 @@ public class POOPSoccer implements Serializable {
         }
     }
 
-    private void updateDecoyBalls() {
-        if (decoyTimerSeconds <= 0.0f) return;
-        decoyTimerSeconds -= DELTA_TIME;
-        if (decoyTimerSeconds <= 0.0f) {
-            clearDecoyBalls();
-            return;
-        }
-        for (Map.Entry<Integer, Element> entry : elements.entrySet()) {
-            if (entry.getKey() >= DECOY_START_ID && entry.getValue() instanceof Ball decoy) {
-                decoy.update();
-                cChecker.resolveBallEnvironmentCollisions(decoy, elements.values());
-            }
-        }
-    }
-
     private void clearDecoyBalls() {
         decoyTimerSeconds = 0.0f;
         elements.keySet().removeIf(id -> id >= DECOY_START_ID);
     }
 
     // Player 1 controls
-    public void movePlayer1(char direction) {
-        if (player1 != null && !isPaused) {
-            try {
-                player1.move(direction);
-                if (direction == 'l' || direction == 'r') {
-                    cChecker.resolvePlayerMovementCollision(player1, player2);
-                }
-                cChecker.resolvePlayerEnvironmentCollisions(player1);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
+    public synchronized void movePlayer1(char direction) {
+        movePlayer(player1, player2, direction);
     }
 
     // Player 2 controls
-    public void movePlayer2(char direction) {
-        if (player2 != null && !isPaused) {
+    public synchronized void movePlayer2(char direction) {
+        movePlayer(player2, player1, direction);
+    }
+
+    private void movePlayer(Player mover, Player blocker, char direction) {
+        if (mover != null && !isPaused) {
             try {
-                player2.move(direction);
+                mover.move(direction);
                 if (direction == 'l' || direction == 'r') {
-                    cChecker.resolvePlayerMovementCollision(player2, player1);
+                    cChecker.resolvePlayerMovementCollision(mover, blocker);
                 }
-                cChecker.resolvePlayerEnvironmentCollisions(player2);
+                cChecker.resolvePlayerEnvironmentCollisions(mover);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -250,17 +293,23 @@ public class POOPSoccer implements Serializable {
     }
 
     public void resetMatch() {
-        game = null;
-        game = new POOPSoccer();
+        // Crea una instancia aislada sin gateway en disco para no ensuciar datos reales durante pruebas
+        game = new POOPSoccer(null);
+    }
+
+    /**
+     * Injects the data gateway implementation used to persist and load player profiles.
+     */
+    public void setDataGateway(PlayerDataGateway dataGateway) {
+        this.dataGateway = dataGateway;
     }
 
     public void pauseGame() {
         isPaused = true;
     }
 
-    public boolean resumeGame() {
+    public void resumeGame() {
         isPaused = false;
-        return isPaused;
     }
 
     public int getGoalsP1() {
@@ -303,11 +352,6 @@ public class POOPSoccer implements Serializable {
         return player2 != null ? player2.getActivePowerName() : "Ninguno";
     }
 
-    public String getWinnerName() {
-        Player winner = getWinner();
-        return winner != null ? winner.getName() : null;
-    }
-
     public String[] getAvailableTeams() {
         return Arrays.stream(Team.values())
                 .map(Team::getDisplayName)
@@ -333,6 +377,13 @@ public class POOPSoccer implements Serializable {
                 .toArray(String[]::new);
     }
 
+    public String[] getAvailableStats() {
+        // Obtiene las etiquetas de las estadísticas mejorables definidas en el dominio
+        return Arrays.stream(PlayerStat.values())
+                .map(PlayerStat::getDisplayName)
+                .toArray(String[]::new);
+    }
+
     public void awardMatchPoints() {
         if (pointsAwarded || !isGameFinished()) return;
         pointsAwarded = true;
@@ -343,6 +394,30 @@ public class POOPSoccer implements Serializable {
         } else if (winner == player2) {
             player2.addPoints(100);
             player1.addPoints(25);
+        }
+        player1.recordMatchResult(winner == player1, player1.getGoals(), player2.getGoals());
+        player2.recordMatchResult(winner == player2, player2.getGoals(), player1.getGoals());
+        savePlayerToGateway(player1);
+        savePlayerToGateway(player2);
+    }
+
+    private void savePlayerToGateway(Player player) {
+        // Delega el guardado del progreso al gateway si se encuentra configurado
+        if (dataGateway != null && player != null) {
+            dataGateway.savePlayerProgress(player);
+        }
+    }
+
+    /**
+     * Selects a player profile by name and loads its stored points and stats from the data gateway.
+     */
+    public void selectPlayerProfile(int playerNum, String playerName) {
+        Player p = getPlayerByNumber(playerNum);
+        if (p == null || playerName == null || playerName.isBlank()) return;
+        String trimmed = playerName.trim();
+        p.setName(trimmed);
+        if (dataGateway == null || !dataGateway.loadPlayerProgress(p)) {
+            p.resetProgress();
         }
     }
 
@@ -364,6 +439,16 @@ public class POOPSoccer implements Serializable {
         return p != null ? p.getPoints() : 0;
     }
 
+    public int getMatchesPlayed(int playerNum) {
+        Player p = getPlayerByNumber(playerNum);
+        return p != null ? p.getMatchesPlayed() : 0;
+    }
+
+    public int getWins(int playerNum) {
+        Player p = getPlayerByNumber(playerNum);
+        return p != null ? p.getWins() : 0;
+    }
+
     public int getStatLevel(int playerNum, String stat) {
         Player p = getPlayerByNumber(playerNum);
         return p != null ? p.getStatLevel(stat) : 1;
@@ -376,7 +461,11 @@ public class POOPSoccer implements Serializable {
 
     public boolean upgradeStat(int playerNum, String stat) {
         Player p = getPlayerByNumber(playerNum);
-        return p != null && p.upgradeStat(stat);
+        if (p != null && p.upgradeStat(stat)) {
+            savePlayerToGateway(p);
+            return true;
+        }
+        return false;
     }
 
     public boolean isGameFinished() {
@@ -407,7 +496,31 @@ public class POOPSoccer implements Serializable {
         return elements;
     }
 
-    public void setElements() {
+    /**
+     * Returns an immutable thread-safe snapshot of all board elements for the view to render.
+     */
+    public synchronized List<RenderElementData> getRenderElements() {
+        List<RenderElementData> snapshots = new ArrayList<>(elements.size());
+        // Traduce cada elemento a datos visuales simples para evitar exponer entidades a presentación
+        for (Element elem : elements.values()) {
+            if (elem == null || elem.getPosition() == null) continue;
+            snapshots.add(new RenderElementData(
+                    elem.getClass().getSimpleName().toLowerCase(),
+                    elem.getVariantName(),
+                    (int) elem.getX(),
+                    (int) elem.getY(),
+                    (int) elem.getWidth(),
+                    (int) elem.getHeight(),
+                    elem.hasPowerAura(),
+                    elem.isStunnedStatus(),
+                    elem.getStatusText(),
+                    elem.hasShotAura()
+            ));
+        }
+        return snapshots;
+    }
+
+    private void setElements() {
         final int TILE_SIZE = 50;
         final String path = "/positionElements/configuration.txt";
         int nextId = 3;
@@ -434,10 +547,10 @@ public class POOPSoccer implements Serializable {
             case "1" -> placePlayer(1, player1, posX, posY);
             case "2" -> placePlayer(2, player2, posX, posY);
             case "0" -> placeBall(posX + tileSize / 2, posY);
-            case "4" -> placePitch(Side.LEFT, posX, posY, nextId++);
-            case "5" -> placePitch(Side.RIGTH, posX + 5.0f, posY, nextId++);
-            case "6" -> placeGoal(1, Side.LEFT, player1, posX, posY, nextId++);
-            case "7" -> placeGoal(2, Side.RIGTH, player2, posX + 5.0f, posY, nextId++);
+            case "4" -> placePitch(posX, posY, nextId++);
+            case "5" -> placePitch(posX + 5.0f, posY, nextId++);
+            case "6" -> placeGoal(1, posX, posY, nextId++);
+            case "7" -> placeGoal(2, posX + 5.0f, posY, nextId++);
         }
         return nextId;
     }
@@ -454,14 +567,14 @@ public class POOPSoccer implements Serializable {
         elements.put(0, this.ball);
     }
 
-    private void placePitch(Side side, float x, float y, int id) {
-        Pitch pitch = new Pitch(side);
+    private void placePitch(float x, float y, int id) {
+        Pitch pitch = new Pitch();
         pitch.setPositions(x, y);
         elements.put(id, pitch);
     }
 
-    private void placeGoal(int goalKey, Side side, Player owner, float x, float y, int id) {
-        Goal goal = new Goal(side, owner);
+    private void placeGoal(int goalKey, float x, float y, int id) {
+        Goal goal = new Goal();
         goalPlayers.putIfAbsent(goalKey, goal);
         goal.setPositions(x, y);
         elements.put(id, goal);

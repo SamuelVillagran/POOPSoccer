@@ -36,11 +36,6 @@ public class Vector2D implements Serializable {
         }
     }
 
-    public void scale(float factor) {
-        this.x *= factor;
-        this.y *= factor;
-    }
-
     public float magnitude() {
         return (float) Math.sqrt(x * x + y * y);
     }

@@ -1,22 +1,16 @@
 package domain;
 
 public enum NumberPlayer {
-    PLAYER1(1, Side.LEFT),
-    PLAYER2(2, Side.RIGTH);
+    PLAYER1(1),
+    PLAYER2(2);
 
     private int number;
-    private Side initialSide;
 
-    NumberPlayer(int number, Side initialSide) {
+    NumberPlayer(int number) {
         this.number = number;
-        this.initialSide = initialSide;
     }
 
     public int getNumber() {
         return number;
-    }
-
-    public Side getInitialSide() {
-        return initialSide;
     }
 }

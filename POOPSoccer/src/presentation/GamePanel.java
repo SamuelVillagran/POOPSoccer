@@ -1,8 +1,5 @@
 package presentation;
 
-import domain.Element;
-import domain.POOPSoccer;
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -12,6 +9,7 @@ import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.JOptionPane;
@@ -32,14 +30,16 @@ public class GamePanel extends JPanel implements Runnable {
     private volatile Thread gameThread;
     private HashMap<String, BufferedImage> cachedImages;
     private final GamePanelListener LISTENER;
+    private final GameController controller;
     private BufferedImage background;
 
-    public GamePanel(GamePanelListener listener) {
-        this(listener, new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+    public GamePanel(GamePanelListener listener, GameController controller) {
+        this(listener, controller, new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
     }
 
-    public GamePanel(GamePanelListener listener, Dimension resolution) {
+    public GamePanel(GamePanelListener listener, GameController controller, Dimension resolution) {
         this.LISTENER = listener;
+        this.controller = controller;
         this.cachedImages = new HashMap<>();
 
         setPreferredSize(resolution != null ? resolution : new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
@@ -107,16 +107,16 @@ public class GamePanel extends JPanel implements Runnable {
 
     private long updateUI(long refreshTimer) {
         if (refreshTimer >= 100_000_000L) {
-            String score = POOPSoccer.getGame().getGoalsP1() + " - " + POOPSoccer.getGame().getGoalsP2();
-            String p1 = POOPSoccer.getGame().getDisplayInfoP1();
-            String p2 = POOPSoccer.getGame().getDisplayInfoP2();
-            float time = POOPSoccer.getGame().getRemainingTime();
-            float hp1 = POOPSoccer.getGame().getHealthPercentP1();
-            float hp2 = POOPSoccer.getGame().getHealthPercentP2();
-            float pow1 = POOPSoccer.getGame().getPowerPercentP1();
-            float pow2 = POOPSoccer.getGame().getPowerPercentP2();
-            String activePow1 = POOPSoccer.getGame().getActivePowerNameP1();
-            String activePow2 = POOPSoccer.getGame().getActivePowerNameP2();
+            String score = controller.getGoalsP1() + " - " + controller.getGoalsP2();
+            String p1 = controller.getDisplayInfoP1();
+            String p2 = controller.getDisplayInfoP2();
+            float time = controller.getRemainingTime();
+            float hp1 = controller.getHealthPercentP1();
+            float hp2 = controller.getHealthPercentP2();
+            float pow1 = controller.getPowerPercentP1();
+            float pow2 = controller.getPowerPercentP2();
+            String activePow1 = controller.getActivePowerNameP1();
+            String activePow2 = controller.getActivePowerNameP2();
 
             SwingUtilities.invokeLater(() -> LISTENER.onMatchInfoChanged(
                     p1, score, time, p2, hp1, hp2, pow1, pow2, activePow1, activePow2));
@@ -127,25 +127,26 @@ public class GamePanel extends JPanel implements Runnable {
 
     private void update(float deltaTime) {
         if (KeyHandler.getInstance().consumeEscToggle()) {
-            POOPSoccer.getGame().pauseGame();
+            controller.pauseGame();
             KeyHandler.getInstance().clearAllKeys();
             SwingUtilities.invokeLater(this::showEscapeMenu);//Ayudado con Gemini Flash 3.8 IA
             return;
         }
 
-        // Lógica de movimiento según teclas activas
-        if (KeyHandler.getInstance().getW()) POOPSoccer.getGame().movePlayer1('j');
-        if (KeyHandler.getInstance().getS()) POOPSoccer.getGame().movePlayer1('k');
-        if (KeyHandler.getInstance().getA()) POOPSoccer.getGame().movePlayer1('l');
-        if (KeyHandler.getInstance().getD()) POOPSoccer.getGame().movePlayer1('r');
-        if (KeyHandler.getInstance().getQ()) POOPSoccer.getGame().movePlayer1('p');
-        if (KeyHandler.getInstance().getUp()) POOPSoccer.getGame().movePlayer2('j');
-        if (KeyHandler.getInstance().getDown()) POOPSoccer.getGame().movePlayer2('k');
-        if (KeyHandler.getInstance().getLeft()) POOPSoccer.getGame().movePlayer2('l');
-        if (KeyHandler.getInstance().getRight()) POOPSoccer.getGame().movePlayer2('r');
-        if (KeyHandler.getInstance().getCtrlRight()) POOPSoccer.getGame().movePlayer2('p');
+        // Envía las acciones activas del teclado al controlador de presentación
+        KeyHandler keys = KeyHandler.getInstance();
+        if (keys.getW()) controller.movePlayer1('j');
+        if (keys.getS()) controller.movePlayer1('k');
+        if (keys.getA()) controller.movePlayer1('l');
+        if (keys.getD()) controller.movePlayer1('r');
+        if (keys.getQ()) controller.movePlayer1('p');
+        if (keys.getUp()) controller.movePlayer2('j');
+        if (keys.getDown()) controller.movePlayer2('k');
+        if (keys.getLeft()) controller.movePlayer2('l');
+        if (keys.getRight()) controller.movePlayer2('r');
+        if (keys.getCtrlRight()) controller.movePlayer2('p');
 
-        POOPSoccer.getGame().update();
+        controller.updateGame();
     }
 
     private void showEscapeMenu() {
@@ -164,9 +165,9 @@ public class GamePanel extends JPanel implements Runnable {
             case 0 -> LISTENER.goToMenu();
             case 1 -> LISTENER.restartFromLevel1();
             default -> {
-                // Limpia las teclas retenidas, reanuda el partido en el dominio y devuelve el foco a la cancha
+                // Limpia las teclas retenidas, reanuda el partido y devuelve el foco a la cancha
                 KeyHandler.getInstance().clearAllKeys();
-                POOPSoccer.getGame().resumeGame();
+                controller.resumeGame();
                 requestFocusInWindow();
             }
         }
@@ -195,11 +196,10 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     /**
-     * Builds the resource path dynamically from the element class name and variant.
+     * Builds the resource path dynamically from the visual category and variant.
      */
-    private String resolveImagePath(Element elem) {
-        String className = elem.getClass().getSimpleName().toLowerCase();
-        return "/" + className + "/" + elem.getVariantName() + ".png";
+    private String resolveImagePath(RenderElement elem) {
+        return "/" + elem.category() + "/" + elem.variant() + ".png";
     }
 
     private BufferedImage getSprite(String path) {
@@ -225,36 +225,35 @@ public class GamePanel extends JPanel implements Runnable {
             g2.drawImage(background, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, null);
         }
 
-        if (POOPSoccer.getGame().getElementsToDraw() != null) {
-            for (Element elem : POOPSoccer.getGame().getElementsToDraw().values()) {
-                if (elem == null || elem.getPosition() == null) continue;
-
-                // Resuelve la ruta de la imagen de forma dinámica y la dibuja desde la caché
+        List<RenderElement> elements = controller.getRenderElements();
+        if (elements != null) {
+            for (RenderElement elem : elements) {
+                // Resuelve la ruta de la imagen y dibuja las auras junto con el sprite
                 String imagePath = resolveImagePath(elem);
                 BufferedImage sprite = getSprite(imagePath);
                 if (sprite != null) {
-                    int x = (int) elem.getX();
-                    int y = (int) elem.getY();
-                    int width = (int) elem.getWidth();
-                    int height = (int) elem.getHeight();
-
-                    drawElementAuraOrEffects(g2, elem, x, y, width, height);
-                    g2.drawImage(sprite, x, y, width, height, null);
+                    drawElementAuraOrEffects(g2, elem);
+                    g2.drawImage(sprite, elem.x(), elem.y(), elem.width(), elem.height(), null);
                 }
             }
         }
     }
 
-    private void drawElementAuraOrEffects(Graphics2D g2, Element elem, int x, int y, int width, int height) {
-        if (elem.hasPowerAura()) {
+    private void drawElementAuraOrEffects(Graphics2D g2, RenderElement elem) {
+        int x = elem.x();
+        int y = elem.y();
+        int width = elem.width();
+        int height = elem.height();
+
+        if (elem.powerAura()) {
             g2.setColor(new Color(0, 200, 255, 110));
             g2.fillOval(x - 10, y - 10, width + 20, height + 20);
             g2.setColor(new Color(255, 215, 0, 220));
             g2.drawOval(x - 10, y - 10, width + 20, height + 20);
         }
-        String statusText = elem.getStatusText();
-        if (!statusText.isEmpty()) {
-            if (elem.isStunnedStatus()) {
+        String statusText = elem.statusText();
+        if (statusText != null && !statusText.isEmpty()) {
+            if (elem.stunned()) {
                 g2.setColor(new Color(255, 60, 60, 120));
                 g2.fillOval(x - 6, y - 6, width + 12, height + 12);
                 g2.setColor(Color.RED);
@@ -265,17 +264,17 @@ public class GamePanel extends JPanel implements Runnable {
             }
             g2.drawString(statusText, x - 2, y - 8);
         }
-        if (elem.hasShotAura()) {
+        if (elem.shotAura()) {
             g2.setColor(new Color(255, 180, 0, 140));
             g2.fillOval(x - 6, y - 6, width + 12, height + 12);
         }
     }
 
     private void verifyGame() {
-        if (POOPSoccer.getGame().isGameFinished()) {
+        if (controller.isGameFinished()) {
             stopThread();
             SwingUtilities.invokeLater(() -> {
-                String message = POOPSoccer.getGame().getMatchSummaryMessage();
+                String message = controller.getMatchSummaryMessage();
                 JOptionPane.showMessageDialog(this, message, "Fin del Partido", JOptionPane.INFORMATION_MESSAGE);
                 LISTENER.goToMenu(); // Vuelve prolijamente al menú
             });

@@ -1,13 +1,10 @@
 package presentation;
 
-import domain.POOPSoccer;
-
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.Window;
 import java.io.File;
-import java.util.Locale;
 
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -22,9 +19,11 @@ public class GameContainer extends JPanel implements GamePanelListener {
     private JPanel cardPanel;
     private GameSetup setup;
     private InfoPanel infoPanel;
-    private GamePanel activeGamePanel = new GamePanel(this);;
+    private GamePanel activeGamePanel;
+    private final GameController controller;
 
-    public GameContainer() {
+    public GameContainer(GameController controller) {
+        this.controller = controller;
         prepareView();
     }
 
@@ -78,7 +77,7 @@ public class GameContainer extends JPanel implements GamePanelListener {
 
     public void onModeSelected(String mode) {
         setup.setMode(mode);
-        cardPanel.add(new PlayerConfig(this, mode), ScreenView.PLAYER_CONFIG.name());
+        cardPanel.add(new PlayerConfig(this, controller, mode), ScreenView.PLAYER_CONFIG.name());
         showView(ScreenView.PLAYER_CONFIG);
     }
 
@@ -119,8 +118,8 @@ public class GameContainer extends JPanel implements GamePanelListener {
 
     public void startGame() {
         try {
-            // Inicializa un partido nuevo en la fachada del dominio
-            POOPSoccer.getGame().startGame(
+            // Delega el inicio del partido al controlador de presentación POOPSoccerGUI
+            controller.startGame(
                     setup.getGameMode(),
                     setup.getMatchType(),
                     setup.getGoalLimit(),
@@ -147,7 +146,7 @@ public class GameContainer extends JPanel implements GamePanelListener {
             cardPanel.remove(activeGamePanel);
         }
         // Crea el nuevo lienzo, muestra la vista de cancha y arranca el hilo
-        activeGamePanel = new GamePanel(this, setup.getResolution());
+        activeGamePanel = new GamePanel(this, controller, setup.getResolution());
         cardPanel.add(activeGamePanel, ScreenView.GAME.name());
         showView(ScreenView.GAME);
         activeGamePanel.startGameThread();
@@ -175,16 +174,16 @@ public class GameContainer extends JPanel implements GamePanelListener {
      * Saves the current match into the selected file.
      */
     public void saveCurrentGame(File selectedFile) throws Exception {
-        // Delega el guardado a la fachada del dominio
-        POOPSoccer.getGame().save(selectedFile);
+        // Delega el guardado al controlador principal
+        controller.saveGame(selectedFile);
     }
 
     /**
      * Opens a saved match from the selected file and shows the game view.
      */
     public void loadSavedGame(File selectedFile) throws Exception {
-        // Carga el estado desde el dominio y abre la cancha sin reiniciar el partido
-        POOPSoccer.getGame().open(selectedFile);
+        // Delega la carga al controlador principal y abre la cancha sin reiniciar el partido
+        controller.openGame(selectedFile);
         launchGameView();
     }
 }

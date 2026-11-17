@@ -1,9 +1,6 @@
 package presentation;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.IOException;
 
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -26,8 +23,10 @@ public class Window extends JFrame {
     private JMenuItem optionExit;
 
     private GameContainer gameContainer;
+    private final GameController controller;
 
-    public Window() throws Exception {
+    public Window(GameController controller) throws Exception {
+        this.controller = controller;
         prepareView();
         prepareActions();
     }
@@ -42,7 +41,7 @@ public class Window extends JFrame {
         setTitle("POOPSoccer");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        gameContainer = new GameContainer();
+        gameContainer = new GameContainer(controller);
         add(gameContainer);
         pack();
         setLocationRelativeTo(null);

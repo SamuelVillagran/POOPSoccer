@@ -7,7 +7,6 @@ import java.io.Serializable;
  */
 public abstract class PlayerType implements Serializable {
     protected Player player;
-    private Power power;
 
     public PlayerType() {
     }

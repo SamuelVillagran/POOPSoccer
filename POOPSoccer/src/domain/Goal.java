@@ -1,13 +1,8 @@
 package domain;
 
 public class Goal extends ItemSoccer {
-    private Side side;
-    private Player owner;
 
-    public Goal(Side side, Player owner) {
-        this.side = side;
-        this.owner = owner;
-
+    public Goal() {
     }
 
     @Override
@@ -26,9 +21,5 @@ public class Goal extends ItemSoccer {
     @Override
     public boolean hasCollision() {
         return false;
-    }
-
-    public Side getSide() {
-        return side;
     }
 }

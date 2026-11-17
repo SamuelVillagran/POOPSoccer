@@ -2,10 +2,7 @@ package domain;
 
 public class Pitch extends ItemSoccer {
 
-    private Side side;
-
-    public Pitch(Side side) {
-        this.side = side;
+    public Pitch() {
     }
 
     @Override
@@ -15,6 +12,4 @@ public class Pitch extends ItemSoccer {
     public float getHeight() { return 8.0f; }
 
     @Override public boolean isMovible() { return false; }
-
-    public Side getSide() { return side; }
 }
