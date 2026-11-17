@@ -13,7 +13,7 @@ import javax.swing.SwingUtilities;
 /**
  * Central view container that switches between menu, configuration, and game screens using CardLayout.
  */
-public class GameContainer extends JPanel implements GamePanelListener {
+public class GameContainer extends JPanel implements GamePanelListener, MenuPanelListener, PlayerConfigListener {
 
     private CardLayout cardLayout;
     private JPanel cardPanel;
@@ -70,6 +70,7 @@ public class GameContainer extends JPanel implements GamePanelListener {
         repaint();
     }
 
+    @Override
     public void onModeSelected(String mode) {
         setup.setMode(mode);
         if (activeConfigPanel != null) {
@@ -81,6 +82,7 @@ public class GameContainer extends JPanel implements GamePanelListener {
     }
 
 
+    @Override
     public void onPlayerConfigConfirmed(String nameP1, String teamP1, String nameP2, String teamP2,
                                         String matchType, int goalLimit, int timeLimit) {
         setup.setPlayer1(nameP1, teamP1);
@@ -91,6 +93,7 @@ public class GameContainer extends JPanel implements GamePanelListener {
         startGame();
     }
 
+    @Override
     public void setResolution(Dimension resolution) {
         setup.setResolution(resolution);
     }
@@ -145,6 +148,7 @@ public class GameContainer extends JPanel implements GamePanelListener {
         activeGamePanel.requestFocusInWindow();
     }
 
+    @Override
     public void goToMenu() {
         if (activeGamePanel != null) {
             activeGamePanel.stopThread();

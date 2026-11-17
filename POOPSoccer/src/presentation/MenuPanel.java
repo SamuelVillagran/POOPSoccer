@@ -24,10 +24,10 @@ public class MenuPanel extends JPanel {
     private JButton btnMvM;
     private BufferedImage background;
 
-    public MenuPanel(GameContainer container) {
+    public MenuPanel(MenuPanelListener listener) {
         loadBackground();
         prepareElements();
-        prepareActions(container);
+        prepareActions(listener);
     }
 
     private void loadBackground() {
@@ -69,11 +69,11 @@ public class MenuPanel extends JPanel {
         add(btnMvM, gbc);
     }
 
-    private void prepareActions(GameContainer container) {
+    private void prepareActions(MenuPanelListener listener) {
         // Envía el identificador de la modalidad al contenedor sin acoplarse a enums del dominio
-        btnPvP.addActionListener(e -> container.onModeSelected("PVP"));
-        btnPvM.addActionListener(e -> container.onModeSelected("PVM"));
-        btnMvM.addActionListener(e -> container.onModeSelected("MVM"));
+        btnPvP.addActionListener(e -> listener.onModeSelected("PVP"));
+        btnPvM.addActionListener(e -> listener.onModeSelected("PVM"));
+        btnMvM.addActionListener(e -> listener.onModeSelected("MVM"));
     }
 
     private JButton createButton(String text) {

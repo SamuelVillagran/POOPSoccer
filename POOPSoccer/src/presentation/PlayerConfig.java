@@ -3,6 +3,7 @@ package presentation;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -10,7 +11,10 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.Path2D;
@@ -18,24 +22,53 @@ import java.awt.image.BufferedImage;
 import java.io.InputStream;
 
 import javax.imageio.ImageIO;
+import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicComboPopup;
+import javax.swing.plaf.basic.BasicScrollBarUI;
+import javax.swing.plaf.basic.ComboPopup;
 
 /**
  * Configuration screen for players, stats upgrades, match type, and pitch resolution.
  */
-public class PlayerConfig extends JPanel {
+public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hydrogen 4
 
-    private String mode;
-    private GameContainer container;
+    private static final Color CARD_BG = new Color(18, 28, 48, 232);
+    private static final Color CARD_BORDER = new Color(245, 198, 45);
+    private static final Color P1_TITLE_COLOR = new Color(70, 210, 250);
+    private static final Color P2_TITLE_COLOR = new Color(255, 165, 50);
+    private static final Color MATCH_TITLE_COLOR = new Color(245, 198, 45);
+    private static final Color FIELD_BG = new Color(26, 38, 62);
+    private static final Color FIELD_LOCKED_BG = new Color(52, 62, 84);
+    private static final Color FIELD_DISABLED_FG = new Color(185, 195, 210);
+    private static final Color FIELD_BORDER = new Color(95, 130, 175);
+    private static final Color COMBO_HOVER_BG = new Color(34, 88, 130);
+    private static final Color PILL_BG = new Color(12, 18, 32, 225);
+    private static final Color P1_BTN_BG = new Color(14, 82, 110);
+    private static final Color P2_BTN_BG = new Color(195, 95, 12);
+    private static final Color START_BTN_BG = new Color(18, 168, 88);
+
+    private static final Font FONT_SECTION = new Font("Arial", Font.BOLD, 16);
+    private static final Font FONT_LABEL = new Font("Arial", Font.BOLD, 12);
+    private static final Font FONT_INPUT = new Font("Arial", Font.PLAIN, 13);
+
+    private final String mode;
+    private final PlayerConfigListener listener;
     private final GameController controller;
+
     private JTextField nameFieldP1;
     private JComboBox<String> countryComboP1;
     private JComboBox<String> machineProfileComboP1;
@@ -56,9 +89,9 @@ public class PlayerConfig extends JPanel {
     private JButton startBtn;
     private BufferedImage background;
 
-    public PlayerConfig(GameContainer container, GameController controller, String mode) {
+    public PlayerConfig(PlayerConfigListener listener, GameController controller, String mode) {
         this.mode = mode;
-        this.container = container;
+        this.listener = listener;
         this.controller = controller;
         loadBackground();
         prepareView();
@@ -66,8 +99,7 @@ public class PlayerConfig extends JPanel {
     }
 
     private void loadBackground() {
-        try {
-            InputStream is = getClass().getResourceAsStream("/menu/playerconfig.jpg");
+        try (InputStream is = getClass().getResourceAsStream("/menu/playerconfig.jpg")) {
             if (is != null) {
                 background = ImageIO.read(is);
             }
@@ -85,125 +117,217 @@ public class PlayerConfig extends JPanel {
     }
 
     private void prepareView() {
-        setOpaque(false);
-        setLayout(new BorderLayout(8, 6));
-        setBorder(BorderFactory.createEmptyBorder(8, 40, 10, 40));
+        configureRootPanel();
         prepareViewTopBar();
-        JPanel formPanel = new JPanel(new GridLayout(0, 1, 4, 4)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                g.setColor(getBackground());
-                g.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
-                super.paintComponent(g);
-            }
-        };
-        formPanel.setOpaque(false);
-        formPanel.setBackground(new Color(255, 255, 255, 130));
-        formPanel.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
-
-        // Configura los jugadores, el partido y el botón de inicio
-        prepareViewSettingPlayer(formPanel);
-        prepareViewMatchSettings(formPanel);
-        add(formPanel, BorderLayout.CENTER);
+        JPanel formCard = createTranslucentFormCard();
+        GridBagConstraints gbc = createFormConstraints();
+        prepareViewPlayers(formCard, gbc);
+        prepareViewMatchSettings(formCard, gbc);
+        add(wrapCenteredCard(formCard), BorderLayout.CENTER);
         prepareViewStartButton();
     }
 
-    private void prepareViewSettingPlayer(JPanel formPanel) {
-        String[] possibleCountries = controller.getAvailableTeams();
-        String[] machineProfiles = controller.getAvailableMachineProfiles();
+    private void configureRootPanel() {
+        setOpaque(false);
+        setLayout(new BorderLayout(8, 6));
+        setBorder(BorderFactory.createEmptyBorder(10, 44, 12, 44));
+    }
+
+    private JPanel createTranslucentFormCard() {
+        JPanel formCard = new JPanel(new GridBagLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                paintFormCardSurface(g, getWidth(), getHeight());
+            }
+        };
+        formCard.setOpaque(false);
+        formCard.setBorder(BorderFactory.createEmptyBorder(14, 22, 16, 22));
+        return formCard;
+    }
+
+    private void paintFormCardSurface(Graphics g, int width, int height) {
+        // Pinta la tarjeta oscura traslúcida con borde dorado estilo Head Soccer
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(CARD_BG);
+        g2.fillRoundRect(0, 0, width, height, 22, 22);
+        g2.setColor(CARD_BORDER);
+        g2.setStroke(new BasicStroke(2.5f));
+        g2.drawRoundRect(1, 1, width - 3, height - 3, 22, 22);
+        g2.dispose();
+    }
+
+    private GridBagConstraints createFormConstraints() {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.weightx = 1.0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(4, 0, 4, 0);
+        return gbc;
+    }
+
+    private JPanel wrapCenteredCard(JPanel formCard) {
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        centerWrapper.setOpaque(false);
+        GridBagConstraints wrapGbc = new GridBagConstraints();
+        wrapGbc.weightx = 1.0;
+        wrapGbc.fill = GridBagConstraints.HORIZONTAL;
+        centerWrapper.add(formCard, wrapGbc);
+        return centerWrapper;
+    }
+
+    private void prepareViewPlayers(JPanel formCard, GridBagConstraints gbc) {
         boolean isP1Machine = "MVM".equals(mode);
         boolean isP2Machine = "PVM".equals(mode) || "MVM".equals(mode);
+        addPlayerSection(formCard, gbc, 1, isP1Machine, P1_TITLE_COLOR, P1_BTN_BG, 0);
+        addPlayerSection(formCard, gbc, 2, isP2Machine, P2_TITLE_COLOR, P2_BTN_BG, 4);
+    }
 
-        // Configura los controles del primer jugador consultando su último perfil activo al controlador
-        JLabel titleP1 = new JLabel(isP1Machine ? "Configuración Máquina (Jugador 1):" : "Configuración Jugador 1:");
-        titleP1.setFont(new Font("Arial", Font.BOLD, 15));
-        formPanel.add(titleP1);
+    private void addPlayerSection(JPanel formCard, GridBagConstraints gbc, int playerNum,
+                                  boolean isMachine, Color titleColor, Color btnFill, int startRow) {
+        gbc.gridy = startRow;
+        gbc.insets = new Insets(startRow == 0 ? 4 : 10, 0, 4, 0);
+        formCard.add(createSectionHeader(buildPlayerTitle(playerNum, isMachine), titleColor), gbc);
+        gbc.insets = new Insets(4, 0, 4, 0);
 
-        nameFieldP1 = new JTextField(controller.getPlayerName(1));
-        formPanel.add(new JLabel("Nombre:"));
-        formPanel.add(nameFieldP1);
+        JTextField nameField = createStyledTextField(controller.getPlayerName(playerNum), true);
+        JComboBox<String> countryCombo = createStyledComboBox(controller.getAvailableTeams());
+        JComboBox<String> profileCombo = isMachine ? createStyledComboBox(controller.getAvailableMachineProfiles()) : null;
+        storePlayerFields(playerNum, nameField, countryCombo, profileCombo);
 
-        countryComboP1 = new JComboBox<>(possibleCountries);
-        if (isP1Machine) {
-            machineProfileComboP1 = new JComboBox<>(machineProfiles);
-            configureMachineNameField(nameFieldP1, machineProfileComboP1);
-            addCountryAndProfileRow(formPanel, countryComboP1, machineProfileComboP1);
+        addPlayerIdentityRows(formCard, gbc, startRow + 1, nameField, countryCombo, profileCombo);
+        gbc.gridy = startRow + 3;
+        formCard.add(createStatsSection(playerNum, nameField, btnFill, titleColor), gbc);
+    }
+
+    private String buildPlayerTitle(int playerNum, boolean isMachine) {
+        String role = isMachine ? "Máquina (Jugador " + playerNum + ")" : "Jugador " + playerNum;
+        return "Configuración " + role + ":";
+    }
+
+    private void storePlayerFields(int playerNum, JTextField nameField,
+                                   JComboBox<String> countryCombo, JComboBox<String> profileCombo) {
+        if (playerNum == 1) {
+            nameFieldP1 = nameField;
+            countryComboP1 = countryCombo;
+            machineProfileComboP1 = profileCombo;
         } else {
-            formPanel.add(new JLabel("País / Poder:"));
-            formPanel.add(countryComboP1);
+            nameFieldP2 = nameField;
+            countryComboP2 = countryCombo;
+            machineProfileComboP2 = profileCombo;
         }
-        addStatsUpgradeRow(formPanel, 1, nameFieldP1);
+    }
 
-        // Configura los controles del segundo jugador solicitando países y perfiles al controlador
-        JLabel titleP2 = new JLabel(!isP2Machine ? "Configuración Jugador 2:" : "Configuración Máquina (Jugador 2):");
-        titleP2.setFont(new Font("Arial", Font.BOLD, 15));
-        formPanel.add(titleP2);
-
-        nameFieldP2 = new JTextField(controller.getPlayerName(2));
-        formPanel.add(new JLabel("Nombre:"));
-        formPanel.add(nameFieldP2);
-
-        countryComboP2 = new JComboBox<>(possibleCountries);
-        if (isP2Machine) {
-            machineProfileComboP2 = new JComboBox<>(machineProfiles);
-            configureMachineNameField(nameFieldP2, machineProfileComboP2);
-            addCountryAndProfileRow(formPanel, countryComboP2, machineProfileComboP2);
-        } else {
-            formPanel.add(new JLabel("País / Poder:"));
-            formPanel.add(countryComboP2);
+    private void addPlayerIdentityRows(JPanel formCard, GridBagConstraints gbc, int baseRow,
+                                       JTextField nameField, JComboBox<String> countryCombo,
+                                       JComboBox<String> profileCombo) {
+        if (profileCombo != null) {
+            configureMachineNameField(nameField, profileCombo);
+            gbc.gridy = baseRow;
+            formCard.add(createInlineFieldRow("Nombre:", nameField), gbc);
+            gbc.gridy = baseRow + 1;
+            formCard.add(createTwoColumnRow("País / Poder:", countryCombo, "Perfil de máquina:", profileCombo), gbc);
+            return;
         }
-        addStatsUpgradeRow(formPanel, 2, nameFieldP2);
+        gbc.gridy = baseRow;
+        formCard.add(createTwoColumnRow("Nombre:", nameField, "País / Poder:", countryCombo), gbc);
+    }
+
+    private JLabel createSectionHeader(String text, Color color) {
+        JLabel label = new JLabel(text, SwingConstants.CENTER);
+        label.setFont(FONT_SECTION);
+        label.setForeground(color);
+        return label;
+    }
+
+    private JPanel createInlineFieldRow(String labelText, Component field) {
+        JPanel row = new JPanel(new BorderLayout(10, 0));
+        row.setOpaque(false);
+        row.add(createDarkLabel(labelText), BorderLayout.WEST);
+        row.add(field, BorderLayout.CENTER);
+        return row;
+    }
+
+    private JPanel createTwoColumnRow(String labelLeft, Component inputLeft,
+                                      String labelRight, Component inputRight) {
+        JPanel row = new JPanel(new GridLayout(1, 2, 14, 0));
+        row.setOpaque(false);
+        row.add(createInlineFieldRow(labelLeft, inputLeft));
+        row.add(createInlineFieldRow(labelRight, inputRight));
+        return row;
     }
 
     private void configureMachineNameField(JTextField nameField, JComboBox<String> profileCombo) {
         // Bloquea la edición manual del nombre de la máquina y lo fija según el perfil elegido
         nameField.setEditable(false);
+        nameField.setBackground(FIELD_LOCKED_BG);
+        nameField.setForeground(FIELD_DISABLED_FG);
         nameField.setText("CPU " + profileCombo.getSelectedItem());
         profileCombo.addActionListener(e -> nameField.setText("CPU " + profileCombo.getSelectedItem()));
     }
 
-    private void addCountryAndProfileRow(JPanel formPanel, JComboBox<String> countryCombo, JComboBox<String> profileCombo) {
-        // Agrupa país y perfil de máquina en dos columnas para no recargar la altura del formulario
-        JPanel labelsRow = new JPanel(new GridLayout(1, 2, 8, 0));
-        labelsRow.setOpaque(false);
-        labelsRow.add(new JLabel("País / Poder:"));
-        labelsRow.add(new JLabel("Perfil de máquina:"));
-        formPanel.add(labelsRow);
-
-        JPanel combosRow = new JPanel(new GridLayout(1, 2, 8, 0));
-        combosRow.setOpaque(false);
-        combosRow.add(countryCombo);
-        combosRow.add(profileCombo);
-        formPanel.add(combosRow);
-    }
-
-    private void addStatsUpgradeRow(JPanel formPanel, int playerNum, JTextField nameField) {
-        // Carga el perfil guardado del jugador según el nombre escrito en el campo de texto
+    private JPanel createStatsSection(int playerNum, JTextField nameField, Color btnFill, Color btnAccent) {
         controller.selectPlayerProfile(playerNum, nameField.getText());
-        JPanel row = new JPanel(new BorderLayout(8, 0));
-        row.setOpaque(false);
+        JPanel containerPanel = new JPanel(new BorderLayout(0, 6));
+        containerPanel.setOpaque(false);
 
-        JLabel pointsLbl = new JLabel(formatProfileSummary(playerNum));
-        pointsLbl.setFont(new Font("Arial", Font.BOLD, 12));
-        row.add(pointsLbl, BorderLayout.WEST);
+        JLabel pointsLbl = createPointsPillLabel(playerNum);
+        containerPanel.add(wrapPillBadge(pointsLbl), BorderLayout.NORTH);
 
         String[] stats = controller.getAvailableStats();
-        JPanel statsBar = new JPanel(new GridLayout(1, stats.length, 6, 0));
-        statsBar.setOpaque(false);
         JButton[] buttons = new JButton[stats.length];
+        containerPanel.add(createStatButtonsBar(playerNum, stats, pointsLbl, buttons, btnFill, btnAccent),
+                BorderLayout.CENTER);
+        bindProfileNameListener(nameField, playerNum, pointsLbl, buttons, stats);
+        return containerPanel;
+    }
+
+    private JPanel wrapPillBadge(JLabel pointsLbl) {
+        JPanel pillHolder = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        pillHolder.setOpaque(false);
+        pillHolder.add(pointsLbl);
+        return pillHolder;
+    }
+
+    private JPanel createStatButtonsBar(int playerNum, String[] stats, JLabel pointsLbl,
+                                        JButton[] buttons, Color btnFill, Color btnAccent) {
+        JPanel statsBar = new JPanel(new GridLayout(1, stats.length, 8, 0));
+        statsBar.setOpaque(false);
         for (int i = 0; i < stats.length; i++) {
-            buttons[i] = createStatButton(playerNum, stats[i], pointsLbl);
+            buttons[i] = createStatButton(playerNum, stats[i], pointsLbl, buttons, stats, btnFill, btnAccent);
             statsBar.add(buttons[i]);
         }
-        bindProfileNameListener(nameField, playerNum, pointsLbl, buttons, stats);
-        row.add(statsBar, BorderLayout.CENTER);
-        formPanel.add(row);
+        return statsBar;
+    }
+
+    private JLabel createPointsPillLabel(int playerNum) {
+        JLabel badge = new JLabel(formatProfileSummary(playerNum), SwingConstants.CENTER) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                paintPillBadgeSurface(g, getWidth(), getHeight());
+                super.paintComponent(g);
+            }
+        };
+        badge.setFont(FONT_LABEL);
+        badge.setForeground(Color.WHITE);
+        badge.setBorder(BorderFactory.createEmptyBorder(4, 14, 4, 14));
+        return badge;
+    }
+
+    private void paintPillBadgeSurface(Graphics g, int width, int height) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(PILL_BG);
+        g2.fillRoundRect(0, 0, width, height, 16, 16);
+        g2.setColor(new Color(255, 255, 255, 70));
+        g2.drawRoundRect(0, 0, width - 1, height - 1, 16, 16);
+        g2.dispose();
     }
 
     private String formatProfileSummary(int playerNum) {
         return "Puntos: " + controller.getPlayerPoints(playerNum)
                 + " | PJ: " + controller.getPlayerMatchesPlayed(playerNum)
-                + " (G: " + controller.getPlayerWins(playerNum) + ")  ";
+                + " (G: " + controller.getPlayerWins(playerNum) + ")";
     }
 
     private void bindProfileNameListener(JTextField nameField, int playerNum, JLabel pointsLbl,
@@ -212,41 +336,86 @@ public class PlayerConfig extends JPanel {
         Runnable refreshProfile = () -> {
             controller.selectPlayerProfile(playerNum, nameField.getText());
             pointsLbl.setText(formatProfileSummary(playerNum));
-            for (int i = 0; i < stats.length; i++) {
-                updateStatButtonText(buttons[i], playerNum, stats[i]);
-            }
+            refreshStatButtons(buttons, playerNum, stats);
         };
-        nameField.getDocument().addDocumentListener(new DocumentListener() {
+        nameField.getDocument().addDocumentListener(createSimpleDocListener(refreshProfile));
+    }
+
+    private DocumentListener createSimpleDocListener(Runnable action) {
+        return new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                refreshProfile.run();
+                action.run();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                refreshProfile.run();
+                action.run();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                refreshProfile.run();
+                action.run();
             }
-        });
+        };
     }
 
-    private JButton createStatButton(int playerNum, String statName, JLabel pointsLbl) {
-        JButton btn = new JButton();
-        btn.setFont(new Font("Arial", Font.BOLD, 11));
-        updateStatButtonText(btn, playerNum, statName);
-        btn.addActionListener(e -> {
-            if (!controller.upgradePlayerStat(playerNum, statName)) {
-                int cost = controller.getPlayerUpgradeCost(playerNum, statName);
-                JOptionPane.showMessageDialog(this, "Necesitás " + cost + " puntos (o ya está al máximo nivel 10).");
+    private void refreshStatButtons(JButton[] buttons, int playerNum, String[] stats) {
+        for (int i = 0; i < stats.length; i++) {
+            updateStatButtonText(buttons[i], playerNum, stats[i]);
+        }
+    }
+
+    private JButton createStatButton(int playerNum, String statName, JLabel pointsLbl,
+                                     JButton[] allButtons, String[] stats, Color fillColor, Color accentColor) {
+        JButton btn = new JButton() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                paintStatButtonSurface(g, this, playerNum, statName, fillColor, accentColor);
+                super.paintComponent(g);
             }
-            pointsLbl.setText(formatProfileSummary(playerNum));
-            updateStatButtonText(btn, playerNum, statName);
-        });
+        };
+        configureArcadeButtonStyle(btn, FONT_LABEL, new Dimension(120, 30));
+        updateStatButtonText(btn, playerNum, statName);
+        btn.addActionListener(e -> handleStatUpgradeClick(playerNum, statName, pointsLbl, allButtons, stats));
         return btn;
+    }
+
+    private void paintStatButtonSurface(Graphics g, AbstractButton btn, int playerNum,
+                                        String statName, Color fillColor, Color accentColor) {
+        // Pinta cada botón de estadística con brillo cuando la mejora está disponible
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        boolean affordable = isStatUpgradeAffordable(playerNum, statName);
+        Color bg = resolveHoverPressedColor(btn, fillColor);
+        g2.setColor(bg);
+        g2.fillRoundRect(0, 0, btn.getWidth(), btn.getHeight(), 16, 16);
+        g2.setColor(affordable ? accentColor : new Color(255, 255, 255, 90));
+        g2.setStroke(new BasicStroke(affordable ? 2.0f : 1.2f));
+        g2.drawRoundRect(1, 1, btn.getWidth() - 3, btn.getHeight() - 3, 16, 16);
+        g2.dispose();
+    }
+
+    private boolean isStatUpgradeAffordable(int playerNum, String statName) {
+        return controller.getPlayerStatLevel(playerNum, statName) < 10
+                && controller.getPlayerPoints(playerNum) >= controller.getPlayerUpgradeCost(playerNum, statName);
+    }
+
+    private Color resolveHoverPressedColor(AbstractButton btn, Color baseColor) {
+        if (btn.getModel().isPressed()) {
+            return baseColor.darker();
+        }
+        return btn.getModel().isRollover() ? baseColor.brighter() : baseColor;
+    }
+
+    private void handleStatUpgradeClick(int playerNum, String statName, JLabel pointsLbl,
+                                        JButton[] allButtons, String[] stats) {
+        if (!controller.upgradePlayerStat(playerNum, statName)) {
+            int cost = controller.getPlayerUpgradeCost(playerNum, statName);
+            JOptionPane.showMessageDialog(this, "Necesitás " + cost + " puntos (o ya está al máximo nivel 10).");
+        }
+        pointsLbl.setText(formatProfileSummary(playerNum));
+        refreshStatButtons(allButtons, playerNum, stats);
     }
 
     private void updateStatButtonText(JButton btn, int playerNum, String statName) {
@@ -254,43 +423,159 @@ public class PlayerConfig extends JPanel {
         int cost = controller.getPlayerUpgradeCost(playerNum, statName);
         btn.setText(statName + " Nv." + lvl + " (+)");
         btn.setToolTipText(lvl < 10 ? "Mejorar por " + cost + " pts" : "Nivel máximo (10)");
+        btn.repaint();
     }
 
-    private void prepareViewMatchSettings(JPanel formPanel) {
-        JLabel titleMatch = new JLabel("Configuración del Partido:");
-        titleMatch.setFont(new Font("Arial", Font.BOLD, 15));
-        formPanel.add(titleMatch);
+    private void prepareViewMatchSettings(JPanel formCard, GridBagConstraints gbc) {
+        addMatchHeader(formCard, gbc);
+        initMatchCombos();
+        addMatchSettingsGrid(formCard, gbc);
+    }
 
-        // Consulta los tipos de partido disponibles directamente desde el controlador
-        matchTypeCombo = new JComboBox<>(controller.getAvailableMatchTypes());
-        formPanel.add(new JLabel("Tipo de partido:"));
-        formPanel.add(matchTypeCombo);
+    private void addMatchHeader(JPanel formCard, GridBagConstraints gbc) {
+        gbc.gridy = 8;
+        gbc.insets = new Insets(10, 0, 4, 0);
+        formCard.add(createSectionHeader("Configuración del Partido:", MATCH_TITLE_COLOR), gbc);
+    }
 
-        limitLabel = new JLabel("Goles para ganar:");
-        formPanel.add(limitLabel);
-
-        goalLimitCombo = new JComboBox<>(new Integer[] { 3, 5, 7 });
-        timeLimitCombo = new JComboBox<>(new Integer[] { 1, 2, 3, 5 });
+    private void initMatchCombos() {
+        matchTypeCombo = createStyledComboBox(controller.getAvailableMatchTypes());
+        goalLimitCombo = createStyledComboBox(new Integer[] { 3, 5, 7 });
+        timeLimitCombo = createStyledComboBox(new Integer[] { 1, 2, 3, 5 });
+        limitLabel = createDarkLabel("Goles para ganar:");
         limitComboHolder = new JPanel(new BorderLayout());
         limitComboHolder.setOpaque(false);
         limitComboHolder.add(goalLimitCombo, BorderLayout.CENTER);
-        formPanel.add(limitComboHolder);
 
         screenResolutions = buildScreenResolutions();
-        resolutionCombo = new JComboBox<>(new String[] {
+        resolutionCombo = createStyledComboBox(new String[] {
                 "Pequeña (75% - 4:3)",
                 "Estándar (90% - 4:3)",
                 "Grande (100% - 4:3)"
         });
         resolutionCombo.setSelectedIndex(1);
-        formPanel.add(new JLabel("Resolución de la cancha:"));
-        formPanel.add(resolutionCombo);
+    }
+
+    private void addMatchSettingsGrid(JPanel formCard, GridBagConstraints gbc) {
+        JPanel matchGrid = new JPanel(new GridLayout(1, 3, 12, 0));
+        matchGrid.setOpaque(false);
+        matchGrid.add(createStackedColumn(createDarkLabel("Tipo de partido:"), matchTypeCombo));
+        matchGrid.add(createStackedColumn(limitLabel, limitComboHolder));
+        matchGrid.add(createStackedColumn(createDarkLabel("Resolución de la cancha:"), resolutionCombo));
+
+        gbc.gridy = 9;
+        gbc.insets = new Insets(2, 0, 2, 0);
+        formCard.add(matchGrid, gbc);
+    }
+
+    private JPanel createStackedColumn(JLabel label, Component input) {
+        JPanel col = new JPanel(new BorderLayout(0, 4));
+        col.setOpaque(false);
+        col.add(label, BorderLayout.NORTH);
+        col.add(input, BorderLayout.CENTER);
+        return col;
+    }
+
+    private JLabel createDarkLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(FONT_LABEL);
+        label.setForeground(Color.WHITE);
+        return label;
+    }
+
+    private JTextField createStyledTextField(String initialText, boolean editable) {
+        JTextField field = new JTextField(initialText);
+        field.setFont(FONT_INPUT);
+        field.setForeground(editable ? Color.WHITE : FIELD_DISABLED_FG);
+        field.setDisabledTextColor(FIELD_DISABLED_FG);
+        field.setCaretColor(Color.WHITE);
+        field.setSelectionColor(COMBO_HOVER_BG);
+        field.setSelectedTextColor(Color.WHITE);
+        field.setBackground(editable ? FIELD_BG : FIELD_LOCKED_BG);
+        field.setEditable(editable);
+        field.setPreferredSize(new Dimension(160, 28));
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(FIELD_BORDER, 1, true),
+                BorderFactory.createEmptyBorder(3, 8, 3, 8)));
+        return field;
+    }
+
+    private <T> JComboBox<T> createStyledComboBox(T[] items) {
+        JComboBox<T> combo = new JComboBox<>(items);
+        combo.setFont(FONT_INPUT);
+        combo.setForeground(Color.WHITE);
+        combo.setBackground(FIELD_BG);
+        combo.setOpaque(true);
+        combo.setPreferredSize(new Dimension(160, 28));
+        combo.setBorder(BorderFactory.createLineBorder(FIELD_BORDER, 1, true));
+        combo.setUI(new DarkComboBoxUI());
+        combo.setRenderer(createDarkComboRenderer());
+        return combo;
+    }
+
+    private JButton createDarkComboArrowButton() {
+        JButton arrow = new JButton() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                paintComboArrowButton(g, this);
+            }
+        };
+        arrow.setPreferredSize(new Dimension(24, 24));
+        arrow.setBorder(BorderFactory.createEmptyBorder());
+        arrow.setContentAreaFilled(false);
+        arrow.setBorderPainted(false);
+        arrow.setFocusPainted(false);
+        arrow.setOpaque(true);
+        return arrow;
+    }
+
+    private void paintComboArrowButton(Graphics g, JButton arrow) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        boolean enabled = arrow.getParent() == null || arrow.getParent().isEnabled();
+        g2.setColor(enabled ? FIELD_BG : FIELD_LOCKED_BG);
+        g2.fillRect(0, 0, arrow.getWidth(), arrow.getHeight());
+        drawGoldDropdownTriangle(g2, arrow.getWidth() / 2, arrow.getHeight() / 2, enabled);
+        g2.dispose();
+    }
+
+    private void drawGoldDropdownTriangle(Graphics2D g2, int cx, int cy, boolean enabled) {
+        g2.setColor(enabled ? CARD_BORDER : FIELD_DISABLED_FG);
+        Path2D triangle = new Path2D.Float();
+        triangle.moveTo(cx - 4.0, cy - 2.0);
+        triangle.lineTo(cx + 4.0, cy - 2.0);
+        triangle.lineTo(cx, cy + 3.5);
+        triangle.closePath();
+        g2.fill(triangle);
+    }
+
+    private DefaultListCellRenderer createDarkComboRenderer() {
+        return new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                boolean enabled = list == null || list.isEnabled();
+                setOpaque(true);
+                setBackground(resolveComboRowBackground(index == -1, isSelected, enabled));
+                setForeground(enabled ? Color.WHITE : FIELD_DISABLED_FG);
+                setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
+                return this;
+            }
+        };
+    }
+
+    private Color resolveComboRowBackground(boolean closedDisplay, boolean isSelected, boolean enabled) {
+        if (closedDisplay) {
+            return enabled ? FIELD_BG : FIELD_LOCKED_BG;
+        }
+        return isSelected ? COMBO_HOVER_BG : FIELD_BG;
     }
 
     private Dimension[] buildScreenResolutions() {
-        Rectangle usableBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-        int maxPitchW = usableBounds.width - 40;
-        int maxPitchH = usableBounds.height - 110; // leaves room for HUD (68px) and window title bar
+        Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+        int maxPitchW = Math.max(800, screen.width - 280);
+        int maxPitchH = Math.max(540, screen.height - 90);
 
         // Preserve 4:3 pitch aspect ratio bounded by the player's actual screen
         int baseH = Math.min(maxPitchH, (maxPitchW * 3) / 4);
@@ -316,93 +601,129 @@ public class PlayerConfig extends JPanel {
         JButton btn = new JButton() {
             @Override
             protected void paintComponent(Graphics g) {
-                // Dibuja un botón circular traslúcido y una flecha vectorizada con antialiasing
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                boolean hovered = getModel().isRollover() || getModel().isPressed();
-                g2.setColor(hovered ? new Color(25, 25, 35, 210) : new Color(25, 25, 35, 155));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
-                g2.setColor(new Color(255, 255, 255, hovered ? 230 : 160));
-                g2.setStroke(new BasicStroke(1.5f));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 18, 18);
-
-                g2.setColor(Color.WHITE);
-                g2.setStroke(new BasicStroke(2.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                int cy = getHeight() / 2;
-                Path2D arrow = new Path2D.Float();
-                arrow.moveTo(24, cy);
-                arrow.lineTo(12, cy);
-                arrow.moveTo(18, cy - 6);
-                arrow.lineTo(12, cy);
-                arrow.lineTo(18, cy + 6);
-                g2.draw(arrow);
-                g2.dispose();
+                paintBackArrowSurface(g, this);
             }
         };
-        btn.setPreferredSize(new Dimension(38, 34));
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setOpaque(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        configureArcadeButtonStyle(btn, FONT_LABEL, new Dimension(38, 34));
         btn.setToolTipText("Volver al menú");
         return btn;
     }
 
-    private void prepareViewStartButton() {
-        startBtn = new JButton("Iniciar Partido");
-        startBtn.setFont(new Font("Arial", Font.BOLD, 16));
-        startBtn.setBackground(new Color(40, 140, 40));
-        startBtn.setForeground(Color.WHITE);
-        startBtn.setPreferredSize(new Dimension(200, 45));
+    private void paintBackArrowSurface(Graphics g, AbstractButton btn) {
+        // Dibuja un botón redondeado traslúcido y una flecha vectorizada con antialiasing
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        boolean hovered = btn.getModel().isRollover() || btn.getModel().isPressed();
+        g2.setColor(hovered ? new Color(25, 25, 35, 210) : new Color(25, 25, 35, 155));
+        g2.fillRoundRect(0, 0, btn.getWidth(), btn.getHeight(), 18, 18);
+        g2.setColor(hovered ? CARD_BORDER : new Color(255, 255, 255, 160));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(0, 0, btn.getWidth() - 1, btn.getHeight() - 1, 18, 18);
+        drawBackArrowStroke(g2, btn.getHeight() / 2);
+        g2.dispose();
+    }
 
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+    private void drawBackArrowStroke(Graphics2D g2, int cy) {
+        g2.setColor(Color.WHITE);
+        g2.setStroke(new BasicStroke(2.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        Path2D arrow = new Path2D.Float();
+        arrow.moveTo(24, cy);
+        arrow.lineTo(12, cy);
+        arrow.moveTo(18, cy - 6);
+        arrow.lineTo(12, cy);
+        arrow.lineTo(18, cy + 6);
+        g2.draw(arrow);
+    }
+
+    private void prepareViewStartButton() {
+        startBtn = createStartButton();
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 2));
         bottomPanel.setOpaque(false);
         bottomPanel.add(startBtn);
         add(bottomPanel, BorderLayout.SOUTH);
     }
 
-    private void prepareController() {
-        backBtn.addActionListener(e -> container.goToMenu());
-        prepareControllerStartButton();
-        matchTypeCombo.addActionListener(e -> {
-            boolean isPerGoals = matchTypeCombo.getSelectedIndex() == 0;
-            limitLabel.setText(isPerGoals ? "Goles para ganar:" : "Minutos del partido:");
-            limitComboHolder.removeAll();
-            limitComboHolder.add(isPerGoals ? goalLimitCombo : timeLimitCombo, BorderLayout.CENTER);
-            limitComboHolder.revalidate();
-            limitComboHolder.repaint();
-        });
+    private JButton createStartButton() {
+        JButton btn = new JButton("Iniciar Partido") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                paintStartButtonSurface(g, this);
+                super.paintComponent(g);
+            }
+        };
+        configureArcadeButtonStyle(btn, new Font("Arial", Font.BOLD, 16), new Dimension(215, 42));
+        return btn;
     }
 
-    private void prepareControllerStartButton() {
-        startBtn.addActionListener(e -> {
-            if (!validateMachineProfiles()) {
-                return;
-            }
-            String p1Name = nameFieldP1.getText().trim();
-            String p2Name = nameFieldP2.getText().trim();
-            if (p1Name.isEmpty() || p2Name.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Debe ingresar el nombre de ambos jugadores");
-                return;
-            }
-            String p1Country = (String) countryComboP1.getSelectedItem();
-            String p2Country = (String) countryComboP2.getSelectedItem();
-            String selectedMatchType = (String) matchTypeCombo.getSelectedItem();
-            int goalLimit = (Integer) goalLimitCombo.getSelectedItem();
-            int timeLimit = (Integer) timeLimitCombo.getSelectedItem();
-            container.setResolution(resolveSelectedDimension());
-            container.onPlayerConfigConfirmed(p1Name, p1Country, p2Name, p2Country, selectedMatchType, goalLimit, timeLimit);
-        });
+    private void paintStartButtonSurface(Graphics g, AbstractButton btn) {
+        // Dibuja el botón principal redondeado estilo arcade
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(resolveHoverPressedColor(btn, START_BTN_BG));
+        g2.fillRoundRect(0, 0, btn.getWidth(), btn.getHeight(), 18, 18);
+        g2.setColor(new Color(255, 255, 255, 130));
+        g2.setStroke(new BasicStroke(1.8f));
+        g2.drawRoundRect(1, 1, btn.getWidth() - 3, btn.getHeight() - 3, 18, 18);
+        g2.dispose();
+    }
+
+    private void configureArcadeButtonStyle(JButton btn, Font font, Dimension size) {
+        btn.setFont(font);
+        btn.setForeground(Color.WHITE);
+        btn.setPreferredSize(size);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
+
+    private void prepareController() {
+        backBtn.addActionListener(e -> listener.goToMenu());
+        startBtn.addActionListener(e -> onStartMatchClicked());
+        matchTypeCombo.addActionListener(e -> onMatchTypeChanged());
+    }
+
+    private void onMatchTypeChanged() {
+        boolean isPerGoals = matchTypeCombo.getSelectedIndex() == 0;
+        limitLabel.setText(isPerGoals ? "Goles para ganar:" : "Minutos del partido:");
+        limitComboHolder.removeAll();
+        limitComboHolder.add(isPerGoals ? goalLimitCombo : timeLimitCombo, BorderLayout.CENTER);
+        limitComboHolder.revalidate();
+        limitComboHolder.repaint();
+    }
+
+    private void onStartMatchClicked() {
+        if (!validateMachineProfiles()) {
+            return;
+        }
+        String p1Name = nameFieldP1.getText().trim();
+        String p2Name = nameFieldP2.getText().trim();
+        if (p1Name.isEmpty() || p2Name.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Debe ingresar el nombre de ambos jugadores");
+            return;
+        }
+        launchConfiguredMatch(p1Name, p2Name);
+    }
+
+    private void launchConfiguredMatch(String p1Name, String p2Name) {
+        String p1Country = (String) countryComboP1.getSelectedItem();
+        String p2Country = (String) countryComboP2.getSelectedItem();
+        String selectedMatchType = (String) matchTypeCombo.getSelectedItem();
+        int goalLimit = (Integer) goalLimitCombo.getSelectedItem();
+        int timeLimit = (Integer) timeLimitCombo.getSelectedItem();
+        listener.setResolution(resolveSelectedDimension());
+        listener.onPlayerConfigConfirmed(p1Name, p1Country, p2Name, p2Country, selectedMatchType, goalLimit, timeLimit);
     }
 
     private boolean validateMachineProfiles() {
+        return isMachineProfileChoiceValid(machineProfileComboP1)
+                && isMachineProfileChoiceValid(machineProfileComboP2);
+    }
+
+    private boolean isMachineProfileChoiceValid(JComboBox<String> profileCombo) {
         // Consulta al controlador si el perfil de máquina elegido está disponible
-        if (machineProfileComboP1 != null && !controller.isMachineProfileAvailable((String) machineProfileComboP1.getSelectedItem())) {
-            JOptionPane.showMessageDialog(this, "Tipo de máquina en construcción, elija máquina torpe");
-            return false;
-        }
-        if (machineProfileComboP2 != null && !controller.isMachineProfileAvailable((String) machineProfileComboP2.getSelectedItem())) {
+        if (profileCombo != null && !controller.isMachineProfileAvailable((String) profileCombo.getSelectedItem())) {
             JOptionPane.showMessageDialog(this, "Tipo de máquina en construcción, elija máquina torpe");
             return false;
         }
@@ -415,5 +736,122 @@ public class PlayerConfig extends JPanel {
             return screenResolutions[index];
         }
         return new Dimension(800, 600);
+    }
+
+    private final class DarkComboBoxUI extends BasicComboBoxUI {
+
+        @Override
+        protected void installDefaults() {
+            super.installDefaults();
+            comboBox.setBackground(FIELD_BG);
+            comboBox.setForeground(Color.WHITE);
+            applyDarkListColors(listBox);
+        }
+
+        @Override
+        public void paint(Graphics g, JComponent c) {
+            // Pinta todo el fondo antes del trazado estándar para evitar destellos blancos del Look and Feel
+            g.setColor(c.isEnabled() ? FIELD_BG : FIELD_LOCKED_BG);
+            g.fillRect(0, 0, c.getWidth(), c.getHeight());
+            super.paint(g, c);
+        }
+
+        @Override
+        public void paintCurrentValueBackground(Graphics g, Rectangle bounds, boolean hasFocus) {
+            g.setColor(comboBox.isEnabled() ? FIELD_BG : FIELD_LOCKED_BG);
+            g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+        }
+
+        @Override
+        public void paintCurrentValue(Graphics g, Rectangle bounds, boolean hasFocus) {
+            // Renderiza el valor cerrado sin aplicar el resaltado claro de foco del sistema
+            Component c = prepareClosedValueComponent();
+            currentValuePane.paintComponent(
+                    g, c, comboBox, bounds.x, bounds.y, bounds.width, bounds.height, c instanceof JPanel);
+        }
+
+        private Component prepareClosedValueComponent() {
+            Component c = comboBox.getRenderer().getListCellRendererComponent(
+                    listBox, comboBox.getSelectedItem(), -1, false, false);
+            c.setFont(comboBox.getFont());
+            c.setBackground(comboBox.isEnabled() ? FIELD_BG : FIELD_LOCKED_BG);
+            c.setForeground(comboBox.isEnabled() ? Color.WHITE : FIELD_DISABLED_FG);
+            return c;
+        }
+
+        @Override
+        protected JButton createArrowButton() {
+            return createDarkComboArrowButton();
+        }
+
+        @Override
+        protected ComboPopup createPopup() {
+            return new DarkComboPopup(comboBox);
+        }
+    }
+
+    private static final class DarkComboPopup extends BasicComboPopup {
+
+        private DarkComboPopup(JComboBox<Object> owner) {
+            super(owner);
+        }
+
+        @Override
+        protected void configureList() {
+            super.configureList();
+            applyDarkListColors(list);
+        }
+
+        @Override
+        protected void configureScroller() {
+            super.configureScroller();
+            scroller.setBackground(FIELD_BG);
+            scroller.getViewport().setBackground(FIELD_BG);
+            scroller.getVerticalScrollBar().setUI(new DarkScrollBarUI());
+        }
+
+        @Override
+        protected void configurePopup() {
+            super.configurePopup();
+            setBackground(FIELD_BG);
+            setBorder(BorderFactory.createLineBorder(FIELD_BORDER, 1));
+        }
+    }
+
+    private static final class DarkScrollBarUI extends BasicScrollBarUI {
+
+        @Override
+        protected void configureScrollBarColors() {
+            thumbColor = FIELD_BORDER;
+            trackColor = FIELD_BG;
+        }
+
+        @Override
+        protected JButton createDecreaseButton(int orientation) {
+            return createZeroSizeButton();
+        }
+
+        @Override
+        protected JButton createIncreaseButton(int orientation) {
+            return createZeroSizeButton();
+        }
+
+        private JButton createZeroSizeButton() {
+            JButton empty = new JButton();
+            empty.setPreferredSize(new Dimension(0, 0));
+            empty.setMinimumSize(new Dimension(0, 0));
+            empty.setMaximumSize(new Dimension(0, 0));
+            return empty;
+        }
+    }
+
+    private static void applyDarkListColors(JList<?> list) {
+        if (list == null) {
+            return;
+        }
+        list.setBackground(FIELD_BG);
+        list.setForeground(Color.WHITE);
+        list.setSelectionBackground(COMBO_HOVER_BG);
+        list.setSelectionForeground(Color.WHITE);
     }
 }
