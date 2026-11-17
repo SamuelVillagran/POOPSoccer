@@ -1,14 +1,19 @@
 package presentation;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 
@@ -47,6 +52,7 @@ public class PlayerConfig extends JPanel {
     private JComboBox<String> resolutionCombo;
     private Dimension[] screenResolutions;
 
+    private JButton backBtn;
     private JButton startBtn;
     private BufferedImage background;
 
@@ -80,8 +86,9 @@ public class PlayerConfig extends JPanel {
 
     private void prepareView() {
         setOpaque(false);
-        setLayout(new BorderLayout(8, 8));
-        setBorder(BorderFactory.createEmptyBorder(12, 40, 12, 40));
+        setLayout(new BorderLayout(8, 6));
+        setBorder(BorderFactory.createEmptyBorder(8, 40, 10, 40));
+        prepareViewTopBar();
         JPanel formPanel = new JPanel(new GridLayout(0, 1, 4, 4)) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -108,17 +115,18 @@ public class PlayerConfig extends JPanel {
         boolean isP2Machine = "PVM".equals(mode) || "MVM".equals(mode);
 
         // Configura los controles del primer jugador consultando su último perfil activo al controlador
-        JLabel titleP1 = new JLabel("Configuración Jugador 1:");
+        JLabel titleP1 = new JLabel(isP1Machine ? "Configuración Máquina (Jugador 1):" : "Configuración Jugador 1:");
         titleP1.setFont(new Font("Arial", Font.BOLD, 15));
         formPanel.add(titleP1);
 
-        nameFieldP1 = new JTextField(isP1Machine ? "Máquina 1" : controller.getPlayerName(1));
+        nameFieldP1 = new JTextField(controller.getPlayerName(1));
         formPanel.add(new JLabel("Nombre:"));
         formPanel.add(nameFieldP1);
 
         countryComboP1 = new JComboBox<>(possibleCountries);
         if (isP1Machine) {
             machineProfileComboP1 = new JComboBox<>(machineProfiles);
+            configureMachineNameField(nameFieldP1, machineProfileComboP1);
             addCountryAndProfileRow(formPanel, countryComboP1, machineProfileComboP1);
         } else {
             formPanel.add(new JLabel("País / Poder:"));
@@ -131,19 +139,27 @@ public class PlayerConfig extends JPanel {
         titleP2.setFont(new Font("Arial", Font.BOLD, 15));
         formPanel.add(titleP2);
 
-        nameFieldP2 = new JTextField(!isP2Machine ? controller.getPlayerName(2) : "Máquina 2");
+        nameFieldP2 = new JTextField(controller.getPlayerName(2));
         formPanel.add(new JLabel("Nombre:"));
         formPanel.add(nameFieldP2);
 
         countryComboP2 = new JComboBox<>(possibleCountries);
         if (isP2Machine) {
             machineProfileComboP2 = new JComboBox<>(machineProfiles);
+            configureMachineNameField(nameFieldP2, machineProfileComboP2);
             addCountryAndProfileRow(formPanel, countryComboP2, machineProfileComboP2);
         } else {
             formPanel.add(new JLabel("País / Poder:"));
             formPanel.add(countryComboP2);
         }
         addStatsUpgradeRow(formPanel, 2, nameFieldP2);
+    }
+
+    private void configureMachineNameField(JTextField nameField, JComboBox<String> profileCombo) {
+        // Bloquea la edición manual del nombre de la máquina y lo fija según el perfil elegido
+        nameField.setEditable(false);
+        nameField.setText("CPU " + profileCombo.getSelectedItem());
+        profileCombo.addActionListener(e -> nameField.setText("CPU " + profileCombo.getSelectedItem()));
     }
 
     private void addCountryAndProfileRow(JPanel formPanel, JComboBox<String> countryCombo, JComboBox<String> profileCombo) {
@@ -288,6 +304,51 @@ public class PlayerConfig extends JPanel {
         return dims;
     }
 
+    private void prepareViewTopBar() {
+        backBtn = createBackArrowButton();
+        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        topBar.setOpaque(false);
+        topBar.add(backBtn);
+        add(topBar, BorderLayout.NORTH);
+    }
+
+    private JButton createBackArrowButton() {
+        JButton btn = new JButton() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                // Dibuja un botón circular traslúcido y una flecha vectorizada con antialiasing
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                boolean hovered = getModel().isRollover() || getModel().isPressed();
+                g2.setColor(hovered ? new Color(25, 25, 35, 210) : new Color(25, 25, 35, 155));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
+                g2.setColor(new Color(255, 255, 255, hovered ? 230 : 160));
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 18, 18);
+
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(2.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                int cy = getHeight() / 2;
+                Path2D arrow = new Path2D.Float();
+                arrow.moveTo(24, cy);
+                arrow.lineTo(12, cy);
+                arrow.moveTo(18, cy - 6);
+                arrow.lineTo(12, cy);
+                arrow.lineTo(18, cy + 6);
+                g2.draw(arrow);
+                g2.dispose();
+            }
+        };
+        btn.setPreferredSize(new Dimension(38, 34));
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setToolTipText("Volver al menú");
+        return btn;
+    }
+
     private void prepareViewStartButton() {
         startBtn = new JButton("Iniciar Partido");
         startBtn.setFont(new Font("Arial", Font.BOLD, 16));
@@ -302,6 +363,7 @@ public class PlayerConfig extends JPanel {
     }
 
     private void prepareController() {
+        backBtn.addActionListener(e -> container.goToMenu());
         prepareControllerStartButton();
         matchTypeCombo.addActionListener(e -> {
             boolean isPerGoals = matchTypeCombo.getSelectedIndex() == 0;

@@ -19,6 +19,7 @@ public class GameContainer extends JPanel implements GamePanelListener {
     private JPanel cardPanel;
     private GameSetup setup;
     private InfoPanel infoPanel;
+    private PlayerConfig activeConfigPanel;
     private GamePanel activeGamePanel;
     private final GameController controller;
 
@@ -71,7 +72,11 @@ public class GameContainer extends JPanel implements GamePanelListener {
 
     public void onModeSelected(String mode) {
         setup.setMode(mode);
-        cardPanel.add(new PlayerConfig(this, controller, mode), ScreenView.PLAYER_CONFIG.name());
+        if (activeConfigPanel != null) {
+            cardPanel.remove(activeConfigPanel);
+        }
+        activeConfigPanel = new PlayerConfig(this, controller, mode);
+        cardPanel.add(activeConfigPanel, ScreenView.PLAYER_CONFIG.name());
         showView(ScreenView.PLAYER_CONFIG);
     }
 

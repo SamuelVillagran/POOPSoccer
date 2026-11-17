@@ -17,7 +17,7 @@ import java.util.List;
 /**
  * SQLite database and data mapper implementation for the PlayerDataGateway boundary.
  */
-public class SQLitePlayerDatabase implements PlayerDataGateway {
+public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a implementar con Gemini Argon 4
 
     private static final String DEFAULT_DB_NAME = "poopsoccer.db";
     private static final String CREATE_PLAYERS_TABLE_SQL = """
@@ -63,7 +63,8 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {
     private static final String SELECT_RECENT_NAMES_SQL = """
             SELECT name
             FROM players
-            WHERE profile_key NOT IN ('cpu', 'máquina', 'maquina', 'máquina 1', 'maquina 1', 'máquina 2', 'maquina 2')
+            WHERE profile_key NOT LIKE 'cpu%'
+              AND profile_key NOT IN ('máquina', 'maquina', 'máquina 1', 'maquina 1', 'máquina 2', 'maquina 2')
             ORDER BY updated_at DESC, rowid ASC
             LIMIT ?
             """;
