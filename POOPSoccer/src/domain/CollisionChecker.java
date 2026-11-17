@@ -128,11 +128,13 @@ public class CollisionChecker implements Serializable {
     }
 
     private void placeBallInFrontOfPlayer(Player player, Ball ball, float liftY) {
-        // Coloca el balón justo delante del jugador para evitar colisiones repetidas en el mismo cuadro
-        float safeX = (player.getAttackDirection() == 1)
+        // Coloca el balón justo delante del jugador acotándolo dentro de los límites de la cancha
+        float rawX = (player.getAttackDirection() == 1)
                 ? player.getX() + player.getWidth() + 4.0f
                 : player.getX() - ball.getWidth() - 4.0f;
-        ball.setPositions(safeX, ball.getY() - liftY);
+        float safeX = Math.max(0.0f, Math.min(FIELD_WIDTH - ball.getWidth(), rawX));
+        float safeY = Math.max(0.0f, Math.min(DEFAULT_FLOOR_Y - ball.getHeight(), ball.getY() - liftY));
+        ball.setPositions(safeX, safeY);
     }
 
     private void applyBodyContactToBall(Player player, Ball ball) {
@@ -192,11 +194,13 @@ public class CollisionChecker implements Serializable {
     }
 
     private void bounceBallOnSideWalls(Ball ball) {
-        // Invierte la velocidad horizontal cuando el balón toca los bordes izquierdo o derecho
+        // Invierte la velocidad horizontal y cancela el tiro de poder al rebotar contra los muros laterales
         if (ball.getX() <= 0.0f) {
+            ball.clearPowerShot();
             ball.setPositions(0.0f, ball.getY());
             ball.setVelocity(Math.abs(ball.getVx()) * Ball.RESTITUTION, ball.getVy());
         } else if (ball.getX() + ball.getWidth() >= FIELD_WIDTH) {
+            ball.clearPowerShot();
             ball.setPositions(FIELD_WIDTH - ball.getWidth(), ball.getY());
             ball.setVelocity(-Math.abs(ball.getVx()) * Ball.RESTITUTION, ball.getVy());
         }
@@ -232,7 +236,8 @@ public class CollisionChecker implements Serializable {
     }
 
     private void bounceBallOnSolidElement(Ball ball, Element solid) {
-        // Calcula cuánto penetró el balón por cada lado del obstáculo para rebotar por el eje más cercano
+        // Cancela el tiro de poder si golpea el travesaño y rebota por el eje de menor penetración
+        ball.clearPowerShot();
         float overlapLeft = (ball.getX() + ball.getWidth()) - solid.getX();
         float overlapRight = (solid.getX() + solid.getWidth()) - ball.getX();
         float overlapTop = (ball.getY() + ball.getHeight()) - solid.getY();
@@ -322,7 +327,15 @@ public class CollisionChecker implements Serializable {
         return elem.getY() + elem.getHeight() * 0.5f;
     }
 
+    /**
+     * Returns true only when the entire ball crosses inside the goal bounds.
+     */
     public boolean isGoal(Ball ball, Goal goal) {
-        return overlaps(ball, goal);
+        if (ball == null || goal == null) return false;
+        // Exige que el balón entre por completo dentro del ancho y alto del arco antes de contar el gol
+        return ball.getX() >= goal.getX()
+                && ball.getX() + ball.getWidth() <= goal.getX() + goal.getWidth()
+                && ball.getY() >= goal.getY()
+                && ball.getY() + ball.getHeight() <= goal.getY() + goal.getHeight();
     }
 }

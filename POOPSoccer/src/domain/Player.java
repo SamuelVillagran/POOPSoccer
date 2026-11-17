@@ -238,10 +238,6 @@ public class Player extends ItemSoccer {
         return team.getPowerName();
     }
 
-    public String getTeamDisplayName() {
-        return team != null ? team.getDisplayName() : "";
-    }
-
     public String getDisplayInfo() {
         if (team == null) return name;
         return name + " (" + team.getDisplayName() + ")";
@@ -413,13 +409,12 @@ public class Player extends ItemSoccer {
 
     @Override
     public String getVariantName() {
-        if (getTeamDisplayName().isEmpty() || getNumberPlayerInt() == 0) {
+        if (team == null || getNumberPlayerInt() == 0) {
             return "normal";
         }
-        String teamKey = java.text.Normalizer.normalize(getTeamDisplayName().trim(), java.text.Normalizer.Form.NFD)
-                .replaceAll("\\p{M}|\\s+", "").toLowerCase();
+        // Usa la clave de sprite precalculada en el enum del equipo para evitar normalizar texto en cada frame
         String suffix = isKicking() ? "_kick" : "";
-        return teamKey + getNumberPlayerInt() + suffix;
+        return team.getSpriteKey() + getNumberPlayerInt() + suffix;
     }
 
     @Override

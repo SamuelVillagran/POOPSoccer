@@ -11,7 +11,7 @@ public class Goal extends ItemSoccer {
     }
 
     @Override
-    public float getHeight() { return 115.0f; }
+    public float getHeight() { return 157.0f; }
 
     @Override
     public boolean isMovible(){

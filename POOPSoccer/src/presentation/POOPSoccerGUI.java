@@ -4,6 +4,7 @@ import domain.POOPSoccer;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.swing.SwingUtilities;
@@ -71,6 +72,11 @@ public class POOPSoccerGUI implements GameController {
     @Override
     public void selectPlayerProfile(int playerNum, String playerName) {
         POOPSoccer.getGame().selectPlayerProfile(playerNum, playerName);
+    }
+
+    @Override
+    public String getPlayerName(int playerNum) {
+        return POOPSoccer.getGame().getPlayerName(playerNum);
     }
 
     @Override
@@ -143,6 +149,11 @@ public class POOPSoccerGUI implements GameController {
     @Override
     public void resumeGame() {
         POOPSoccer.getGame().resumeGame();
+    }
+
+    @Override
+    public boolean isPaused() {
+        return POOPSoccer.getGame().isPaused();
     }
 
     @Override
@@ -234,6 +245,6 @@ public class POOPSoccerGUI implements GameController {
                     item.shotAura()
             ));
         }
-        return renderList;
+        return Collections.unmodifiableList(renderList);
     }
 }

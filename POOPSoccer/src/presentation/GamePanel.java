@@ -27,16 +27,22 @@ public class GamePanel extends JPanel implements Runnable {
     private static final int SCREEN_WIDTH = 800;
     private static final int SCREEN_HEIGHT = 600;
 
+    private static final Color AURA_FILL = new Color(0, 200, 255, 110);
+    private static final Color AURA_BORDER = new Color(255, 215, 0, 220);
+    private static final Color STUN_FILL = new Color(255, 60, 60, 120);
+    private static final Color EFFECT_FILL = new Color(255, 230, 0, 110);
+    private static final Color SHOT_AURA_FILL = new Color(255, 180, 0, 140);
+
+    private static final HashMap<String, BufferedImage> CACHED_IMAGES = new HashMap<>();
+    private static BufferedImage background;
+
     private volatile Thread gameThread;
-    private HashMap<String, BufferedImage> cachedImages;
     private final GamePanelListener LISTENER;
     private final GameController controller;
-    private BufferedImage background;
 
     public GamePanel(GamePanelListener listener, GameController controller, Dimension resolution) {
         this.LISTENER = listener;
         this.controller = controller;
-        this.cachedImages = new HashMap<>();
 
         setPreferredSize(resolution != null ? resolution : new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
         setBackground(Color.BLACK);
@@ -50,9 +56,13 @@ public class GamePanel extends JPanel implements Runnable {
             }
         });
         setFocusable(true);
+        loadBackgroundIfNeeded();
+    }
 
+    private static void loadBackgroundIfNeeded() {
+        if (background != null) return;
         try {
-            InputStream is = getClass().getResourceAsStream("/map/1.jpg");
+            InputStream is = GamePanel.class.getResourceAsStream("/map/1.jpg");
             if (is != null) {
                 background = ImageIO.read(is);
             } else {
@@ -91,11 +101,13 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (delta >= 1) {
                 update();
-                repaint();
+                if (!controller.isPaused()) {
+                    repaint();
+                    verifyGame();
+                    refreshTimer = updateUI(refreshTimer);
+                }
                 delta--;
             }
-            verifyGame();
-            refreshTimer = updateUI(refreshTimer);
             if (!optimizeThread()) break;
         }
     }
@@ -128,7 +140,11 @@ public class GamePanel extends JPanel implements Runnable {
             SwingUtilities.invokeLater(this::showEscapeMenu);//Ayudado con Gemini Flash 3.8 IA
             return;
         }
+        handlePlayerInputs();
+        controller.updateGame();
+    }
 
+    private void handlePlayerInputs() {
         // Envía las acciones activas del teclado al controlador de presentación
         KeyHandler keys = KeyHandler.getInstance();
         if (keys.getW()) controller.movePlayer1('j');
@@ -141,8 +157,6 @@ public class GamePanel extends JPanel implements Runnable {
         if (keys.getLeft()) controller.movePlayer2('l');
         if (keys.getRight()) controller.movePlayer2('r');
         if (keys.getCtrlRight()) controller.movePlayer2('p');
-
-        controller.updateGame();
     }
 
     private void showEscapeMenu() {
@@ -173,7 +187,8 @@ public class GamePanel extends JPanel implements Runnable {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        Graphics2D g2 = (Graphics2D) g;
+        // Crea una copia del contexto gráfico para escalar la cancha sin alterar el Graphics original de Swing
+        Graphics2D g2 = (Graphics2D) g.create();
         double scaleX = (double) getWidth() / SCREEN_WIDTH;
         double scaleY = (double) getHeight() / SCREEN_HEIGHT;
         g2.scale(scaleX, scaleY);
@@ -199,21 +214,21 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private BufferedImage getSprite(String path) {
-        if (!cachedImages.containsKey(path)) {
+        if (!CACHED_IMAGES.containsKey(path)) {
             try {
                 InputStream is = getClass().getResourceAsStream(path);
                 if (is != null) {
-                    cachedImages.put(path, ImageIO.read(is));
+                    CACHED_IMAGES.put(path, ImageIO.read(is));
                 } else {
                     // Fallback visual o log si no se encuentra la skin específica
                     System.err.println("No se encontró recurso en: " + path);
-                    cachedImages.put(path, null);
+                    CACHED_IMAGES.put(path, null);
                 }
             } catch (Exception e) {
-                cachedImages.put(path, null);
+                CACHED_IMAGES.put(path, null);
             }
         }
-        return cachedImages.get(path);
+        return CACHED_IMAGES.get(path);
     }
 
     public void draw(Graphics2D g2) {
@@ -242,26 +257,26 @@ public class GamePanel extends JPanel implements Runnable {
         int height = elem.height();
 
         if (elem.powerAura()) {
-            g2.setColor(new Color(0, 200, 255, 110));
+            g2.setColor(AURA_FILL);
             g2.fillOval(x - 10, y - 10, width + 20, height + 20);
-            g2.setColor(new Color(255, 215, 0, 220));
+            g2.setColor(AURA_BORDER);
             g2.drawOval(x - 10, y - 10, width + 20, height + 20);
         }
         String statusText = elem.statusText();
         if (statusText != null && !statusText.isEmpty()) {
             if (elem.stunned()) {
-                g2.setColor(new Color(255, 60, 60, 120));
+                g2.setColor(STUN_FILL);
                 g2.fillOval(x - 6, y - 6, width + 12, height + 12);
                 g2.setColor(Color.RED);
             } else {
-                g2.setColor(new Color(255, 230, 0, 110));
+                g2.setColor(EFFECT_FILL);
                 g2.fillOval(x - 6, y - 6, width + 12, height + 12);
                 g2.setColor(Color.YELLOW);
             }
             g2.drawString(statusText, x - 2, y - 8);
         }
         if (elem.shotAura()) {
-            g2.setColor(new Color(255, 180, 0, 140));
+            g2.setColor(SHOT_AURA_FILL);
             g2.fillOval(x - 6, y - 6, width + 12, height + 12);
         }
     }

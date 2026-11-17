@@ -61,8 +61,15 @@ public class POOPSoccer implements Serializable {
         cChecker = CollisionChecker.getInstance();
         this.dataGateway = dataGateway;
         goalPlayers = new TreeMap<>();
-        player1 = new Player(new Normal(), "Jugador 1", Team.COREA_DEL_SUR, NumberPlayer.PLAYER1);
-        player2 = new Player(new Normal(), "Jugador 2", Team.CAMEROON, NumberPlayer.PLAYER2);
+        String defaultNameP1 = "Jugador 1";
+        String defaultNameP2 = "Jugador 2";
+        if (this.dataGateway != null) {
+            List<String> recent = this.dataGateway.getRecentPlayerNames(2);
+            if (!recent.isEmpty()) defaultNameP1 = recent.get(0);
+            if (recent.size() > 1) defaultNameP2 = recent.get(1);
+        }
+        player1 = new Player(new Normal(), defaultNameP1, Team.COREA_DEL_SUR, NumberPlayer.PLAYER1);
+        player2 = new Player(new Normal(), defaultNameP2, Team.CAMEROON, NumberPlayer.PLAYER2);
         if (this.dataGateway != null) {
             this.dataGateway.loadPlayerProgress(player1);
             this.dataGateway.loadPlayerProgress(player2);
@@ -126,6 +133,8 @@ public class POOPSoccer implements Serializable {
         player2 = new Player(typeP2, nameP2Final, Team.fromDisplayName(teamP2), NumberPlayer.PLAYER2);
         restorePlayerProgress(player1, prevP1);
         restorePlayerProgress(player2, prevP2);
+        savePlayerToGateway(player1);
+        savePlayerToGateway(player2);
     }
 
     private void restorePlayerProgress(Player current, Player previous) {
@@ -312,6 +321,10 @@ public class POOPSoccer implements Serializable {
         isPaused = false;
     }
 
+    public boolean isPaused() {
+        return isPaused;
+    }
+
     public int getGoalsP1() {
         return player1.getGoals();
     }
@@ -434,6 +447,11 @@ public class POOPSoccer implements Serializable {
         return playerNum == 1 ? player1 : player2;
     }
 
+    public String getPlayerName(int playerNum) {
+        Player p = getPlayerByNumber(playerNum);
+        return p != null ? p.getName() : ("Jugador " + playerNum);
+    }
+
     public int getPoints(int playerNum) {
         Player p = getPlayerByNumber(playerNum);
         return p != null ? p.getPoints() : 0;
@@ -549,8 +567,8 @@ public class POOPSoccer implements Serializable {
             case "0" -> placeBall(posX + tileSize / 2, posY);
             case "4" -> placePitch(posX, posY, nextId++);
             case "5" -> placePitch(posX + 5.0f, posY, nextId++);
-            case "6" -> placeGoal(1, posX, posY, nextId++);
-            case "7" -> placeGoal(2, posX + 5.0f, posY, nextId++);
+            case "6" -> placeGoal(1, posX, 358.0f, nextId++);
+            case "7" -> placeGoal(2, posX + 5.0f, 358.0f, nextId++);
         }
         return nextId;
     }
@@ -610,6 +628,9 @@ public class POOPSoccer implements Serializable {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             POOPSoccer loadedGame = (POOPSoccer) in.readObject();
             loadedGame.isPaused = false;
+            if (loadedGame.dataGateway == null) {
+                loadedGame.dataGateway = resolveDefaultDataGateway();
+            }
             game = loadedGame;
         } catch (Exception e) {
             Log.record(e);

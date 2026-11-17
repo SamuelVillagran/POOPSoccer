@@ -447,9 +447,28 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         game.checkGoal();
         assertEquals(0, game.getGoalsP1());
 
-        // Fully inside the right goal (755..800, 400..515): 760..790 -> goal counts
-        ball.setPositions(760f, 450f);
+        // Fully inside the right goal (755..800, 358..515): 760..790 -> goal counts
+        ball.setPositions(760f, 365f);
         game.checkGoal();
         assertEquals(1, game.getGoalsP1());
+    }
+
+    @Test
+    void powerShotClearsWhenHittingSideWallOrCrossbar() {
+        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 5,
+                "Ana", "Cameroon", "Luis", "Nigeria");
+        p1 = game.getPlayer1();
+        Ball ball = game.getBall();
+        playFrames(600);
+        game.movePlayer1('p');
+
+        // Player 1 touches ball on the ground to launch Lightning, then ball hits upper right wall above goal
+        ball.setPositions(p1.getX(), p1.getY());
+        playFrames(1);
+        assertTrue(ball.hasShotAura(), "Lightning shot is active after hit");
+
+        ball.setPositions(CollisionChecker.FIELD_WIDTH - ball.getWidth() + 2f, 100f);
+        playFrames(1);
+        assertFalse(ball.hasShotAura(), "Wall bounce clears active power shot so ball falls naturally");
     }
 }

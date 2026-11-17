@@ -20,6 +20,8 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 /**
  * Configuration screen for players, stats upgrades, match type, and pitch resolution.
@@ -105,12 +107,12 @@ public class PlayerConfig extends JPanel {
         boolean isP1Machine = "MVM".equals(mode);
         boolean isP2Machine = "PVM".equals(mode) || "MVM".equals(mode);
 
-        // Configura los controles del primer jugador consultando los datos al controlador
+        // Configura los controles del primer jugador consultando su último perfil activo al controlador
         JLabel titleP1 = new JLabel("Configuración Jugador 1:");
         titleP1.setFont(new Font("Arial", Font.BOLD, 15));
         formPanel.add(titleP1);
 
-        nameFieldP1 = new JTextField(isP1Machine ? "Máquina 1" : "Jugador 1");
+        nameFieldP1 = new JTextField(isP1Machine ? "Máquina 1" : controller.getPlayerName(1));
         formPanel.add(new JLabel("Nombre:"));
         formPanel.add(nameFieldP1);
 
@@ -129,7 +131,7 @@ public class PlayerConfig extends JPanel {
         titleP2.setFont(new Font("Arial", Font.BOLD, 15));
         formPanel.add(titleP2);
 
-        nameFieldP2 = new JTextField(!isP2Machine ? "Jugador 2" : "Máquina 2");
+        nameFieldP2 = new JTextField(!isP2Machine ? controller.getPlayerName(2) : "Máquina 2");
         formPanel.add(new JLabel("Nombre:"));
         formPanel.add(nameFieldP2);
 
@@ -190,12 +192,28 @@ public class PlayerConfig extends JPanel {
 
     private void bindProfileNameListener(JTextField nameField, int playerNum, JLabel pointsLbl,
                                          JButton[] buttons, String[] stats) {
-        // Actualiza los puntos y niveles en pantalla cuando el usuario cambia el nombre del jugador
-        nameField.addCaretListener(e -> {
+        // Reacciona únicamente cuando cambia el texto del nombre para recargar el perfil desde la base de datos
+        Runnable refreshProfile = () -> {
             controller.selectPlayerProfile(playerNum, nameField.getText());
             pointsLbl.setText(formatProfileSummary(playerNum));
             for (int i = 0; i < stats.length; i++) {
                 updateStatButtonText(buttons[i], playerNum, stats[i]);
+            }
+        };
+        nameField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                refreshProfile.run();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                refreshProfile.run();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                refreshProfile.run();
             }
         });
     }

@@ -8,10 +8,12 @@ public enum Team {
     COLOMBIA("Colombia", new Illusion());
 
     private final String displayName;
+    private final String spriteKey;
     private final Power POWER;
 
     Team(String displayName, Power power) {
         this.displayName = displayName;
+        this.spriteKey = normalize(displayName);
         this.POWER = power;
     }
 
@@ -35,6 +37,7 @@ public enum Team {
     }
 
     public String getDisplayName() { return displayName; }
+    public String getSpriteKey() { return spriteKey; }
     public Power getPower() { return POWER; }
     public String getPowerName() { return POWER != null ? POWER.getName() : "Ninguno"; }
     public void launchPowerShot(Player owner, Ball ball) {

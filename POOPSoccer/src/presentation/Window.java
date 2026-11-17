@@ -15,6 +15,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
  */
 public class Window extends JFrame {
 
+    private static final String SAVED_GAMES_DIR = "savedGames";
+
     private JMenuBar menuBar;
     private JMenu menu;
     private JMenuItem optionNew;
@@ -81,8 +83,7 @@ public class Window extends JFrame {
     }
 
     private void saveAsAction() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new FileNameExtensionFilter("DAT Files (*.dat)", "dat"));
+        JFileChooser fileChooser = createSaveFileChooser();
         int result = fileChooser.showSaveDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
@@ -103,8 +104,7 @@ public class Window extends JFrame {
     }
 
     private void openAction() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new FileNameExtensionFilter("DAT Files (*.dat)", "dat"));
+        JFileChooser fileChooser = createSaveFileChooser();
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
@@ -117,6 +117,17 @@ public class Window extends JFrame {
                         JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    private JFileChooser createSaveFileChooser() {
+        // Dirige el selector de archivos al directorio dedicado de partidas guardadas
+        File savesDir = new File(SAVED_GAMES_DIR);
+        if (!savesDir.exists()) {
+            savesDir.mkdirs();
+        }
+        JFileChooser fileChooser = new JFileChooser(savesDir);
+        fileChooser.setFileFilter(new FileNameExtensionFilter("DAT Files (*.dat)", "dat"));
+        return fileChooser;
     }
 
     private void exitAction() {
