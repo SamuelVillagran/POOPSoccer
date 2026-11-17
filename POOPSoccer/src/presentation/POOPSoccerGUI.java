@@ -181,6 +181,11 @@ public class POOPSoccerGUI implements GameController {
     }
 
     @Override
+    public boolean isSuddenDeath() {
+        return POOPSoccer.getGame().isSuddenDeath();
+    }
+
+    @Override
     public float getHealthPercentP1() {
         return POOPSoccer.getGame().getHealthPercentP1();
     }

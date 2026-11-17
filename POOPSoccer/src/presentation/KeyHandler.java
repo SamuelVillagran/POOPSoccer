@@ -41,16 +41,6 @@ public class KeyHandler extends KeyAdapter {
         }
     }
 
-    public void setKeyState(int keyCode, boolean state) {
-        // Cambia manualmente el estado de una tecla específica
-        KEYS.set(keyCode, state);
-    }
-
-    public void toggleKey(int keyCode) {
-        // Invierte el estado actual de la tecla indicada
-        KEYS.flip(keyCode);
-    }
-
     public boolean consumeEscToggle() {
         boolean fired = escToggle;
         escToggle = false;

@@ -10,7 +10,6 @@ public class CollisionChecker implements Serializable {
     private static CollisionChecker instance = null;
 
     public static final int FIELD_WIDTH = 800;
-    public static final int FIELD_HEIGHT = 600;
     public static final float DEFAULT_FLOOR_Y = 515.0f;
 
     // Constantes físicas para el alcance y el impulso de la patada sobre el balón
@@ -49,14 +48,10 @@ public class CollisionChecker implements Serializable {
                 && y1 < y2 + h2 && y1 + h1 > y2;
     }
 
-    public boolean checkContactPyWithBall(Player player, Ball ball) {
-        return overlaps(player, ball);
-    }
-
     /**
      * Checks if the target element is within the player's kicking reach.
      */
-    public boolean checkKickReach(Player player, Element target) {
+    private boolean checkKickReach(Player player, Element target) {
         if (player == null || target == null) return false;
         // Extiende el área del jugador hacia adelante según la dirección en la que ataca
         float reachX = (player.getAttackDirection() == 1)
@@ -85,7 +80,7 @@ public class CollisionChecker implements Serializable {
      */
     public void resolvePlayerBallInteraction(Player player, Ball ball) {
         if (player == null || ball == null) return;
-        boolean touching = checkContactPyWithBall(player, ball);
+        boolean touching = overlaps(player, ball);
         boolean inKickZone = player.isKicking() && checkKickReach(player, ball);
         if (!touching && !inKickZone) return;
 

@@ -46,8 +46,8 @@ public class POOPSoccer implements Serializable {
 
     private CollisionChecker cChecker;
     private PlayerDataGateway dataGateway;
-    private Map<Integer, Element> elements;
-    private Map<Integer, Goal> goalPlayers;
+    private TreeMap<Integer, Element> elements;
+    private TreeMap<Integer, Goal> goalPlayers;
     private float decoyTimerSeconds = 0.0f;
     private boolean pointsAwarded = false;
     private static final int DECOY_START_ID = 100;

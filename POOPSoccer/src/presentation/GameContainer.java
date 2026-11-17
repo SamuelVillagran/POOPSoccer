@@ -49,17 +49,11 @@ public class GameContainer extends JPanel implements GamePanelListener {
     }
 
     @Override
-    public void onMatchInfoChanged(String p1Info, String score, float timeRemaining,
-                                   String p2Info, float hp1, float hp2) {
-        infoPanel.updateMatchInfo(p1Info, score, timeRemaining, p2Info, hp1, hp2);
-    }
-
-    @Override
-    public void onMatchInfoChanged(String p1Info, String score, float timeRemaining,
+    public void onMatchInfoChanged(String p1Info, String score, float timeRemaining, boolean suddenDeath,
                                    String p2Info, float hp1, float hp2,
                                    float power1, float power2,
                                    String activePower1, String activePower2) {
-        infoPanel.updateMatchInfo(p1Info, score, timeRemaining, p2Info, hp1, hp2,
+        infoPanel.updateMatchInfo(p1Info, score, timeRemaining, suddenDeath, p2Info, hp1, hp2,
                 power1, power2, activePower1, activePower2);
     }
 
@@ -82,15 +76,8 @@ public class GameContainer extends JPanel implements GamePanelListener {
     }
 
 
-    public void onPlayerConfigConfirmed(String nameP1, String teamP1, String matchType, int goalLimit, int timeLimit) {
-        setup.setPlayer1(nameP1, teamP1);
-        setup.setMatchType(matchType);
-        setup.setGoalLimit(goalLimit);
-        setup.setTimeLimit(timeLimit);
-        startGame();
-    }
-
-    public void onPlayerConfigConfirmed(String nameP1, String teamP1, String nameP2, String teamP2, String matchType, int goalLimit, int timeLimit) {
+    public void onPlayerConfigConfirmed(String nameP1, String teamP1, String nameP2, String teamP2,
+                                        String matchType, int goalLimit, int timeLimit) {
         setup.setPlayer1(nameP1, teamP1);
         setup.setPlayer2(nameP2, teamP2);
         setup.setMatchType(matchType);

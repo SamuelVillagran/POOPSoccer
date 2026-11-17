@@ -32,6 +32,7 @@ public class InfoPanel extends JPanel {
     private String p2Name       = "P2";
     private String score        = "0 - 0";
     private String timer        = "";
+    private boolean suddenDeath = false;
     private float  hp1          = 1.0f;  // 0.0 - 1.0
     private float  hp2          = 1.0f;
     private float  power1       = 0.0f;  // 0.0 - 1.0
@@ -46,18 +47,19 @@ public class InfoPanel extends JPanel {
     }
 
     /**
-     * Full HUD update with health, power recharge progress, and active power.
+     * Full HUD update with health, power recharge progress, sudden death status, and active power.
      */
-    public void updateMatchInfo(String p1Info, String score, float timeRemaining,
+    public void updateMatchInfo(String p1Info, String score, float timeRemaining, boolean suddenDeath,
                                 String p2Info, float hp1Pct, float hp2Pct,
                                 float pow1Pct, float pow2Pct,
                                 String activePow1, String activePow2) {
         this.p1Name       = p1Info;
         this.p2Name       = p2Info;
         this.score        = score;
-        this.timer        = timeRemaining > 0f
-                ? String.format("%.0fs", Math.ceil(timeRemaining))
-                : "";
+        this.suddenDeath  = suddenDeath;
+        this.timer        = suddenDeath
+                ? "¡MUERTE SÚBITA!"
+                : (timeRemaining > 0f ? String.format("%.0fs", Math.ceil(timeRemaining)) : "");
         this.hp1          = clamp01(hp1Pct);
         this.hp2          = clamp01(hp2Pct);
         this.power1       = clamp01(pow1Pct);
@@ -65,18 +67,6 @@ public class InfoPanel extends JPanel {
         this.activePower1 = (activePow1 != null) ? activePow1 : "Ninguno";
         this.activePower2 = (activePow2 != null) ? activePow2 : "Ninguno";
         repaint();
-    }
-
-    /** Overload preserving compatibility with 6-parameter callers. */
-    public void updateMatchInfo(String p1Info, String score, float timeRemaining,
-                                String p2Info, float hp1Pct, float hp2Pct) {
-        updateMatchInfo(p1Info, score, timeRemaining, p2Info, hp1Pct, hp2Pct,
-                power1, power2, activePower1, activePower2);
-    }
-
-    /** Legacy overload used by older callers (no health/power data). */
-    public void updateMatchInfo(String p1Info, String score, float timeRemaining, String p2Info) {
-        updateMatchInfo(p1Info, score, timeRemaining, p2Info, hp1, hp2);
     }
 
     private float clamp01(float value) {
@@ -125,8 +115,8 @@ public class InfoPanel extends JPanel {
 
         if (!timer.isEmpty()) {
             g2.setFont(FONT_TIMER);
-            g2.setColor(Color.LIGHT_GRAY);
-            String timerLabel = "Tiempo: " + timer;
+            g2.setColor(suddenDeath ? Color.RED : Color.LIGHT_GRAY);
+            String timerLabel = suddenDeath ? timer : "Tiempo: " + timer;
             int timerX = (w - g2.getFontMetrics().stringWidth(timerLabel)) / 2;
             g2.drawString(timerLabel, timerX, 55);
         }

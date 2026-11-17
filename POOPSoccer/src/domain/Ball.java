@@ -109,10 +109,6 @@ public class Ball extends ItemSoccer {
         }
     }
 
-    public Vector2D getVelocity() {
-        return velocity;
-    }
-
     public void setVelocity(float vx, float vy) {
         this.velocity.setPositions(vx, vy);
     }

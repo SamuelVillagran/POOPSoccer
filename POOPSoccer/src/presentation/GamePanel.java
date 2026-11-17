@@ -33,10 +33,6 @@ public class GamePanel extends JPanel implements Runnable {
     private final GameController controller;
     private BufferedImage background;
 
-    public GamePanel(GamePanelListener listener, GameController controller) {
-        this(listener, controller, new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
-    }
-
     public GamePanel(GamePanelListener listener, GameController controller, Dimension resolution) {
         this.LISTENER = listener;
         this.controller = controller;
@@ -94,8 +90,7 @@ public class GamePanel extends JPanel implements Runnable {
             lastTime = currentTime;
 
             if (delta >= 1) {
-                float deltaTime = 1.0f / FPS;
-                update(deltaTime);
+                update();
                 repaint();
                 delta--;
             }
@@ -111,6 +106,7 @@ public class GamePanel extends JPanel implements Runnable {
             String p1 = controller.getDisplayInfoP1();
             String p2 = controller.getDisplayInfoP2();
             float time = controller.getRemainingTime();
+            boolean suddenDeath = controller.isSuddenDeath();
             float hp1 = controller.getHealthPercentP1();
             float hp2 = controller.getHealthPercentP2();
             float pow1 = controller.getPowerPercentP1();
@@ -119,13 +115,13 @@ public class GamePanel extends JPanel implements Runnable {
             String activePow2 = controller.getActivePowerNameP2();
 
             SwingUtilities.invokeLater(() -> LISTENER.onMatchInfoChanged(
-                    p1, score, time, p2, hp1, hp2, pow1, pow2, activePow1, activePow2));
+                    p1, score, time, suddenDeath, p2, hp1, hp2, pow1, pow2, activePow1, activePow2));
             return 0; // Reinicia el contador para la siguiente iteración
         }
         return refreshTimer;// Conserva el acumulado actual
     }
 
-    private void update(float deltaTime) {
+    private void update() {
         if (KeyHandler.getInstance().consumeEscToggle()) {
             controller.pauseGame();
             KeyHandler.getInstance().clearAllKeys();
