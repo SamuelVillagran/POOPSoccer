@@ -658,8 +658,8 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         }
         String p1Name = nameFieldP1.getText().trim();
         String p2Name = nameFieldP2.getText().trim();
-        if (p1Name.length() < 4 || p2Name.length() < 4) { // Exige que ambos nombres tengan un mínimo de 4 caracteres
-            JOptionPane.showMessageDialog(this, "El nombre de cada jugador debe tener al menos 4 letras");
+        if (p1Name.length() < 3 || p2Name.length() < 3) { // Exige que ambos nombres tengan un mínimo de 3 caracteres
+            JOptionPane.showMessageDialog(this, "El nombre de cada jugador debe tener al menos 3 letras");
             return;
         }
         launchConfiguredMatch(p1Name, p2Name);

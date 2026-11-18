@@ -51,12 +51,13 @@ public class PlayerDatabase implements PlayerDataGateway {
 
     private String mapPlayerToRow(Player player) {
         String cleanName = player.getName().trim().replace(";", ","); // Evita que un punto y coma corrompa las columnas del CSV
+        var profile = player.getProfile();
         return cleanName + ";"
-                + player.getPoints() + ";"
-                + player.getStatLevel("speed") + ";"
-                + player.getStatLevel("jump") + ";"
-                + player.getStatLevel("kick") + ";"
-                + player.getStatLevel("survival");
+                + profile.getPoints() + ";"
+                + profile.getStatLevel("speed") + ";"
+                + profile.getStatLevel("jump") + ";"
+                + profile.getStatLevel("kick") + ";"
+                + profile.getStatLevel("survival");
     }
 
     private boolean mapRowToPlayer(String row, Player player) {
@@ -70,7 +71,8 @@ public class PlayerDatabase implements PlayerDataGateway {
             int jump = Integer.parseInt(cols[3].trim());
             int kick = Integer.parseInt(cols[4].trim());
             int survival = Integer.parseInt(cols[5].trim());
-            player.loadProgress(points, speed, jump, kick, survival); // Restaura puntos y niveles leídos desde disco
+            player.getProfile().loadProgress(points, speed, jump, kick, survival); // Restaura puntos y niveles leídos desde disco
+            player.restoreFullHealth();
             return true;
         } catch (NumberFormatException e) {
             Log.record(e);

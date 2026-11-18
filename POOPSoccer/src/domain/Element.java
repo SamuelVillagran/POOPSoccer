@@ -30,7 +30,7 @@ public interface Element extends Serializable {
         return "normal"; // Nombre de variante de sprite usado por defecto en presentación
     }
 
-    default boolean hasPowerAura() {
+    default boolean isPowerActive() {
         return false;
     }
 
@@ -38,7 +38,7 @@ public interface Element extends Serializable {
         return false;
     }
 
-    default boolean isStunnedStatus() {
+    default boolean isStuned() {
         return false;
     }
 

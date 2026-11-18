@@ -77,6 +77,8 @@ public class POOPSoccer implements Serializable {
         if (this.dataGateway != null) {
             this.dataGateway.loadPlayerProgress(player1);
             this.dataGateway.loadPlayerProgress(player2);
+            player1.restoreFullHealth();
+            player2.restoreFullHealth();
         }
     }
 
@@ -141,11 +143,13 @@ public class POOPSoccer implements Serializable {
 
     private void restorePlayerProgress(Player current, Player previous) {
         if (dataGateway != null && dataGateway.loadPlayerProgress(current)) { // Prioriza los datos almacenados en la base de datos
+            current.restoreFullHealth();
             return;
         }
         if (previous != null && previous.getName() != null
                 && previous.getName().trim().equalsIgnoreCase(current.getName().trim())) {
-            current.copyProgressFrom(previous); // Conserva el progreso en memoria si coincide el nombre previo
+            current.getProfile().copyFrom(previous.getProfile()); // Conserva el progreso en memoria si coincide el nombre previo
+            current.restoreFullHealth();
         }
     }
 
@@ -417,8 +421,8 @@ public class POOPSoccer implements Serializable {
             player2.addPoints(WINNER_POINTS_REWARD);
             player1.addPoints(LOSER_POINTS_REWARD);
         }
-        player1.recordMatchResult(winner == player1, player1.getGoals(), player2.getGoals());
-        player2.recordMatchResult(winner == player2, player2.getGoals(), player1.getGoals());
+        player1.getProfile().recordMatchResult(winner == player1, player1.getGoals(), player2.getGoals());
+        player2.getProfile().recordMatchResult(winner == player2, player2.getGoals(), player1.getGoals());
         savePlayerToGateway(player1);
         savePlayerToGateway(player2);
     }
@@ -438,8 +442,9 @@ public class POOPSoccer implements Serializable {
         String trimmed = playerName.trim();
         p.setName(trimmed);
         if (dataGateway == null || !dataGateway.loadPlayerProgress(p)) {
-            p.resetProgress(); // Inicializa nivel 1 y 0 puntos si el nombre es nuevo
+            p.getProfile().reset(); // Inicializa nivel 1 y 0 puntos si el nombre es nuevo
         }
+        p.restoreFullHealth();
     }
 
     public MatchSummarySnapshot getMatchSummary() {
@@ -455,10 +460,10 @@ public class POOPSoccer implements Serializable {
                 getGoalsP2(),
                 winner.getName(),
                 WINNER_POINTS_REWARD,
-                winner.getPoints(),
+                winner.getProfile().getPoints(),
                 loser.getName(),
                 LOSER_POINTS_REWARD,
-                loser.getPoints()
+                loser.getProfile().getPoints()
         );
     }
 
@@ -473,32 +478,33 @@ public class POOPSoccer implements Serializable {
 
     public int getPoints(int playerNum) {
         Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getPoints() : 0;
+        return p != null ? p.getProfile().getPoints() : 0;
     }
 
     public int getMatchesPlayed(int playerNum) {
         Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getMatchesPlayed() : 0;
+        return p != null ? p.getProfile().getMatchesPlayed() : 0;
     }
 
     public int getWins(int playerNum) {
         Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getWins() : 0;
+        return p != null ? p.getProfile().getWins() : 0;
     }
 
     public int getStatLevel(int playerNum, String stat) {
         Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getStatLevel(stat) : 1;
+        return p != null ? p.getProfile().getStatLevel(stat) : 1;
     }
 
     public int getUpgradeCost(int playerNum, String stat) {
         Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getUpgradeCost(stat) : 500;
+        return p != null ? p.getProfile().getUpgradeCost(stat) : 500;
     }
 
     public boolean upgradeStat(int playerNum, String stat) {
         Player p = getPlayerByNumber(playerNum);
-        if (p != null && p.upgradeStat(stat)) {
+        if (p != null && p.getProfile().upgradeStat(stat)) {
+            p.restoreFullHealth(); // Actualiza la vida máxima inmediata si mejoró supervivencia
             savePlayerToGateway(p);
             return true;
         }
@@ -545,8 +551,8 @@ public class POOPSoccer implements Serializable {
                     (int) elem.getY(),
                     (int) elem.getWidth(),
                     (int) elem.getHeight(),
-                    elem.hasPowerAura(),
-                    elem.isStunnedStatus(),
+                    elem.isPowerActive(),
+                    elem.isStuned(),
                     elem.getStatusText(),
                     elem.hasShotAura()
             ));

@@ -428,7 +428,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         assertEquals(2, game.getStatLevel(1, "speed"));
         assertEquals(1, game.getMatchesPlayed(1));
         assertEquals(1, game.getWins(1));
-        assertEquals(1, game.getPlayer1().getGoalsFor());
+        assertEquals(1, game.getPlayer1().getProfile().getGoalsFor());
     }
 
     @Test

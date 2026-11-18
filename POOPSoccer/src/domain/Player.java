@@ -5,10 +5,7 @@ public class Player extends ItemSoccer {
     private static final int JUMP_HALF_FRAMES = 18; // Frames de subida del salto; el ciclo total dura el doble
     private static final int STUN_FRAMES = 180; // Duración del aturdimiento: 3 segundos exactos a 60 FPS
     private static final int KICK_COOLDOWN_FRAMES = 30; // Pausa de 0.5 segundos antes de permitir otra patada
-    private int kickCooldown = 0;
 
-    private static final int MAX_STAT = 10; // Nivel máximo alcanzable por cada estadística
-    private static final int BASE_UPGRADE_COST = 500; // Costo en puntos de la primera mejora (nivel 1 a 2)
     private static final float BASE_SPEED = 3.0f; // Velocidad horizontal base en píxeles por frame
     private static final float BASE_JUMP = 3.0f; // Estadística base usada en el cálculo de altura de salto
     private static final float BALL_KICK_FORCE = 3.0f; // Impulso constante aplicado al balón al patearlo
@@ -17,21 +14,14 @@ public class Player extends ItemSoccer {
     private static final int POWER_CHARGE_FRAMES = 600; // Tiempo de recarga completo: 10 segundos a 60 FPS
     private static final float POWER_RECHARGE_PER_FRAME = MAX_POWER / POWER_CHARGE_FRAMES; // Incremento por frame de la barra de poder
     private static final float GOAL_CONCEDED_POWER_BONUS = MAX_POWER * 0.25f; // Recarga el 25% de la barra cuando recibe un gol
+
+    private int kickCooldown = 0; // Frames restantes antes de poder patear nuevamente
     private boolean kickAlreadyHit = false; // Evita que una misma patada golpee en varios frames consecutivos
     private transient boolean pendingKickStarted = false; // Señal temporal para reproducir sonido de patada al aire
     private transient boolean pendingKickBallImpact = false; // Señal temporal para reproducir sonido de golpe al balón
 
-    private int speedStat = 1; // Nivel actual de velocidad (1 a 10)
-    private int jumpStat = 1; // Nivel actual de salto (1 a 10)
-    private int kickStat = 1; // Nivel actual de fuerza/daño de patada (1 a 10)
-    private int survivalStat = 1; // Nivel actual de resistencia/vida máxima (1 a 10)
-    private int points = 0; // Puntos acumulados del perfil para comprar mejoras
-    private int matchesPlayed = 0; // Total histórico de partidos jugados
-    private int wins = 0; // Total histórico de partidos ganados
-    private int goalsFor = 0; // Goles a favor acumulados en el perfil
-    private int goalsAgainst = 0; // Goles en contra acumulados en el perfil
-
-    private String name; // Nombre visible del perfil del jugador
+    private final PlayerProfile profile = new PlayerProfile(); // Perfil persistente con puntos, estadísticas e historial
+    private String name; // Nombre visible del jugador en la interfaz
     private int goals = 0; // Goles anotados en el partido actual
     private boolean isStuned; // Indica si el jugador perdió toda su vida y está aturdido
     private int stunFramesLeft = 0; // Frames restantes para salir del aturdimiento
@@ -56,6 +46,18 @@ public class Player extends ItemSoccer {
         this.name = name;
         this.team = team;
         this.currentHealth = getMaxLife();
+    }
+
+    public PlayerProfile getProfile() {
+        return profile;
+    }
+
+    public void restoreFullHealth() {
+        this.currentHealth = getMaxLife(); // Sincroniza la vida actual con el nivel de resistencia del perfil
+    }
+
+    public void addPoints(int amount) {
+        profile.addPoints(amount);
     }
 
     public void move(char direction) {
@@ -93,25 +95,18 @@ public class Player extends ItemSoccer {
 
     @Override
     public void update() {
-        updatePowerCharge();
-        updateEffect();
-        if (updateStun()) return; // Detiene movimiento y acciones mientras dure el aturdimiento
-        updateTypeAction();
-        updatePush();
-        updateKick();
-        updateJump();
-    }
-
-    private void updateTypeAction() {
-        if (type != null) {
-            type.action(); // Delega la decisión automática cuando el jugador pertenece a la máquina
-        }
-    }
-
-    private void updatePowerCharge() {
         if (currentPower < MAX_POWER) {
             currentPower = Math.min(MAX_POWER, currentPower + POWER_RECHARGE_PER_FRAME); // Recarga la barra gradualmente hasta el 100%
         }
+        updateEffect();
+        if (updateStun()) return; // Detiene movimiento y acciones mientras dure el aturdimiento
+        if (type != null) {
+            type.action(); // Delega la decisión automática cuando el jugador pertenece a la máquina
+        }
+        updatePush();
+        if (kickFrames > 0) kickFrames--;
+        if (kickCooldown > 0) kickCooldown--;
+        updateJump();
     }
 
     private void updateEffect() {
@@ -128,7 +123,7 @@ public class Player extends ItemSoccer {
         stunFramesLeft--;
         if (stunFramesLeft <= 0) {
             isStuned = false;
-            currentHealth = getMaxLife(); // Restaura la vida completa al despertar del aturdimiento
+            restoreFullHealth(); // Restaura la vida completa al despertar del aturdimiento
         }
         return true;
     }
@@ -137,11 +132,6 @@ public class Player extends ItemSoccer {
         if (effect != null && effect.isPushed()) {
             move(-getAttackDirection() * Math.round(BASE_SPEED * 1.6f), 0); // Empuja al jugador hacia su propio arco
         }
-    }
-
-    private void updateKick() {
-        if (kickFrames > 0) kickFrames--;
-        if (kickCooldown > 0) kickCooldown--;
     }
 
     private void updateJump() {
@@ -193,6 +183,7 @@ public class Player extends ItemSoccer {
         return currentPower >= MAX_POWER - 0.001f;
     }
 
+    @Override
     public boolean isPowerActive() {
         return powerActive;
     }
@@ -214,14 +205,6 @@ public class Player extends ItemSoccer {
         if (team != null && ball != null) {
             team.launchPowerShot(this, ball);
         }
-    }
-
-    public boolean hasActiveEffect() {
-        return effect != null && !effect.isFinished();
-    }
-
-    public String getActiveEffectName() {
-        return hasActiveEffect() ? effect.getClass().getSimpleName() : ""; // Muestra el nombre de la clase de efecto activa sin prefijos
     }
 
     public String getActivePowerName() {
@@ -250,12 +233,12 @@ public class Player extends ItemSoccer {
      * +1 if Player 1 (attacks right), -1 if Player 2 (attacks left).
      */
     public int getAttackDirection() {
-        return getNumberPlayerInt() == 1 ? 1 : -1;
+        return (numberPlayer != null && numberPlayer.getNumber() == 1) ? 1 : -1;
     }
 
     public float getSpeed() {
         float factor = (effect != null) ? effect.getSpeedFactor() : 1.0f;
-        return BASE_SPEED * (1 + 0.10f * (speedStat - 1)) * factor; // Aumenta 10% por nivel y aplica ralentización si hay efecto
+        return BASE_SPEED * profile.getStatBonusMultiplier(PlayerStat.SPEED) * factor; // Aumenta 10% por nivel y aplica efecto activo
     }
 
     public int getForce() {
@@ -263,123 +246,15 @@ public class Player extends ItemSoccer {
     }
 
     public float getKickMultiplier() {
-        return 1 + 0.10f * (kickStat - 1); // Suma 10% al daño de golpes por cada nivel sobre 1
+        return profile.getStatBonusMultiplier(PlayerStat.KICK); // Suma 10% al daño de golpes por cada nivel sobre 1
     }
 
     public float getMaxLife() {
-        return 100 * (1 + 0.10f * (survivalStat - 1)); // Parte en 100 HP y suma 10% por nivel de resistencia
+        return profile.getMaxLife();
     }
 
     public float getJumpStat() {
-        return BASE_JUMP * (1 + 0.10f * (jumpStat - 1)); // Incrementa el alcance del salto en 10% por nivel
-    }
-
-    public int getPoints() {
-        return points;
-    }
-
-    public void addPoints(int amount) {
-        if (amount > 0) points += amount;
-    }
-
-    public int getStatLevel(String stat) {
-        PlayerStat resolved = PlayerStat.fromName(stat);
-        if (resolved == null) return 1;
-        return switch (resolved) {
-            case SPEED -> speedStat;
-            case JUMP -> jumpStat;
-            case KICK -> kickStat;
-            case SURVIVAL -> survivalStat;
-        };
-    }
-
-    public int getUpgradeCost(String stat) {
-        int level = getStatLevel(stat);
-        return BASE_UPGRADE_COST * (int) Math.pow(2, level - 1); // Duplica el precio en cada nivel: 500, 1000, 2000...
-    }
-
-    public boolean upgradeStat(String stat) {
-        PlayerStat resolved = PlayerStat.fromName(stat);
-        if (resolved == null) return false;
-        int level = getStatLevel(stat);
-        int cost = getUpgradeCost(stat);
-        if (level >= MAX_STAT || points < cost) return false;
-        points -= cost;
-        incrementStat(resolved);
-        currentHealth = getMaxLife();
-        return true;
-    }
-
-    private void incrementStat(PlayerStat stat) {
-        switch (stat) {
-            case SPEED -> speedStat++;
-            case JUMP -> jumpStat++;
-            case KICK -> kickStat++;
-            case SURVIVAL -> survivalStat++;
-        }
-    }
-
-    public void copyProgressFrom(Player previous) {
-        if (previous == null) return;
-        loadProgress(previous.points, previous.speedStat, previous.jumpStat, previous.kickStat,
-                previous.survivalStat, previous.matchesPlayed, previous.wins, previous.goalsFor, previous.goalsAgainst);
-    }
-
-    /**
-     * Loads the stored points and stat levels into this player entity.
-     */
-    public void loadProgress(int points, int speed, int jump, int kick, int survival) {
-        loadProgress(points, speed, jump, kick, survival, 0, 0, 0, 0);
-    }
-
-    /**
-     * Loads stored points, stat levels, and career match statistics into this player entity.
-     */
-    public void loadProgress(int points, int speed, int jump, int kick, int survival,
-                             int matchesPlayed, int wins, int goalsFor, int goalsAgainst) {
-        this.points = Math.max(0, points); // Garantiza valores no negativos y estadísticas acotadas entre 1 y 10
-        this.speedStat = Math.max(1, Math.min(MAX_STAT, speed));
-        this.jumpStat = Math.max(1, Math.min(MAX_STAT, jump));
-        this.kickStat = Math.max(1, Math.min(MAX_STAT, kick));
-        this.survivalStat = Math.max(1, Math.min(MAX_STAT, survival));
-        this.matchesPlayed = Math.max(0, matchesPlayed);
-        this.wins = Math.max(0, wins);
-        this.goalsFor = Math.max(0, goalsFor);
-        this.goalsAgainst = Math.max(0, goalsAgainst);
-        this.currentHealth = getMaxLife();
-    }
-
-    /**
-     * Records the outcome and goal totals of a finished match for this player.
-     */
-    public void recordMatchResult(boolean won, int goalsScored, int goalsConceded) {
-        this.matchesPlayed++;
-        if (won) this.wins++;
-        this.goalsFor += Math.max(0, goalsScored);
-        this.goalsAgainst += Math.max(0, goalsConceded);
-    }
-
-    public int getMatchesPlayed() {
-        return matchesPlayed;
-    }
-
-    public int getWins() {
-        return wins;
-    }
-
-    public int getGoalsFor() {
-        return goalsFor;
-    }
-
-    public int getGoalsAgainst() {
-        return goalsAgainst;
-    }
-
-    /**
-     * Resets the progression of this player to the initial level 1 values.
-     */
-    public void resetProgress() {
-        loadProgress(0, 1, 1, 1, 1, 0, 0, 0, 0);
+        return BASE_JUMP * profile.getStatBonusMultiplier(PlayerStat.JUMP); // Incrementa el alcance del salto en 10% por nivel
     }
 
     public void setGroundY(float groundY) {
@@ -398,27 +273,18 @@ public class Player extends ItemSoccer {
 
     @Override
     public String getVariantName() {
-        if (team == null || getNumberPlayerInt() == 0) {
+        int playerNum = numberPlayer == null ? 0 : numberPlayer.getNumber();
+        if (team == null || playerNum == 0) {
             return "normal";
         }
         String suffix = isKicking() ? "_kick" : ""; // Añade sufijo de animación cuando el jugador extiende el pie
-        return team.getSpriteKey() + getNumberPlayerInt() + suffix; // Resuelve el sprite con la clave precalculada del país
-    }
-
-    @Override
-    public boolean hasPowerAura() {
-        return isPowerActive();
-    }
-
-    @Override
-    public boolean isStunnedStatus() {
-        return isStuned();
+        return team.getSpriteKey() + playerNum + suffix; // Resuelve el sprite con la clave precalculada del país
     }
 
     @Override
     public String getStatusText() {
         if (isStuned) return "¡ATURDIDO!";
-        return getActiveEffectName();
+        return (effect != null && !effect.isFinished()) ? effect.getClass().getSimpleName() : ""; // Muestra el nombre del efecto activo
     }
 
     @Override
@@ -448,10 +314,7 @@ public class Player extends ItemSoccer {
         return team;
     }
 
-    public int getNumberPlayerInt() {
-        return numberPlayer == null ? 0 : numberPlayer.getNumber();
-    }
-
+    @Override
     public boolean isStuned() {
         return isStuned;
     }

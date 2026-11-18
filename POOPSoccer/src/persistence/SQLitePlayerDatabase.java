@@ -157,21 +157,22 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
     }
 
     private void bindPlayerToStatement(PreparedStatement stmt, Player player) throws SQLException {
+        var profile = player.getProfile();
         stmt.setString(1, normalizeKey(player.getName()));
         stmt.setString(2, player.getName().trim());
-        stmt.setInt(3, player.getPoints());
-        stmt.setInt(4, player.getStatLevel("speed"));
-        stmt.setInt(5, player.getStatLevel("jump"));
-        stmt.setInt(6, player.getStatLevel("kick"));
-        stmt.setInt(7, player.getStatLevel("survival"));
-        stmt.setInt(8, player.getMatchesPlayed());
-        stmt.setInt(9, player.getWins());
-        stmt.setInt(10, player.getGoalsFor());
-        stmt.setInt(11, player.getGoalsAgainst());
+        stmt.setInt(3, profile.getPoints());
+        stmt.setInt(4, profile.getStatLevel("speed"));
+        stmt.setInt(5, profile.getStatLevel("jump"));
+        stmt.setInt(6, profile.getStatLevel("kick"));
+        stmt.setInt(7, profile.getStatLevel("survival"));
+        stmt.setInt(8, profile.getMatchesPlayed());
+        stmt.setInt(9, profile.getWins());
+        stmt.setInt(10, profile.getGoalsFor());
+        stmt.setInt(11, profile.getGoalsAgainst());
     }
 
     private void mapResultSetToPlayer(ResultSet rs, Player player) throws SQLException {
-        player.loadProgress(
+        player.getProfile().loadProgress(
                 rs.getInt("points"),
                 rs.getInt("speed_level"),
                 rs.getInt("jump_level"),
@@ -182,6 +183,7 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
                 rs.getInt("goals_for"),
                 rs.getInt("goals_against")
         );
+        player.restoreFullHealth();
     }
 
     private boolean isInvalidPlayer(Player player) {
