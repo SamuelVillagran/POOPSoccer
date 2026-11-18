@@ -471,4 +471,24 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         playFrames(1);
         assertFalse(ball.hasShotAura(), "Wall bounce clears active power shot so ball falls naturally");
     }
+
+    @Test
+    void matchSummaryReturnsStructuredWinnerAndDrawSnapshots() {
+        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 1,
+                "Samuel", "Cameroon", "Atun", "Nigeria");
+        MatchSummarySnapshot drawSummary = game.getMatchSummary();
+        assertTrue(drawSummary.isDraw());
+        assertEquals(0, drawSummary.goalsP1());
+        assertEquals(0, drawSummary.goalsP2());
+
+        game.getPlayer1().doGoal();
+        MatchSummarySnapshot winSummary = game.getMatchSummary();
+        assertFalse(winSummary.isDraw());
+        assertEquals("Samuel", winSummary.winnerName());
+        assertEquals(POOPSoccer.WINNER_POINTS_REWARD, winSummary.winnerPointsAwarded());
+        assertEquals("Atun", winSummary.loserName());
+        assertEquals(POOPSoccer.LOSER_POINTS_REWARD, winSummary.loserPointsAwarded());
+        assertEquals(1, winSummary.goalsP1());
+        assertEquals(0, winSummary.goalsP2());
+    }
 }

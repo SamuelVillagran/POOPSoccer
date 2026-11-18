@@ -397,16 +397,19 @@ public class POOPSoccer implements Serializable {
                 .toArray(String[]::new);
     }
 
+    public static final int WINNER_POINTS_REWARD = 100;
+    public static final int LOSER_POINTS_REWARD = 25;
+
     public void awardMatchPoints() {
         if (pointsAwarded || !isGameFinished()) return;
         pointsAwarded = true;
         Player winner = getWinner();
         if (winner == player1) {
-            player1.addPoints(100);
-            player2.addPoints(25);
+            player1.addPoints(WINNER_POINTS_REWARD);
+            player2.addPoints(LOSER_POINTS_REWARD);
         } else if (winner == player2) {
-            player2.addPoints(100);
-            player1.addPoints(25);
+            player2.addPoints(WINNER_POINTS_REWARD);
+            player1.addPoints(LOSER_POINTS_REWARD);
         }
         player1.recordMatchResult(winner == player1, player1.getGoals(), player2.getGoals());
         player2.recordMatchResult(winner == player2, player2.getGoals(), player1.getGoals());
@@ -434,13 +437,35 @@ public class POOPSoccer implements Serializable {
         }
     }
 
-    public String getMatchSummaryMessage() {
+    public MatchSummarySnapshot getMatchSummary() {
         awardMatchPoints();
         Player winner = getWinner();
-        if (winner == null) return "¡EMPATE!";
+        if (winner == null) {
+            return new MatchSummarySnapshot(true, getGoalsP1(), getGoalsP2(), null, 0, 0, null, 0, 0);
+        }
         Player loser = (winner == player1) ? player2 : player1;
-        return "¡Ganador: " + winner.getName() + " (+100 pts | Total: " + winner.getPoints() + " pts)!\n"
-                + "Perdedor: " + loser.getName() + " (+25 pts | Total: " + loser.getPoints() + " pts)";
+        return new MatchSummarySnapshot(
+                false,
+                getGoalsP1(),
+                getGoalsP2(),
+                winner.getName(),
+                WINNER_POINTS_REWARD,
+                winner.getPoints(),
+                loser.getName(),
+                LOSER_POINTS_REWARD,
+                loser.getPoints()
+        );
+    }
+
+    public String getMatchSummaryMessage() {
+        MatchSummarySnapshot summary = getMatchSummary();
+        if (summary.isDraw()) {
+            return "¡EMPATE!";
+        }
+        return "¡Ganador: " + summary.winnerName() + " (+" + summary.winnerPointsAwarded()
+                + " pts | Total: " + summary.winnerTotalPoints() + " pts)!\n"
+                + "Perdedor: " + summary.loserName() + " (+" + summary.loserPointsAwarded()
+                + " pts | Total: " + summary.loserTotalPoints() + " pts)";
     }
 
     private Player getPlayerByNumber(int playerNum) {

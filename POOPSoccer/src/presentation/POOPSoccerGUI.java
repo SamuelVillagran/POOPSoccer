@@ -162,8 +162,19 @@ public class POOPSoccerGUI implements GameController {
     }
 
     @Override
-    public String getMatchSummaryMessage() {
-        return POOPSoccer.getGame().getMatchSummaryMessage();
+    public MatchResultSummary getMatchResultSummary() {
+        var snapshot = POOPSoccer.getGame().getMatchSummary();
+        return new MatchResultSummary(
+                snapshot.isDraw(),
+                snapshot.goalsP1(),
+                snapshot.goalsP2(),
+                snapshot.winnerName(),
+                snapshot.winnerPointsAwarded(),
+                snapshot.winnerTotalPoints(),
+                snapshot.loserName(),
+                snapshot.loserPointsAwarded(),
+                snapshot.loserTotalPoints()
+        );
     }
 
     @Override

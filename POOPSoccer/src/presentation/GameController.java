@@ -55,7 +55,7 @@ public interface GameController {
 
     boolean isGameFinished();
 
-    String getMatchSummaryMessage();
+    MatchResultSummary getMatchResultSummary();
 
     int getGoalsP1();
 

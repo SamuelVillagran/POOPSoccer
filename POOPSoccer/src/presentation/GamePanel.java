@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import javax.imageio.ImageIO;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
@@ -277,8 +276,8 @@ public class GamePanel extends JPanel implements Runnable {
         if (controller.isGameFinished()) {
             stopThread();
             SwingUtilities.invokeLater(() -> {
-                String message = controller.getMatchSummaryMessage();
-                JOptionPane.showMessageDialog(this, message, "Fin del Partido", JOptionPane.INFORMATION_MESSAGE);
+                MatchResultSummary summary = controller.getMatchResultSummary();
+                MatchSummaryDialog.showDialog(this, summary);
                 LISTENER.goToMenu(); // Vuelve prolijamente al menú
             });
         }
