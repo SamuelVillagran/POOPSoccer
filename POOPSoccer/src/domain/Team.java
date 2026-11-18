@@ -9,12 +9,12 @@ public enum Team {
 
     private final String displayName; // Nombre legible mostrado en menús y marcador
     private final String spriteKey; // Clave normalizada sin tildes ni espacios para buscar imágenes PNG
-    private final Power POWER; // Tiro de poder único asociado a esta selección nacional
+    private final Power power; // Tiro de poder único asociado a esta selección nacional
 
     Team(String displayName, Power power) {
         this.displayName = displayName;
         this.spriteKey = normalize(displayName);
-        this.POWER = power;
+        this.power = power;
     }
 
     public static Team fromDisplayName(String name) {
@@ -38,11 +38,11 @@ public enum Team {
 
     public String getDisplayName() { return displayName; }
     public String getSpriteKey() { return spriteKey; }
-    public Power getPower() { return POWER; }
-    public String getPowerName() { return POWER != null ? POWER.getName() : "Ninguno"; }
+    public Power getPower() { return power; }
+    public String getPowerName() { return power != null ? power.getName() : "Ninguno"; }
     public void launchPowerShot(Player owner, Ball ball) {
-        if (POWER != null && ball != null) {
-            ball.activatePowerShot(owner, POWER);
+        if (power != null && ball != null) {
+            ball.activatePowerShot(owner, power);
         }
     }
 }

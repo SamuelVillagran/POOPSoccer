@@ -12,8 +12,6 @@ public class Ball extends ItemSoccer {
     private boolean onGround; // Indica si el balón toca el césped en este frame
     private Power activePowerShot; // Guarda el tiro de poder activo mientras viaja el balón
     private Player powerShotOwner; // Identifica al jugador que lanzó el tiro de poder para no dañarlo a él mismo
-    private int pendingDecoyCount = 0; // Cantidad de balones señuelo pendientes por generar (ej. poder Ilusión)
-    private float pendingDecoyDuration = 0.0f; // Duración en segundos de los balones señuelo generados
 
     public Ball() {
         this.velocity = new Vector2D();
@@ -25,19 +23,7 @@ public class Ball extends ItemSoccer {
         this.activePowerShot = power;
         if (power != null && owner != null) {
             power.launchBall(this, owner.getAttackDirection()); // Impulsa el balón hacia el arco rival según el poder
-            this.pendingDecoyCount = power.getDecoyBallCount(); // Registra señuelos si el poder divide el balón
-            this.pendingDecoyDuration = power.getDecoyDurationSeconds();
         }
-    }
-
-    public int consumePendingDecoyCount() {
-        int count = pendingDecoyCount;
-        pendingDecoyCount = 0; // Limpia el contador para que los señuelos se creen una sola vez
-        return count;
-    }
-
-    public float getPendingDecoyDuration() {
-        return pendingDecoyDuration;
     }
 
     @Override
@@ -60,7 +46,6 @@ public class Ball extends ItemSoccer {
     public void clearPowerShot() {
         this.activePowerShot = null;
         this.powerShotOwner = null;
-        this.pendingDecoyCount = 0;
     }
 
     /**

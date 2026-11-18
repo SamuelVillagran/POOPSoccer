@@ -35,7 +35,7 @@ public class GamePanel extends JPanel implements Runnable {
     private static BufferedImage background; // Imagen de fondo del estadio cargada una sola vez
 
     private volatile Thread gameThread; // Hilo dedicado que ejecuta el bucle del partido de forma segura entre hilos
-    private final GamePanelListener LISTENER; // Contrato de navegación y música desacoplado de GameContainer
+    private final GamePanelListener listener; // Contrato de navegación y música desacoplado de GameContainer
     private final GameController controller; // Puente único hacia la lógica del juego
     private final SoundEffectPlayer soundEffectPlayer; // Reproductor no bloqueante de efectos de patada
 
@@ -45,7 +45,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     public GamePanel(GamePanelListener listener, GameController controller,
                      Dimension resolution, SoundEffectPlayer soundEffectPlayer) {
-        this.LISTENER = listener;
+        this.listener = listener;
         this.controller = controller;
         this.soundEffectPlayer = soundEffectPlayer;
 
@@ -118,7 +118,7 @@ public class GamePanel extends JPanel implements Runnable {
     private long updateUI(long refreshTimer) {
         if (refreshTimer >= 100_000_000L) { // Refresca el HUD superior cada 100 ms (10 veces por segundo)
             MatchHudSnapshot hud = controller.getMatchHudSnapshot();
-            SwingUtilities.invokeLater(() -> LISTENER.onMatchInfoChanged(hud));
+            SwingUtilities.invokeLater(() -> listener.onMatchInfoChanged(hud));
             return 0; // Reinicia el contador para la siguiente iteración
         }
         return refreshTimer; // Conserva el acumulado actual
@@ -167,8 +167,8 @@ public class GamePanel extends JPanel implements Runnable {
         PauseDialog.Choice choice = PauseDialog.showDialog(this, score);
 
         switch (choice) {
-            case MENU -> LISTENER.goToMenu();
-            case RESTART -> LISTENER.restartFromLevel1();
+            case MENU -> listener.goToMenu();
+            case RESTART -> listener.restartFromLevel1();
             case RESUME -> {
                 KeyHandler.getInstance().clearAllKeys(); // Limpia teclas retenidas al cerrar el diálogo de pausa
                 controller.resumeGame();
@@ -269,9 +269,9 @@ public class GamePanel extends JPanel implements Runnable {
             stopThread();
             SwingUtilities.invokeLater(() -> {
                 MatchResultSummary summary = controller.getMatchResultSummary();
-                LISTENER.onMatchFinished(summary);
+                listener.onMatchFinished(summary);
                 MatchSummaryDialog.showDialog(this, summary);
-                LISTENER.goToMenu(); // Vuelve prolijamente al menú principal al cerrar el resumen
+                listener.goToMenu(); // Vuelve prolijamente al menú principal al cerrar el resumen
             });
         }
     }

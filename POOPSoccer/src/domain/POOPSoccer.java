@@ -191,8 +191,13 @@ public class POOPSoccer implements Serializable {
     private void collisionsUpdate() {
         cChecker.resolvePlayerEnvironmentCollisions(player1); // Limita ambos jugadores dentro de la cancha
         cChecker.resolvePlayerEnvironmentCollisions(player2);
+        boolean p1HadPower = player1 != null && player1.isPowerActive();
         cChecker.resolvePlayerBallInteraction(player1, ball); // Resuelve patadas, tiros de poder y choques con el balón
+        boolean p2HadPower = player2 != null && player2.isPowerActive();
         cChecker.resolvePlayerBallInteraction(player2, ball);
+        if ((p1HadPower && !player1.isPowerActive()) || (p2HadPower && !player2.isPowerActive())) {
+            spawnDecoyBallsIfNeeded();
+        }
         cChecker.resolveBallEnvironmentCollisions(ball, elements.values()); // Rebota el balón real contra bordes y travesaños
         resolveDecoyEnvironmentCollisions();
         cChecker.resolveKickDamage(player1, player2); // Aplica daño cuerpo a cuerpo si las patadas alcanzan al rival
@@ -216,16 +221,19 @@ public class POOPSoccer implements Serializable {
                 clearDecoyBalls(); // Elimina todos los balones falsos al vencer la duración del efecto
             }
         }
-        spawnDecoyBallsIfNeeded();
     }
 
     private void spawnDecoyBallsIfNeeded() {
         if (ball == null) return;
-        int count = ball.consumePendingDecoyCount();
+        Player owner = ball.hasPowerShotAgainst(player2) ? player1
+                : (ball.hasPowerShotAgainst(player1) ? player2 : null);
+        Power power = (owner != null && owner.getTeam() != null) ? owner.getTeam().getPower() : null;
+        if (power == null) return;
+        int count = power.getDecoyBallCount();
         if (count <= 0) return;
 
         clearDecoyBalls();
-        decoyTimerSeconds = ball.getPendingDecoyDuration();
+        decoyTimerSeconds = power.getDecoyDurationSeconds();
         float dir = (ball.getVx() >= 0f) ? 1.0f : -1.0f;
         for (int i = 0; i < count; i++) {
             Ball decoy = new Ball();
