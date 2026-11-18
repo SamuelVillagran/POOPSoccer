@@ -1,11 +1,8 @@
 package domain;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -156,7 +153,12 @@ public class POOPSoccer implements Serializable {
     private void initFieldElements() {
         elements.clear();
         goalPlayers.clear();
-        setElements();
+        MapLoader.MapData mapData = new MapLoader().load(player1, player2);
+        elements.putAll(mapData.getElements());
+        goalPlayers.putAll(mapData.getGoals());
+        if (mapData.getBall() != null) {
+            ball = mapData.getBall();
+        }
     }
 
     public synchronized void update() {
@@ -302,7 +304,7 @@ public class POOPSoccer implements Serializable {
         }
     }
 
-    public void resetMatch() {
+    public static synchronized void resetMatch() {
         game = new POOPSoccer(null); // Aísla las pruebas unitarias sin tocar la base de datos en disco
     }
 
@@ -566,65 +568,6 @@ public class POOPSoccer implements Serializable {
             ));
         }
         return snapshots;
-    }
-
-    private void setElements() {
-        final int TILE_SIZE = 50; // Tamaño de cada celda de la grilla de configuración del mapa
-        final String path = "/positionElements/configuration.txt";
-        int nextId = 3; // Reserva los IDs 0, 1 y 2 para balón y jugadores
-        try (InputStream is = getClass().getResourceAsStream(path)) {
-            if (is == null) throw new IllegalArgumentException("No se encontró el archivo de nivel: " + path);
-            BufferedReader br = new BufferedReader(new InputStreamReader(is));
-            String line;
-            int row = 0;
-            while ((line = br.readLine()) != null) {
-                String[] tokens = line.trim().split("\\s+");
-                for (int col = 0; col < tokens.length; col++) {
-                    nextId = placeElementToken(tokens[col], col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, nextId);
-                }
-                row++;
-            }
-        } catch (Exception e) {
-            Log.record(e); // Registra el error de carga de mapa en data/logs/
-        }
-    }
-
-    private int placeElementToken(String token, int posX, int posY, int tileSize, int nextId) {
-        switch (token) {
-            case "1" -> placePlayer(1, player1, posX, posY); // Ubica al Jugador 1 en el tablero
-            case "2" -> placePlayer(2, player2, posX, posY); // Ubica al Jugador 2 en el tablero
-            case "0" -> placeBall(posX + tileSize / 2, posY); // Centra el balón en la celda inicial
-            case "4" -> placePitch(posX, posY, nextId++); // Agrega un tramo del poste o travesaño izquierdo
-            case "5" -> placePitch(posX + 5.0f, posY, nextId++); // Agrega un tramo del travesaño derecho ajustado 5 px
-            case "6" -> placeGoal(1, posX, 358.0f, nextId++); // Crea el arco izquierdo apoyado hasta el suelo (358 + 157 = 515)
-            case "7" -> placeGoal(2, posX + 5.0f, 358.0f, nextId++); // Crea el arco derecho apoyado hasta el suelo
-        }
-        return nextId;
-    }
-
-    private void placePlayer(int id, Player player, float x, float y) {
-        player.setPositions(x, y);
-        player.setGroundY(y);
-        elements.put(id, player);
-    }
-
-    private void placeBall(float x, float y) {
-        this.ball = new Ball();
-        this.ball.setPositions(x, y);
-        elements.put(0, this.ball);
-    }
-
-    private void placePitch(float x, float y, int id) {
-        Pitch pitch = new Pitch();
-        pitch.setPositions(x, y);
-        elements.put(id, pitch);
-    }
-
-    private void placeGoal(int goalKey, float x, float y, int id) {
-        Goal goal = new Goal();
-        goalPlayers.putIfAbsent(goalKey, goal);
-        goal.setPositions(x, y);
-        elements.put(id, goal);
     }
 
     public void startGame(GameMode gameMode, MatchType matchType, int goalLimit,

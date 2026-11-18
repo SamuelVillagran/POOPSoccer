@@ -26,7 +26,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     @BeforeEach
     void setUp() {
         // POOPSoccer is a singleton, so we throw the old game away before every test.
-        POOPSoccer.getGame().resetMatch();
+        POOPSoccer.resetMatch();
         game = POOPSoccer.getGame();
         game.startGame(GameMode.PVP, MatchType.PER_GOALS, 5,
                 "Ana", "Cameroon", "Luis", "Nigeria");
@@ -357,7 +357,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         tempFile.deleteOnExit();
 
         game.save(tempFile);
-        game.resetMatch(); // wipe current singleton
+        POOPSoccer.resetMatch(); // wipe current singleton
         assertEquals(0, POOPSoccer.getGame().getGoalsP1());
 
         POOPSoccer.getGame().open(tempFile);
