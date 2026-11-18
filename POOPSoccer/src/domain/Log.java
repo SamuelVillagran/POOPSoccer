@@ -10,15 +10,14 @@ import java.time.format.DateTimeFormatter;
  * Utility class that records unexpected errors into a human-readable text log file.
  */
 public class Log {
-    private static final String LOG_FILE_NAME = "POOPSoccer_log.txt";
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String LOG_FILE_NAME = "POOPSoccer_log.txt"; // Nombre del archivo de registro de errores para el desarrollador
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"); // Formato de fecha legible
 
     /**
      * Resolves the shared data directory at the repository root alongside Docs/.
      */
     public static File getDataDirectory() {
-        // Ubica la carpeta data junto a Docs cuando se ejecuta desde la subcarpeta del módulo
-        return new File("../Docs").isDirectory() ? new File("../data") : new File("data");
+        return new File("../Docs").isDirectory() ? new File("../data") : new File("data"); // Ubica data/ junto a Docs/ al correr dentro del módulo
     }
 
     /**
@@ -34,14 +33,12 @@ public class Log {
     public static void record(Exception e) {
         if (e == null) return;
         try {
-            // Garantiza que exista la subcarpeta logs dentro de data/
-            File folder = getDataSubdirectory("logs");
+            File folder = getDataSubdirectory("logs"); // Garantiza que exista la subcarpeta logs dentro de data/
             if (!folder.exists()) {
                 folder.mkdirs();
             }
             File logFile = new File(folder, LOG_FILE_NAME);
-            // Escribe el error en texto plano legible con fecha, clase, mensaje y traza completa
-            try (PrintWriter out = new PrintWriter(new FileWriter(logFile, true))) {
+            try (PrintWriter out = new PrintWriter(new FileWriter(logFile, true))) { // Agrega el error en texto plano legible con fecha y traza
                 out.println("============================================================");
                 out.println("Fecha y hora : " + LocalDateTime.now().format(DATE_FORMAT));
                 out.println("Excepción    : " + e.getClass().getName());

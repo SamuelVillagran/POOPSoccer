@@ -15,10 +15,10 @@ import javax.swing.SwingUtilities;
  */
 public class GameContainer extends JPanel implements GamePanelListener, MenuPanelListener, PlayerConfigListener {
 
-    private CardLayout cardLayout;
+    private CardLayout cardLayout; // Administrador de tarjetas para alternar entre menú, configuración y cancha
     private JPanel cardPanel;
-    private GameSetup setup;
-    private InfoPanel infoPanel;
+    private GameSetup setup; // Almacena temporalmente las opciones elegidas antes de iniciar partido
+    private InfoPanel infoPanel; // Barra superior del marcador visible únicamente durante el partido
     private PlayerConfig activeConfigPanel;
     private GamePanel activeGamePanel;
     private final GameController controller;
@@ -43,12 +43,10 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
         cardPanel = new JPanel(cardLayout);
         cardPanel.setOpaque(false);
 
-        // Pantalla de menú inicial
-        cardPanel.add(new MenuPanel(this), ScreenView.MENU.name());
+        cardPanel.add(new MenuPanel(this), ScreenView.MENU.name()); // Monta la pantalla de menú inicial
 
-        // Barra superior de información / HUD
         infoPanel = new InfoPanel();
-        infoPanel.setVisible(false);
+        infoPanel.setVisible(false); // Oculta el HUD mientras el usuario navega por los menús
         add(infoPanel, BorderLayout.NORTH);
 
         cardLayout.show(cardPanel, ScreenView.MENU.name());
@@ -66,7 +64,7 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
         if (view == ScreenView.GAME) {
             applyWindowDimension(setup.getResolution(), true);
         } else {
-            applyWindowDimension(new Dimension(800, 650), false);
+            applyWindowDimension(new Dimension(800, 650), false); // Restaura el tamaño fijo del menú al salir del partido
         }
         cardLayout.show(cardPanel, view.name());
         updateMusicForView(view);
@@ -77,7 +75,7 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
     @Override
     public void onMatchFinished(MatchResultSummary summary) {
         if (audioController != null && summary != null && !summary.isDraw()) {
-            audioController.playOnceThenLoop(SoundTrack.WIN, SoundTrack.IN_GAME);
+            audioController.playOnceThenLoop(SoundTrack.WIN, SoundTrack.IN_GAME); // Suena música de victoria sin bloquear el diálogo
         }
     }
 
@@ -98,11 +96,10 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
         if (activeConfigPanel != null) {
             cardPanel.remove(activeConfigPanel);
         }
-        activeConfigPanel = new PlayerConfig(this, controller, mode);
+        activeConfigPanel = new PlayerConfig(this, controller, mode); // Reconstruye la pantalla con nombres y puntos frescos
         cardPanel.add(activeConfigPanel, ScreenView.PLAYER_CONFIG.name());
         showView(ScreenView.PLAYER_CONFIG);
     }
-
 
     @Override
     public void onPlayerConfigConfirmed(String nameP1, String teamP1, String nameP2, String teamP2,
@@ -121,22 +118,21 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
     }
 
     private void applyWindowDimension(Dimension baseDim, boolean includeHud) {
-        int hudHeight = includeHud ? (int) Math.round(baseDim.height * (80.0 / 600.0)) : 0;
+        int hudHeight = includeHud ? (int) Math.round(baseDim.height * (80.0 / 600.0)) : 0; // Reserva el alto proporcional de InfoPanel
         if (infoPanel != null && includeHud) {
             infoPanel.setPreferredSize(new Dimension(baseDim.width, hudHeight));
         }
         setPreferredSize(new Dimension(baseDim.width, baseDim.height + hudHeight));
         Window topWindow = SwingUtilities.getWindowAncestor(this);
         if (topWindow != null) {
-            topWindow.pack();
-            topWindow.setLocationRelativeTo(null);
+            topWindow.pack(); // Reajusta la ventana padre a las nuevas dimensiones preferidas
+            topWindow.setLocationRelativeTo(null); // Centra la ventana en la pantalla tras cambiar resolución
         }
     }
 
     public void startGame() {
         try {
-            // Delega el inicio del partido al controlador de presentación POOPSoccerGUI
-            controller.startGame(
+            controller.startGame( // Delega el inicio del partido al controlador de presentación POOPSoccerGUI
                     setup.getGameMode(),
                     setup.getMatchType(),
                     setup.getGoalLimit(),
@@ -157,24 +153,22 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
      * Mounts the game panel and starts the game loop for the active match.
      */
     private void launchGameView() {
-        // Si había un panel de juego corriendo, detiene su hilo y lo quita
         if (activeGamePanel != null) {
-            activeGamePanel.stopThread();
+            activeGamePanel.stopThread(); // Detiene el hilo del partido anterior antes de desmontarlo
             cardPanel.remove(activeGamePanel);
         }
-        // Crea el nuevo lienzo, muestra la vista de cancha y arranca el hilo
         activeGamePanel = new GamePanel(this, controller, setup.getResolution());
         cardPanel.add(activeGamePanel, ScreenView.GAME.name());
         showView(ScreenView.GAME);
         activeGamePanel.startGameThread();
-        activeGamePanel.requestFocusInWindow();
+        activeGamePanel.requestFocusInWindow(); // Entrega el foco de teclado al lienzo de juego al instante
     }
 
     @Override
     public void goToMenu() {
         if (activeGamePanel != null) {
             activeGamePanel.stopThread();
-            cardPanel.remove(activeGamePanel); // Limpia el panel de juego anterior
+            cardPanel.remove(activeGamePanel); // Libera el panel de juego anterior al volver al menú
             activeGamePanel = null;
         }
         infoPanel.setVisible(false);
@@ -192,16 +186,14 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
      * Saves the current match into the selected file.
      */
     public void saveCurrentGame(File selectedFile) throws Exception {
-        // Delega el guardado al controlador principal
-        controller.saveGame(selectedFile);
+        controller.saveGame(selectedFile); // Delega el guardado al controlador principal
     }
 
     /**
      * Opens a saved match from the selected file and shows the game view.
      */
     public void loadSavedGame(File selectedFile) throws Exception {
-        // Delega la carga al controlador principal y abre la cancha sin reiniciar el partido
-        controller.openGame(selectedFile);
+        controller.openGame(selectedFile); // Carga el estado binario y reabre la cancha en ese instante
         launchGameView();
     }
 }

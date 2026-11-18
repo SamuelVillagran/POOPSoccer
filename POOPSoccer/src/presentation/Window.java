@@ -22,7 +22,7 @@ public class Window extends JFrame {
     private JMenuItem optionOpen;
     private JMenuItem optionExit;
 
-    private GameContainer gameContainer;
+    private GameContainer gameContainer; // Panel central que alterna todas las pantallas de la interfaz
     private final GameController controller;
 
     public Window(GameController controller) throws Exception {
@@ -37,14 +37,14 @@ public class Window extends JFrame {
     }
 
     private void setScreen() throws Exception {
-        setResizable(false);
+        setResizable(false); // Bloquea redimensionado manual para no deformar las proporciones de menús y cancha
         setTitle("POOPSoccer");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         gameContainer = new GameContainer(controller);
         add(gameContainer);
         pack();
-        setLocationRelativeTo(null);
+        setLocationRelativeTo(null); // Centra la ventana en el monitor del usuario
     }
 
     private void prepareViewMenu() {
@@ -86,12 +86,11 @@ public class Window extends JFrame {
         if (result == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
             if (!selectedFile.getName().endsWith(".dat")) {
-                selectedFile = new File(selectedFile.getAbsolutePath() + ".dat");
+                selectedFile = new File(selectedFile.getAbsolutePath() + ".dat"); // Agrega extensión .dat si el usuario no la escribió
             }
             try {
-                // Delega el guardado al contenedor principal y avisa al usuario
                 if (gameContainer != null) {
-                    gameContainer.saveCurrentGame(selectedFile);
+                    gameContainer.saveCurrentGame(selectedFile); // Delega el guardado al contenedor principal
                 }
                 JOptionPane.showMessageDialog(this, "Partida guardada en: " + selectedFile.getName());
             } catch (Exception ex) {
@@ -118,11 +117,10 @@ public class Window extends JFrame {
     }
 
     private JFileChooser createSaveFileChooser() {
-        // Dirige el selector de archivos a la subcarpeta data/saves/ ubicada al mismo nivel que Docs/
-        File dataDir = new File("../Docs").isDirectory() ? new File("../data") : new File("data");
+        File dataDir = new File("../Docs").isDirectory() ? new File("../data") : new File("data"); // Ubica la carpeta data/ compartida junto a Docs/
         File savesDir = new File(dataDir, "saves");
         try {
-            savesDir = savesDir.getCanonicalFile();
+            savesDir = savesDir.getCanonicalFile(); // Resuelve ".." a una ruta limpia para mostrarla en el selector
         } catch (Exception ignored) {
         }
         if (!savesDir.exists()) {
@@ -141,5 +139,4 @@ public class Window extends JFrame {
             System.exit(0);
         }
     }
-
 }

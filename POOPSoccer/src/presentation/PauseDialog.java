@@ -1,18 +1,14 @@
 package presentation;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 
 import javax.swing.BorderFactory;
@@ -31,23 +27,19 @@ import javax.swing.SwingUtilities;
 public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
 
     public enum Choice {
-        RESUME,
-        RESTART,
-        MENU
+        RESUME, // Reanuda el partido desde el punto exacto donde se pausó
+        RESTART, // Reinicia el marcador y vuelve a lanzar el partido actual
+        MENU // Abandona la cancha actual y regresa al menú principal
     }
 
-    private static final Color CARD_BG = new Color(18, 28, 48, 242);
-    private static final Color CARD_BORDER = new Color(245, 198, 45);
-    private static final Color SCORE_PILL_BG = new Color(10, 16, 28, 220);
-    private static final Color BTN_RESUME = new Color(18, 168, 88);
-    private static final Color BTN_RESTART = new Color(225, 110, 12);
-    private static final Color BTN_MENU = new Color(205, 42, 48);
+    private static final Color BTN_RESTART = new Color(225, 110, 12); // Naranja vibrante para la opción de reinicio
+    private static final Color BTN_MENU = new Color(205, 42, 48); // Rojo intenso para salir al menú principal
 
-    private Choice selectedChoice = Choice.RESUME;
+    private Choice selectedChoice = Choice.RESUME; // Valor seguro por defecto si el diálogo se cierra con Escape
 
     private PauseDialog(Component owner, String scoreText) {
         super(SwingUtilities.getWindowAncestor(owner), ModalityType.APPLICATION_MODAL);
-        configureWindow();
+        ArcadeUIStyle.configureModalDialog(this);
         setContentPane(buildCardPanel(scoreText));
         pack();
         setLocationRelativeTo(owner);
@@ -63,29 +55,11 @@ public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
         return dialog.selectedChoice;
     }
 
-    private void configureWindow() {
-        setUndecorated(true);
-        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        // Aplica transparencia por píxel solo si la plataforma lo soporta
-        try {
-            setBackground(new Color(0, 0, 0, 0));
-        } catch (UnsupportedOperationException ignored) {
-            setBackground(new Color(18, 28, 48));
-        }
-    }
-
     private JPanel buildCardPanel(String scoreText) {
         JPanel card = new JPanel(new GridBagLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(CARD_BG);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 26, 26);
-                g2.setColor(CARD_BORDER);
-                g2.setStroke(new BasicStroke(3.0f));
-                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 26, 26);
-                g2.dispose();
+                ArcadeUIStyle.paintRoundedCard(g, getWidth(), getHeight(), 26, 3.0f);
             }
         };
         card.setOpaque(false);
@@ -108,7 +82,7 @@ public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
 
         gbc.insets = new Insets(5, 0, 5, 0);
         gbc.gridy = 2;
-        card.add(createActionButton("Continuar", BTN_RESUME, Choice.RESUME), gbc);
+        card.add(createActionButton("Continuar", ArcadeUIStyle.BTN_GREEN, Choice.RESUME), gbc);
         gbc.gridy = 3;
         card.add(createActionButton("Reiniciar", BTN_RESTART, Choice.RESTART), gbc);
         gbc.gridy = 4;
@@ -123,11 +97,7 @@ public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
         JLabel badge = new JLabel(scoreText, SwingConstants.CENTER) {
             @Override
             protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(SCORE_PILL_BG);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
-                g2.dispose();
+                ArcadeUIStyle.paintPillSurface(g, getWidth(), getHeight(), 16, ArcadeUIStyle.SCORE_PILL_BG);
                 super.paintComponent(g);
             }
         };
@@ -142,40 +112,22 @@ public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
         JButton btn = new JButton(text) {
             @Override
             protected void paintComponent(Graphics g) {
-                // Dibuja el botón estilo arcade con brillo al pasar el cursor
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color fill = getModel().isPressed() ? baseColor.darker()
-                        : getModel().isRollover() ? baseColor.brighter() : baseColor;
-                g2.setColor(fill);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
-                g2.setColor(new Color(255, 255, 255, 110));
-                g2.setStroke(new BasicStroke(1.5f));
-                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 16, 16);
-                g2.dispose();
+                ArcadeUIStyle.paintArcadeButton(g, this, baseColor, 16);
                 super.paintComponent(g);
             }
         };
-        btn.setFont(new Font("Arial", Font.BOLD, 15));
-        btn.setForeground(Color.WHITE);
-        btn.setPreferredSize(new Dimension(228, 40));
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setOpaque(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        ArcadeUIStyle.configureCleanButton(btn, new Font("Arial", Font.BOLD, 15), new Dimension(228, 40));
         btn.addActionListener(e -> {
-            selectedChoice = choice;
+            selectedChoice = choice; // Registra la elección pulsada y cierra el diálogo modal
             dispose();
         });
         return btn;
     }
 
     private void registerEscapeKey() {
-        // Permite reanudar rápidamente presionando Escape nuevamente dentro del diálogo
         getRootPane().registerKeyboardAction(
                 e -> {
-                    selectedChoice = Choice.RESUME;
+                    selectedChoice = Choice.RESUME; // Reanuda al instante si se presiona Escape por segunda vez
                     dispose();
                 },
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),

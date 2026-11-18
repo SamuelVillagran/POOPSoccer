@@ -4,13 +4,13 @@ package domain;
  * Available behavior profiles for machine players.
  */
 public enum MachineProfile {
-    CLUMSY("Torpe", true),
-    OFFENSIVE("Ofensiva", false),
-    DEFENSIVE("Defensiva", false),
-    EXPERT("Experta", false);
+    CLUMSY("Torpe", true), // Perfil disponible actualmente con movimientos aleatorios
+    OFFENSIVE("Ofensiva", false), // Perfil reservado para futura IA enfocada en atacar
+    DEFENSIVE("Defensiva", false), // Perfil reservado para futura IA enfocada en proteger el arco
+    EXPERT("Experta", false); // Perfil reservado para futura IA táctica adaptativa
 
-    private final String displayName;
-    private final boolean available;
+    private final String displayName; // Nombre legible mostrado en el selector de perfil CPU
+    private final boolean available; // Indica si el comportamiento ya se encuentra implementado
 
     MachineProfile(String displayName, boolean available) {
         this.displayName = displayName;
@@ -27,8 +27,7 @@ public enum MachineProfile {
 
     public static MachineProfile fromDisplayName(String name) {
         if (name == null) return CLUMSY;
-        // Compara el nombre ingresado con el nombre visible o el identificador del perfil
-        for (MachineProfile profile : values()) {
+        for (MachineProfile profile : values()) { // Traduce texto visible o nombre de enum al perfil correspondiente
             if (profile.displayName.equalsIgnoreCase(name.trim())
                     || profile.name().equalsIgnoreCase(name.trim())) {
                 return profile;

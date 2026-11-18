@@ -13,9 +13,9 @@ import java.util.Map;
  */
 public class PlayerDatabase implements PlayerDataGateway {
 
-    private static final String DEFAULT_DB_NAME = "players_db.csv";
-    private static final String HEADER = "name;points;speed;jump;kick;survival";
-    private final File databaseFile;
+    private static final String DEFAULT_DB_NAME = "players_db.csv"; // Archivo CSV de respaldo cuando no hay SQLite disponible
+    private static final String HEADER = "name;points;speed;jump;kick;survival"; // Encabezado estándar de columnas separadas por punto y coma
+    private final File databaseFile; // Ruta del archivo CSV donde persisten los perfiles de respaldo
 
     public PlayerDatabase() {
         this(new File(Log.getDataSubdirectory("database"), DEFAULT_DB_NAME));
@@ -30,8 +30,7 @@ public class PlayerDatabase implements PlayerDataGateway {
         if (player == null || player.getName() == null || player.getName().isBlank()) {
             return;
         }
-        // Lee todos los registros actuales, actualiza la fila del jugador y escribe la tabla en disco
-        Map<String, String> records = readAllRecords();
+        Map<String, String> records = readAllRecords(); // Carga los registros existentes antes de actualizar el perfil
         String key = normalizeKey(player.getName());
         records.put(key, mapPlayerToRow(player));
         writeAllRecords(records);
@@ -42,9 +41,8 @@ public class PlayerDatabase implements PlayerDataGateway {
         if (player == null || player.getName() == null || player.getName().isBlank()) {
             return false;
         }
-        // Busca la fila del jugador por su nombre normalizado y restaura sus estadísticas
         Map<String, String> records = readAllRecords();
-        String row = records.get(normalizeKey(player.getName()));
+        String row = records.get(normalizeKey(player.getName())); // Busca al jugador ignorando mayúsculas y espacios extras
         if (row == null) {
             return false;
         }
@@ -52,8 +50,7 @@ public class PlayerDatabase implements PlayerDataGateway {
     }
 
     private String mapPlayerToRow(Player player) {
-        // Convierte la entidad Player en un registro estructurado separado por punto y coma
-        String cleanName = player.getName().trim().replace(";", ",");
+        String cleanName = player.getName().trim().replace(";", ","); // Evita que un punto y coma corrompa las columnas del CSV
         return cleanName + ";"
                 + player.getPoints() + ";"
                 + player.getStatLevel("speed") + ";"
@@ -63,7 +60,6 @@ public class PlayerDatabase implements PlayerDataGateway {
     }
 
     private boolean mapRowToPlayer(String row, Player player) {
-        // Transforma las columnas almacenadas en la base de datos hacia los atributos de la entidad
         String[] cols = row.split(";");
         if (cols.length < 6) {
             return false;
@@ -74,7 +70,7 @@ public class PlayerDatabase implements PlayerDataGateway {
             int jump = Integer.parseInt(cols[3].trim());
             int kick = Integer.parseInt(cols[4].trim());
             int survival = Integer.parseInt(cols[5].trim());
-            player.loadProgress(points, speed, jump, kick, survival);
+            player.loadProgress(points, speed, jump, kick, survival); // Restaura puntos y niveles leídos desde disco
             return true;
         } catch (NumberFormatException e) {
             Log.record(e);
@@ -87,8 +83,7 @@ public class PlayerDatabase implements PlayerDataGateway {
         if (databaseFile == null || !databaseFile.exists()) {
             return records;
         }
-        // Recorre el archivo de base de datos ignorando el encabezado y carga cada fila por clave
-        try (BufferedReader reader = new BufferedReader(new FileReader(databaseFile))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(databaseFile))) { // Recorre cada línea omitiendo el encabezado
             String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
@@ -110,11 +105,10 @@ public class PlayerDatabase implements PlayerDataGateway {
         if (databaseFile == null) {
             return;
         }
-        // Asegura que la carpeta exista y persiste todos los registros bajo el encabezado de la tabla
         try {
             File parent = databaseFile.getParentFile();
             if (parent != null && !parent.exists()) {
-                parent.mkdirs();
+                parent.mkdirs(); // Crea la carpeta database si todavía no existe
             }
             try (PrintWriter writer = new PrintWriter(new FileWriter(databaseFile, false))) {
                 writer.println(HEADER);

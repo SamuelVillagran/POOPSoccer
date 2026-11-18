@@ -1,32 +1,30 @@
 package presentation;
 
 import java.awt.Dimension;
-import java.awt.Toolkit;
 
 /**
  * Stores the configuration parameters selected in the menus before starting a match.
  */
 public class GameSetup {
 
-    private String gameMode;
-    private String matchType;
-    private int goalLimit;
-    private int timeLimit;
-    private Dimension resolution;
+    private String gameMode; // Modalidad elegida: PVP, PVM o MVM
+    private String matchType; // Regla de victoria elegida ("Por goles" o "Por tiempo")
+    private int goalLimit; // Cantidad de goles meta cuando se juega por goles
+    private int timeLimit; // Duración en minutos cuando se juega por tiempo
+    private Dimension resolution; // Dimensiones visuales seleccionadas para el panel de juego
 
-    private String nameP1;
-    private String teamP1;
+    private String nameP1; // Nombre confirmado del primer participante
+    private String teamP1; // País elegido para el primer participante
 
-    private String nameP2;
-    private String teamP2;
+    private String nameP2; // Nombre confirmado del segundo participante o CPU
+    private String teamP2; // País elegido para el segundo participante o CPU
 
     public GameSetup() {
-        this.gameMode = "PVM";
+        this.gameMode = "PVM"; // Valores iniciales predeterminados al arrancar la aplicación
         this.matchType = "Por goles";
         this.goalLimit = 3;
         this.timeLimit = 2;
-        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        this.resolution = new Dimension((int) Math.round(screen.width * 0.50), (int) Math.round(screen.height * 0.60));
+        this.resolution = new Dimension(800, 600);
         this.nameP1 = "Jugador 1";
         this.teamP1 = "Corea del Sur";
         this.nameP2 = "Máquina";

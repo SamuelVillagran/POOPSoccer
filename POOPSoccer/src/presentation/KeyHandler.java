@@ -4,16 +4,14 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.BitSet;
 
-
 /**
  * Keyboard input handler for both players using a BitSet to track active keys.
  */
 public class KeyHandler extends KeyAdapter {
 
-    private static KeyHandler instance;
-    // Almacena el estado booleano de cada tecla presionada
-    private final BitSet KEYS = new BitSet();
-    private boolean escToggle = false;
+    private static KeyHandler instance; // Instancia única compartida para leer el estado simultáneo del teclado
+    private final BitSet KEYS = new BitSet(); // Registra un bit activo por cada código de tecla presionado
+    private boolean escToggle = false; // Recuerda una pulsación única de Escape para abrir el menú de pausa
 
     private KeyHandler() {}
 
@@ -26,24 +24,22 @@ public class KeyHandler extends KeyAdapter {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        // Marca la tecla como activa cuando el jugador la presiona
-        KEYS.set(e.getKeyCode());
+        KEYS.set(e.getKeyCode()); // Marca la tecla como activa mientras permanezca presionada
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
         int code = e.getKeyCode();
-        // Desmarca la tecla cuando el jugador la suelta
-        KEYS.clear(code);
+        KEYS.clear(code); // Libera la tecla al soltarla
 
         if (code == KeyEvent.VK_ESCAPE) {
-            escToggle = true;
+            escToggle = true; // Dispara la solicitud de pausa al soltar Escape para evitar rebotes repetidos
         }
     }
 
     public boolean consumeEscToggle() {
         boolean fired = escToggle;
-        escToggle = false;
+        escToggle = false; // Limpia la bandera al instante para procesar cada pausa una sola vez
         return fired;
     }
 
@@ -53,16 +49,15 @@ public class KeyHandler extends KeyAdapter {
         escToggle = false;
     }
 
-    // Getters consultando directamente el estado booleano en el BitSet
-    public boolean getW() { return KEYS.get(KeyEvent.VK_W); }
-    public boolean getS() { return KEYS.get(KeyEvent.VK_S); }
-    public boolean getA() { return KEYS.get(KeyEvent.VK_A); }
-    public boolean getD() { return KEYS.get(KeyEvent.VK_D); }
-    public boolean getQ() { return KEYS.get(KeyEvent.VK_Q); }
+    public boolean getW() { return KEYS.get(KeyEvent.VK_W); } // Tecla W para el salto del Jugador 1
+    public boolean getS() { return KEYS.get(KeyEvent.VK_S); } // Tecla S para la patada del Jugador 1
+    public boolean getA() { return KEYS.get(KeyEvent.VK_A); } // Tecla A para mover al Jugador 1 a la izquierda
+    public boolean getD() { return KEYS.get(KeyEvent.VK_D); } // Tecla D para mover al Jugador 1 a la derecha
+    public boolean getQ() { return KEYS.get(KeyEvent.VK_Q); } // Tecla Q para activar el poder del Jugador 1
 
-    public boolean getUp() { return KEYS.get(KeyEvent.VK_UP); }
-    public boolean getDown() { return KEYS.get(KeyEvent.VK_DOWN); }
-    public boolean getLeft() { return KEYS.get(KeyEvent.VK_LEFT); }
-    public boolean getRight() { return KEYS.get(KeyEvent.VK_RIGHT); }
-    public boolean getCtrlRight() { return KEYS.get(KeyEvent.VK_CONTROL); }
+    public boolean getUp() { return KEYS.get(KeyEvent.VK_UP); } // Flecha Arriba para el salto del Jugador 2
+    public boolean getDown() { return KEYS.get(KeyEvent.VK_DOWN); } // Flecha Abajo para la patada del Jugador 2
+    public boolean getLeft() { return KEYS.get(KeyEvent.VK_LEFT); } // Flecha Izquierda para mover al Jugador 2
+    public boolean getRight() { return KEYS.get(KeyEvent.VK_RIGHT); } // Flecha Derecha para mover al Jugador 2
+    public boolean getCtrlRight() { return KEYS.get(KeyEvent.VK_CONTROL); } // Tecla Ctrl para activar el poder del Jugador 2
 }

@@ -14,14 +14,14 @@ import javax.sound.sampled.LineListener;
  */
 public class ClipAudioController implements AudioController {
 
-    private static final float[] VOLUME_DECIBELS = { -80f, -20f, -12f, -5f, 1f, 6f };
+    private static final float[] VOLUME_DECIBELS = { -80f, -20f, -12f, -5f, 1f, 6f }; // Escala discreta de ganancia de silencio a máximo
 
-    private Clip activeClip;
+    private Clip activeClip; // Pista de audio actualmente abierta en la tarjeta de sonido
     private LineListener activeListener;
     private SoundTrack currentTrack;
-    private boolean looping;
-    private int volumeScale = 4;
-    private long playbackGeneration = 0;
+    private boolean looping; // Indica si la pista actual se repite de forma continua
+    private int volumeScale = 4; // Nivel de volumen inicial (índice sobre VOLUME_DECIBELS)
+    private long playbackGeneration = 0; // Evita que eventos STOP de pistas viejas cierren la pista recién iniciada
 
     @Override
     public synchronized void playLoop(SoundTrack track) {
@@ -29,7 +29,7 @@ public class ClipAudioController implements AudioController {
             return;
         }
         if (currentTrack == track && looping && isPlaying()) {
-            return;
+            return; // Conserva la reproducción continua si ya suena la misma música
         }
         startClip(track, true, null);
     }
@@ -47,12 +47,12 @@ public class ClipAudioController implements AudioController {
         if (onceTrack == null) {
             return;
         }
-        startClip(onceTrack, false, () -> playLoop(followUpLoopTrack));
+        startClip(onceTrack, false, () -> playLoop(followUpLoopTrack)); // Encadena automáticamente el bucle al terminar el tema corto
     }
 
     @Override
     public synchronized void stop() {
-        playbackGeneration++;
+        playbackGeneration++; // Invalida cualquier oyente pendiente de la generación anterior
         closeActiveClip();
         currentTrack = null;
         looping = false;
@@ -73,7 +73,7 @@ public class ClipAudioController implements AudioController {
     }
 
     public synchronized void setVolumeScale(int scale) {
-        this.volumeScale = Math.max(0, Math.min(VOLUME_DECIBELS.length - 1, scale));
+        this.volumeScale = Math.max(0, Math.min(VOLUME_DECIBELS.length - 1, scale)); // Acota el índice de volumen al rango válido
         applyVolume(activeClip);
     }
 
@@ -83,7 +83,7 @@ public class ClipAudioController implements AudioController {
 
         URL resourceUrl = getClass().getResource(track.getResourcePath());
         if (resourceUrl == null) {
-            System.err.println("Audio resource not found: " + track.getResourcePath());
+            System.err.println("No se encontró el recurso de audio: " + track.getResourcePath());
             return;
         }
 
@@ -103,7 +103,7 @@ public class ClipAudioController implements AudioController {
                 clip.start();
             }
         } catch (Exception e) {
-            System.err.println("Failed to play audio track " + track + ": " + e.getMessage());
+            System.err.println("No se pudo reproducir la pista " + track + ": " + e.getMessage());
             closeActiveClip();
             this.currentTrack = null;
             this.looping = false;
@@ -121,7 +121,7 @@ public class ClipAudioController implements AudioController {
 
     private synchronized void handleClipStopped(long generation, Runnable onNaturalCompletion) {
         if (generation != this.playbackGeneration) {
-            return;
+            return; // Ignora cierres tardíos cuando ya arrancó otra pista más reciente
         }
         closeActiveClip();
         currentTrack = null;
@@ -137,7 +137,7 @@ public class ClipAudioController implements AudioController {
         }
         FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
         float targetDb = VOLUME_DECIBELS[volumeScale];
-        float clampedDb = Math.max(gainControl.getMinimum(), Math.min(gainControl.getMaximum(), targetDb));
+        float clampedDb = Math.max(gainControl.getMinimum(), Math.min(gainControl.getMaximum(), targetDb)); // Respeta límites del driver
         gainControl.setValue(clampedDb);
     }
 

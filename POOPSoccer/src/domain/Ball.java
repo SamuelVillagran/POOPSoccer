@@ -1,19 +1,19 @@
 package domain;
 
 public class Ball extends ItemSoccer {
-    public static final float GRAVITY = 0.65f;
-    public static final float AIR_DRAG = 0.995f;
-    public static final float GROUND_FRICTION = 0.988f;
-    public static final float RESTITUTION = 0.55f;
-    public static final float MAX_SPEED = 16.0f;
-    private static final float STOP_THRESHOLD = 0.15f;
+    public static final float GRAVITY = 0.65f; // Incrementa la velocidad vertical hacia abajo en cada frame
+    public static final float AIR_DRAG = 0.995f; // Conserva el 99.5% de la velocidad horizontal mientras vuela
+    public static final float GROUND_FRICTION = 0.988f; // Frena progresivamente el balón cuando rueda sobre el césped
+    public static final float RESTITUTION = 0.55f; // Conserva el 55% de la energía al rebotar contra piso, techo o paredes
+    public static final float MAX_SPEED = 16.0f; // Limita la velocidad máxima para evitar que atraviese arcos o muros
+    private static final float STOP_THRESHOLD = 0.15f; // Detiene por completo el balón cuando su velocidad es casi nula
 
-    private Vector2D velocity;
-    private boolean onGround;
-    private Power activePowerShot;
-    private Player powerShotOwner;
-    private int pendingDecoyCount = 0;
-    private float pendingDecoyDuration = 0.0f;
+    private Vector2D velocity; // Almacena la velocidad actual en los ejes X e Y
+    private boolean onGround; // Indica si el balón toca el césped en este frame
+    private Power activePowerShot; // Guarda el tiro de poder activo mientras viaja el balón
+    private Player powerShotOwner; // Identifica al jugador que lanzó el tiro de poder para no dañarlo a él mismo
+    private int pendingDecoyCount = 0; // Cantidad de balones señuelo pendientes por generar (ej. poder Ilusión)
+    private float pendingDecoyDuration = 0.0f; // Duración en segundos de los balones señuelo generados
 
     public Ball() {
         this.velocity = new Vector2D();
@@ -24,15 +24,15 @@ public class Ball extends ItemSoccer {
         this.powerShotOwner = owner;
         this.activePowerShot = power;
         if (power != null && owner != null) {
-            power.launchBall(this, owner.getAttackDirection());
-            this.pendingDecoyCount = power.getDecoyBallCount();
+            power.launchBall(this, owner.getAttackDirection()); // Impulsa el balón hacia el arco rival según el poder
+            this.pendingDecoyCount = power.getDecoyBallCount(); // Registra señuelos si el poder divide el balón
             this.pendingDecoyDuration = power.getDecoyDurationSeconds();
         }
     }
 
     public int consumePendingDecoyCount() {
         int count = pendingDecoyCount;
-        pendingDecoyCount = 0;
+        pendingDecoyCount = 0; // Limpia el contador para que los señuelos se creen una sola vez
         return count;
     }
 
@@ -46,14 +46,14 @@ public class Ball extends ItemSoccer {
     }
 
     public boolean hasPowerShotAgainst(Player target) {
-        return activePowerShot != null && powerShotOwner != null && powerShotOwner != target;
+        return activePowerShot != null && powerShotOwner != null && powerShotOwner != target; // Evita fuego amigo del tiro especial
     }
 
     public void impactPlayerWithPowerShot(Player target) {
         if (!hasPowerShotAgainst(target)) return;
         Power shot = activePowerShot;
         Player owner = powerShotOwner;
-        clearPowerShot();
+        clearPowerShot(); // Consume el tiro especial al impactar para que aplique el efecto una sola vez
         shot.use(owner, target);
     }
 
@@ -77,35 +77,32 @@ public class Ball extends ItemSoccer {
      */
     @Override
     public void update() {
-        // Aplicar gravedad (+Y hacia abajo)
-        velocity.setPositions(velocity.getX(), velocity.getY() + GRAVITY);
+        velocity.setPositions(velocity.getX(), velocity.getY() + GRAVITY); // Suma la aceleración de gravedad en el eje Y hacia abajo
 
         if (activePowerShot != null) {
-            activePowerShot.updateBallFlight(this);
+            activePowerShot.updateBallFlight(this); // Ajusta la trayectoria personalizada si hay un tiro de poder activo
         }
 
-        // Aplicar resistencia del aire o fricción de césped
-        float damping = onGround ? GROUND_FRICTION : AIR_DRAG;
+        float damping = onGround ? GROUND_FRICTION : AIR_DRAG; // Selecciona fricción de césped o resistencia del aire
         velocity.setPositions(velocity.getX() * damping, velocity.getY());
 
-        // Evitar micro-deslizamientos infinitos
         if (Math.abs(velocity.getX()) < STOP_THRESHOLD) {
-            velocity.setPositions(0.0f, velocity.getY());
+            velocity.setPositions(0.0f, velocity.getY()); // Anula micro-deslizamientos horizontales residuales
         }
         if (onGround && Math.abs(velocity.getY()) < STOP_THRESHOLD) {
-            velocity.setPositions(velocity.getX(), 0.0f);
+            velocity.setPositions(velocity.getX(), 0.0f); // Estabiliza el reposo vertical sobre el césped
         }
 
         clampVelocity();
-        position.add(velocity);
-        onGround = false; // Se recalcula en CollisionChecker
+        position.add(velocity); // Desplaza la posición acumulada del balón según la velocidad final
+        onGround = false; // Reinicia el indicador hasta la próxima verificación de colisión con el suelo
     }
 
     private void clampVelocity() {
         float mag = velocity.magnitude();
         if (mag > MAX_SPEED) {
             Vector2D norm = velocity.normalize();
-            velocity.setPositions(norm.getX() * MAX_SPEED, norm.getY() * MAX_SPEED);
+            velocity.setPositions(norm.getX() * MAX_SPEED, norm.getY() * MAX_SPEED); // Conserva la dirección acotando la rapidez al límite
         }
     }
 
@@ -128,12 +125,12 @@ public class Ball extends ItemSoccer {
 
     @Override
     public float getWidth() {
-        return 30.0f;
+        return 30.0f; // Ancho visual y físico del balón en píxeles
     }
 
     @Override
     public float getHeight() {
-        return 30.0f;
+        return 30.0f; // Alto visual y físico del balón en píxeles
     }
 
     public float getVx() {

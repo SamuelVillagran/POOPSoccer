@@ -47,6 +47,10 @@ public interface GameController {
 
     void updateGame();
 
+    boolean consumeKickSound();
+
+    boolean consumeKickBallSound();
+
     void pauseGame();
 
     void resumeGame();

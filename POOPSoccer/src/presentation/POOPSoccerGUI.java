@@ -14,12 +14,11 @@ import javax.swing.SwingUtilities;
  */
 public class POOPSoccerGUI implements GameController {
 
-    private Window window;
+    private Window window; // Ventana principal de la aplicación Swing
 
     public POOPSoccerGUI() {
         try {
-            // Crea la ventana principal inyectando este controlador como único puente hacia el dominio
-            this.window = new Window(this);
+            this.window = new Window(this); // Inyecta este controlador como único puente hacia el dominio
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -142,6 +141,16 @@ public class POOPSoccerGUI implements GameController {
     }
 
     @Override
+    public boolean consumeKickSound() {
+        return POOPSoccer.getGame().consumeKickSound();
+    }
+
+    @Override
+    public boolean consumeKickBallSound() {
+        return POOPSoccer.getGame().consumeKickBallSound();
+    }
+
+    @Override
     public void pauseGame() {
         POOPSoccer.getGame().pauseGame();
     }
@@ -164,7 +173,7 @@ public class POOPSoccerGUI implements GameController {
     @Override
     public MatchResultSummary getMatchResultSummary() {
         var snapshot = POOPSoccer.getGame().getMatchSummary();
-        return new MatchResultSummary(
+        return new MatchResultSummary( // Mapea el snapshot de dominio al DTO propio de presentación
                 snapshot.isDraw(),
                 snapshot.goalsP1(),
                 snapshot.goalsP2(),
@@ -190,35 +199,31 @@ public class POOPSoccerGUI implements GameController {
     @Override
     public MatchHudSnapshot getMatchHudSnapshot() {
         var game = POOPSoccer.getGame();
-        PlayerHudInfo p1 = buildPlayerHudInfo(1, game.getDisplayInfoP1(), game.getHealthPercentP1(),
-                game.getPowerPercentP1(), game.getActivePowerNameP1());
-        PlayerHudInfo p2 = buildPlayerHudInfo(2, game.getDisplayInfoP2(), game.getHealthPercentP2(),
-                game.getPowerPercentP2(), game.getActivePowerNameP2());
+        PlayerHudInfo p1 = buildPlayerHudInfo(1); // Construye la instantánea HUD del Jugador 1
+        PlayerHudInfo p2 = buildPlayerHudInfo(2); // Construye la instantánea HUD del Jugador 2
         String score = game.getGoalsP1() + " - " + game.getGoalsP2();
         return new MatchHudSnapshot(p1, p2, score, game.getRemainingTime(), game.isSuddenDeath());
     }
 
-    private PlayerHudInfo buildPlayerHudInfo(int playerNum, String displayName,
-                                             float healthPercent, float powerPercent, String activePower) {
+    private PlayerHudInfo buildPlayerHudInfo(int playerNum) {
         var game = POOPSoccer.getGame();
         String statsSummary = "Vel:" + game.getStatLevel(playerNum, "speed")
                 + " Sal:" + game.getStatLevel(playerNum, "jump")
                 + " Pat:" + game.getStatLevel(playerNum, "kick")
-                + " Vid:" + game.getStatLevel(playerNum, "life");
+                + " Vid:" + game.getStatLevel(playerNum, "life"); // Resume niveles actuales para mostrarlos en la barra superior
         return new PlayerHudInfo(
-                displayName,
+                game.getDisplayInfo(playerNum),
                 game.getPlayerTeamName(playerNum),
-                healthPercent,
-                powerPercent,
-                activePower,
+                game.getHealthPercent(playerNum),
+                game.getPowerPercent(playerNum),
+                game.getActivePowerName(playerNum),
                 statsSummary
         );
     }
 
     @Override
     public List<RenderElement> getRenderElements() {
-        // Convierte las instantáneas del dominio a objetos visuales propios de presentación
-        var snapshots = POOPSoccer.getGame().getRenderElements();
+        var snapshots = POOPSoccer.getGame().getRenderElements(); // Convierte entidades a DTOs visuales sin exponer el dominio
         List<RenderElement> renderList = new ArrayList<>(snapshots.size());
         for (var item : snapshots) {
             renderList.add(new RenderElement(

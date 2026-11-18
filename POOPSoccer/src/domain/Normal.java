@@ -1,6 +1,6 @@
 package domain;
 
-public class Normal extends PlayerType {
+public class Normal extends Type {
     public Normal() {
     }
 }

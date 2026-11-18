@@ -22,7 +22,7 @@ public class MenuPanel extends JPanel {
     private JButton btnPvP;
     private JButton btnPvM;
     private JButton btnMvM;
-    private BufferedImage background;
+    private BufferedImage background; // Ilustración principal de fondo cargada desde /menu/main.jpg
 
     public MenuPanel(MenuPanelListener listener) {
         loadBackground();
@@ -31,8 +31,7 @@ public class MenuPanel extends JPanel {
     }
 
     private void loadBackground() {
-        try {
-            InputStream is = getClass().getResourceAsStream("/menu/main.jpg");
+        try (InputStream is = getClass().getResourceAsStream("/menu/main.jpg")) {
             if (is != null) {
                 background = ImageIO.read(is);
             }
@@ -70,8 +69,7 @@ public class MenuPanel extends JPanel {
     }
 
     private void prepareActions(MenuPanelListener listener) {
-        // Envía el identificador de la modalidad al contenedor sin acoplarse a enums del dominio
-        btnPvP.addActionListener(e -> listener.onModeSelected("PVP"));
+        btnPvP.addActionListener(e -> listener.onModeSelected("PVP")); // Envía la modalidad sin acoplarse a enums del dominio
         btnPvM.addActionListener(e -> listener.onModeSelected("PVM"));
         btnMvM.addActionListener(e -> listener.onModeSelected("MVM"));
     }

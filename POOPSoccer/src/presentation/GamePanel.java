@@ -15,43 +15,49 @@ import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-
 /**
  * Interactive game canvas that runs the 60 FPS game loop, captures keyboard input,
  * and renders the pitch and its elements.
  */
 public class GamePanel extends JPanel implements Runnable {
 
-    private static final int FPS = 60;
-    private static final int SCREEN_WIDTH = 800;
-    private static final int SCREEN_HEIGHT = 600;
+    private static final int FPS = 60; // Frecuencia objetivo de actualización lógica y visual por segundo
+    private static final int SCREEN_WIDTH = 800; // Ancho lógico base sobre el que opera la física de la cancha
+    private static final int SCREEN_HEIGHT = 600; // Alto lógico base de la cancha antes de escalar a la ventana
 
-    private static final Color AURA_FILL = new Color(0, 200, 255, 110);
-    private static final Color AURA_BORDER = new Color(255, 215, 0, 220);
-    private static final Color STUN_FILL = new Color(255, 60, 60, 120);
-    private static final Color EFFECT_FILL = new Color(255, 230, 0, 110);
-    private static final Color SHOT_AURA_FILL = new Color(255, 180, 0, 140);
+    private static final Color AURA_FILL = new Color(0, 200, 255, 110); // Relleno translúcido del aura cuando el poder está listo
+    private static final Color AURA_BORDER = new Color(255, 215, 0, 220); // Borde dorado que resalta el aura activa del jugador
+    private static final Color STUN_FILL = new Color(255, 60, 60, 120); // Tinte rojo sobre el jugador mientras está aturdido
+    private static final Color EFFECT_FILL = new Color(255, 230, 0, 110); // Tinte amarillo para efectos rivales activos
+    private static final Color SHOT_AURA_FILL = new Color(255, 180, 0, 140); // Halo naranja alrededor del balón en tiro de poder
 
-    private static final HashMap<String, BufferedImage> CACHED_IMAGES = new HashMap<>();
-    private static BufferedImage background;
+    private static final HashMap<String, BufferedImage> CACHED_IMAGES = new HashMap<>(); // Caché en memoria para no leer sprites del disco cada frame
+    private static BufferedImage background; // Imagen de fondo del estadio cargada una sola vez
 
-    private volatile Thread gameThread;
-    private final GamePanelListener LISTENER;
-    private final GameController controller;
+    private volatile Thread gameThread; // Hilo dedicado que ejecuta el bucle del partido de forma segura entre hilos
+    private final GamePanelListener LISTENER; // Contrato de navegación y música desacoplado de GameContainer
+    private final GameController controller; // Puente único hacia la lógica del juego
+    private final SoundEffectPlayer soundEffectPlayer; // Reproductor no bloqueante de efectos de patada
 
     public GamePanel(GamePanelListener listener, GameController controller, Dimension resolution) {
+        this(listener, controller, resolution, new ClipSoundEffectPlayer());
+    }
+
+    public GamePanel(GamePanelListener listener, GameController controller,
+                     Dimension resolution, SoundEffectPlayer soundEffectPlayer) {
         this.LISTENER = listener;
         this.controller = controller;
+        this.soundEffectPlayer = soundEffectPlayer;
 
         setPreferredSize(resolution != null ? resolution : new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
         setBackground(Color.BLACK);
-        setDoubleBuffered(true);
+        setDoubleBuffered(true); // Evita parpadeos dibujando primero en un búfer fuera de pantalla
         KeyHandler.getInstance().clearAllKeys();
         this.addKeyListener(KeyHandler.getInstance());
         this.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                KeyHandler.getInstance().clearAllKeys();
+                KeyHandler.getInstance().clearAllKeys(); // Libera teclas retenidas si el usuario cambia de ventana
             }
         });
         setFocusable(true);
@@ -60,12 +66,10 @@ public class GamePanel extends JPanel implements Runnable {
 
     private static void loadBackgroundIfNeeded() {
         if (background != null) return;
-        try {
-            InputStream is = GamePanel.class.getResourceAsStream("/map/1.jpg");
+        try (InputStream is = GamePanel.class.getResourceAsStream("/map/1.jpg")) {
             if (is != null) {
                 background = ImageIO.read(is);
             } else {
-                // Informa por consola si no se encuentra la imagen de fondo del mapa
                 System.err.println("Error: No se encontró la imagen en /map/1.jpg");
             }
         } catch (Exception e) {
@@ -82,19 +86,19 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void stopThread() {
-        gameThread = null;
+        gameThread = null; // Señala al bucle que termine limpiamente su iteración
     }
 
     @Override
     public void run() {
-        final double nsInterval = 1_000_000_000.0 / FPS;
+        final double nsInterval = 1_000_000_000.0 / FPS; // Nanosegundos equivalentes a un frame exacto a 60 FPS
         double delta = 0;
         long lastTime = System.nanoTime();
         long refreshTimer = 0;
         while (gameThread != null) {
             long currentTime = System.nanoTime();
             long elapsed = currentTime - lastTime;
-            delta += elapsed / nsInterval;
+            delta += elapsed / nsInterval; // Acumula fracciones de frame para mantener velocidad constante
             refreshTimer += elapsed;
             lastTime = currentTime;
 
@@ -112,12 +116,12 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private long updateUI(long refreshTimer) {
-        if (refreshTimer >= 100_000_000L) {
+        if (refreshTimer >= 100_000_000L) { // Refresca el HUD superior cada 100 ms (10 veces por segundo)
             MatchHudSnapshot hud = controller.getMatchHudSnapshot();
             SwingUtilities.invokeLater(() -> LISTENER.onMatchInfoChanged(hud));
             return 0; // Reinicia el contador para la siguiente iteración
         }
-        return refreshTimer;// Conserva el acumulado actual
+        return refreshTimer; // Conserva el acumulado actual
     }
 
     private void update() {
@@ -129,21 +133,33 @@ public class GamePanel extends JPanel implements Runnable {
         }
         handlePlayerInputs();
         controller.updateGame();
+        playKickSoundEffects();
+    }
+
+    private void playKickSoundEffects() {
+        if (soundEffectPlayer == null) {
+            return;
+        }
+        if (controller.consumeKickBallSound()) {
+            soundEffectPlayer.play(SoundEffect.KICK_BALL); // Prioriza el sonido de impacto con el balón
+        }
+        if (controller.consumeKickSound()) {
+            soundEffectPlayer.play(SoundEffect.KICK); // Reproduce el sonido de patada al aire si no tocó el balón
+        }
     }
 
     private void handlePlayerInputs() {
-        // Envía las acciones activas del teclado al controlador de presentación
-        KeyHandler keys = KeyHandler.getInstance();
-        if (keys.getW()) controller.movePlayer1('j');
-        if (keys.getS()) controller.movePlayer1('k');
-        if (keys.getA()) controller.movePlayer1('l');
-        if (keys.getD()) controller.movePlayer1('r');
-        if (keys.getQ()) controller.movePlayer1('p');
-        if (keys.getUp()) controller.movePlayer2('j');
-        if (keys.getDown()) controller.movePlayer2('k');
-        if (keys.getLeft()) controller.movePlayer2('l');
-        if (keys.getRight()) controller.movePlayer2('r');
-        if (keys.getCtrlRight()) controller.movePlayer2('p');
+        KeyHandler keys = KeyHandler.getInstance(); // Traduce teclas activas a comandos de ambos jugadores
+        if (keys.getW()) controller.movePlayer1('j'); // Jugador 1 salta con W
+        if (keys.getS()) controller.movePlayer1('k'); // Jugador 1 patea con S
+        if (keys.getA()) controller.movePlayer1('l'); // Jugador 1 retrocede a la izquierda con A
+        if (keys.getD()) controller.movePlayer1('r'); // Jugador 1 avanza a la derecha con D
+        if (keys.getQ()) controller.movePlayer1('p'); // Jugador 1 activa su poder con Q
+        if (keys.getUp()) controller.movePlayer2('j'); // Jugador 2 salta con Flecha Arriba
+        if (keys.getDown()) controller.movePlayer2('k'); // Jugador 2 patea con Flecha Abajo
+        if (keys.getLeft()) controller.movePlayer2('l'); // Jugador 2 avanza a la izquierda con Flecha Izquierda
+        if (keys.getRight()) controller.movePlayer2('r'); // Jugador 2 retrocede a la derecha con Flecha Derecha
+        if (keys.getCtrlRight()) controller.movePlayer2('p'); // Jugador 2 activa su poder con Ctrl
     }
 
     private void showEscapeMenu() {
@@ -154,22 +170,19 @@ public class GamePanel extends JPanel implements Runnable {
             case MENU -> LISTENER.goToMenu();
             case RESTART -> LISTENER.restartFromLevel1();
             case RESUME -> {
-                // Limpia las teclas retenidas, reanuda el partido y devuelve el foco a la cancha
-                KeyHandler.getInstance().clearAllKeys();
+                KeyHandler.getInstance().clearAllKeys(); // Limpia teclas retenidas al cerrar el diálogo de pausa
                 controller.resumeGame();
-                requestFocusInWindow();
+                requestFocusInWindow(); // Devuelve el foco del teclado a la cancha para seguir jugando
             }
         }
     }
 
-
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        // Crea una copia del contexto gráfico para escalar la cancha sin alterar el Graphics original de Swing
-        Graphics2D g2 = (Graphics2D) g.create();
-        double scaleX = (double) getWidth() / SCREEN_WIDTH;
-        double scaleY = (double) getHeight() / SCREEN_HEIGHT;
+        Graphics2D g2 = (Graphics2D) g.create(); // Copia el contexto gráfico para no alterar otros componentes Swing
+        double scaleX = (double) getWidth() / SCREEN_WIDTH; // Escala el ancho lógico de 800 px a la ventana elegida
+        double scaleY = (double) getHeight() / SCREEN_HEIGHT; // Escala el alto lógico de 600 px a la ventana elegida
         g2.scale(scaleX, scaleY);
         draw(g2);
         g2.dispose();
@@ -177,7 +190,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     private boolean optimizeThread() {
         try {
-            Thread.sleep(2);
+            Thread.sleep(2); // Cede 2 ms de CPU entre iteraciones para evitar saturación del procesador
             return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -194,12 +207,10 @@ public class GamePanel extends JPanel implements Runnable {
 
     private BufferedImage getSprite(String path) {
         if (!CACHED_IMAGES.containsKey(path)) {
-            try {
-                InputStream is = getClass().getResourceAsStream(path);
+            try (InputStream is = getClass().getResourceAsStream(path)) {
                 if (is != null) {
                     CACHED_IMAGES.put(path, ImageIO.read(is));
                 } else {
-                    // Fallback visual o log si no se encuentra la skin específica
                     System.err.println("No se encontró recurso en: " + path);
                     CACHED_IMAGES.put(path, null);
                 }
@@ -218,9 +229,7 @@ public class GamePanel extends JPanel implements Runnable {
         List<RenderElement> elements = controller.getRenderElements();
         if (elements != null) {
             for (RenderElement elem : elements) {
-                // Resuelve la ruta de la imagen y dibuja las auras junto con el sprite
-                String imagePath = resolveImagePath(elem);
-                BufferedImage sprite = getSprite(imagePath);
+                BufferedImage sprite = getSprite(resolveImagePath(elem)); // Obtiene el sprite pre-cargado de caché
                 if (sprite != null) {
                     drawElementAuraOrEffects(g2, elem);
                     g2.drawImage(sprite, elem.x(), elem.y(), elem.width(), elem.height(), null);
@@ -243,16 +252,11 @@ public class GamePanel extends JPanel implements Runnable {
         }
         String statusText = elem.statusText();
         if (statusText != null && !statusText.isEmpty()) {
-            if (elem.stunned()) {
-                g2.setColor(STUN_FILL);
-                g2.fillOval(x - 6, y - 6, width + 12, height + 12);
-                g2.setColor(Color.RED);
-            } else {
-                g2.setColor(EFFECT_FILL);
-                g2.fillOval(x - 6, y - 6, width + 12, height + 12);
-                g2.setColor(Color.YELLOW);
-            }
-            g2.drawString(statusText, x - 2, y - 8);
+            boolean stunned = elem.stunned();
+            g2.setColor(stunned ? STUN_FILL : EFFECT_FILL);
+            g2.fillOval(x - 6, y - 6, width + 12, height + 12);
+            g2.setColor(stunned ? Color.RED : Color.YELLOW);
+            g2.drawString(statusText, x - 2, y - 8); // Dibuja la etiqueta de estado flotando sobre el jugador
         }
         if (elem.shotAura()) {
             g2.setColor(SHOT_AURA_FILL);
@@ -267,7 +271,7 @@ public class GamePanel extends JPanel implements Runnable {
                 MatchResultSummary summary = controller.getMatchResultSummary();
                 LISTENER.onMatchFinished(summary);
                 MatchSummaryDialog.showDialog(this, summary);
-                LISTENER.goToMenu(); // Vuelve prolijamente al menú
+                LISTENER.goToMenu(); // Vuelve prolijamente al menú principal al cerrar el resumen
             });
         }
     }

@@ -6,7 +6,7 @@ public interface Element extends Serializable {
     float getWidth();
     float getHeight();
     Vector2D getPosition();
-    boolean isMovible();
+    boolean isMovible(); // Distingue elementos dinámicos (balón, jugadores) de obstáculos fijos (arcos, postes)
 
     /**
      * Advances the internal state of this element by one game frame.
@@ -15,7 +15,7 @@ public interface Element extends Serializable {
     }
 
     default boolean hasCollision() {
-        return true;
+        return true; // Indica si rebota contra otros elementos sólidos (false en la zona interior del arco)
     }
 
     default float getX() {
@@ -27,7 +27,7 @@ public interface Element extends Serializable {
     }
 
     default String getVariantName() {
-        return "normal";
+        return "normal"; // Nombre de variante de sprite usado por defecto en presentación
     }
 
     default boolean hasPowerAura() {

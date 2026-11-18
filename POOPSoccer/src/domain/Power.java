@@ -4,25 +4,23 @@ import java.io.Serializable;
 
 public abstract class Power implements Serializable {
     public abstract Effect createEffect();
-    public abstract int getDamage();            // base damage from Annex 1
+    public abstract int getDamage(); // Daño base del tiro especial definido en el Anexo 1
 
     public String getName() {
         return getClass().getSimpleName();
     }
 
-    public float getShotSpeed() { return 14f; }
+    public float getShotSpeed() { return 14f; } // Rapidez horizontal base por defecto al lanzar el balón
 
     public void launchBall(Ball ball, int direction) {
         if (ball == null) return;
-        ball.setVelocity(direction * getShotSpeed(), 0.0f);
+        ball.setVelocity(direction * getShotSpeed(), 0.0f); // Dispara el balón recto hacia el arco contrario
     }
 
-    public void updateBallFlight(Ball ball) {
-        // Default: normal gravity applies
-    }
+    public void updateBallFlight(Ball ball) {} // Conserva la gravedad estándar salvo que una subclase altere el vuelo
 
     public int getDecoyBallCount() {
-        return 0;
+        return 0; // Por defecto no genera balones señuelo adicionales
     }
 
     public float getDecoyDurationSeconds() {
@@ -30,13 +28,12 @@ public abstract class Power implements Serializable {
     }
 
     public boolean showsShotAura() {
-        // Oculta el aura del balón cuando existen balones señuelo para que todos se vean idénticos
-        return getDecoyBallCount() == 0;
+        return getDecoyBallCount() == 0; // Oculta el aura para no delatar cuál es el balón real en Ilusión
     }
 
     public void use(Player owner, Player target) {
         if (target == null) return;
-        target.takeDamage(getDamage() * owner.getKickMultiplier());   // DamageShot x kickMultiplier
+        target.takeDamage(getDamage() * owner.getKickMultiplier()); // Aplica el daño base multiplicado por Kick
         target.applyEffect(createEffect());
     }
 }

@@ -14,10 +14,10 @@ import javax.swing.JPanel;
  */
 public class InfoPanel extends JPanel {
 
-    private static final int BASE_WIDTH = 800;
-    private static final int BASE_HEIGHT = 80;
-    private static final int FLAG_WIDTH = 22;
-    private static final int FLAG_HEIGHT = 14;
+    private static final int BASE_WIDTH = 800; // Ancho lógico de referencia usado para escalar proporcionalmente
+    private static final int BASE_HEIGHT = 80; // Alto lógico suficiente para bandera, barras, poder y estadísticas
+    private static final int FLAG_WIDTH = 22; // Ancho en píxeles de cada bandera junto al nombre
+    private static final int FLAG_HEIGHT = 14; // Alto en píxeles de cada bandera junto al nombre
 
     private static final Font FONT_HUD = new Font("Arial", Font.BOLD, 12);
     private static final Font FONT_POWER = new Font("Arial", Font.PLAIN, 11);
@@ -25,15 +25,15 @@ public class InfoPanel extends JPanel {
     private static final Font FONT_SCORE = new Font("Arial", Font.BOLD, 22);
     private static final Font FONT_TIMER = new Font("Arial", Font.BOLD, 13);
 
-    private static final Color BAR_BG = new Color(45, 45, 55);
-    private static final Color HP_HIGH = new Color(50, 200, 50);
-    private static final Color HP_MID = new Color(220, 180, 0);
-    private static final Color HP_LOW = new Color(200, 40, 40);
-    private static final Color POWER_CHARGING = new Color(0, 170, 255);
-    private static final Color POWER_READY = new Color(255, 215, 0);
-    private static final Color STATS_COLOR = new Color(178, 202, 232);
+    private static final Color BAR_BG = new Color(45, 45, 55); // Fondo gris oscuro de las barras vacías
+    private static final Color HP_HIGH = new Color(50, 200, 50); // Verde cuando la vida supera el 50%
+    private static final Color HP_MID = new Color(220, 180, 0); // Amarillo cuando la vida está entre 25% y 50%
+    private static final Color HP_LOW = new Color(200, 40, 40); // Rojo de alerta cuando queda 25% o menos de vida
+    private static final Color POWER_CHARGING = new Color(0, 170, 255); // Azul celeste mientras se recarga el poder
+    private static final Color POWER_READY = new Color(255, 215, 0); // Dorado brillante cuando la barra está al 100%
+    private static final Color STATS_COLOR = new Color(178, 202, 232); // Tono claro para la línea compacta de estadísticas
 
-    private MatchHudSnapshot snapshot = new MatchHudSnapshot(
+    private MatchHudSnapshot snapshot = new MatchHudSnapshot( // Estado inicial neutro mientras comienza el primer frame
             new PlayerHudInfo("P1", "", 1.0f, 0.0f, "Ninguno", ""),
             new PlayerHudInfo("P2", "", 1.0f, 0.0f, "Ninguno", ""),
             "0 - 0",
@@ -63,9 +63,9 @@ public class InfoPanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.scale((double) getWidth() / BASE_WIDTH, (double) getHeight() / BASE_HEIGHT);
+        g2.scale((double) getWidth() / BASE_WIDTH, (double) getHeight() / BASE_HEIGHT); // Adapta el HUD al ancho actual de la ventana
 
-        int barW = Math.max(160, Math.min(240, (int) (BASE_WIDTH * 0.29)));
+        int barW = Math.max(160, Math.min(240, (int) (BASE_WIDTH * 0.29))); // Reserva el 29% lateral para las barras de cada jugador
         int p1BarX = 12;
         int p2BarX = BASE_WIDTH - 12 - barW;
 
@@ -93,7 +93,7 @@ public class InfoPanel extends JPanel {
         int textY = 16;
 
         if (rightAligned) {
-            int flagX = barX + barW - FLAG_WIDTH;
+            int flagX = barX + barW - FLAG_WIDTH; // Ubica la bandera pegada al borde derecho para Jugador 2
             CountryFlagRenderer.drawFlag(g2, info.teamName(), flagX, flagY, FLAG_WIDTH, FLAG_HEIGHT);
             g2.setColor(nameColor);
             g2.drawString(label, flagX - 6 - textWidth, textY);
@@ -151,7 +151,7 @@ public class InfoPanel extends JPanel {
     }
 
     private float clamp01(float value) {
-        return Math.max(0f, Math.min(1f, value));
+        return Math.max(0f, Math.min(1f, value)); // Acota porcentajes entre 0.0 y 1.0 para evitar desbordes gráficos
     }
 
     private Color resolveHpColor(float pct) {
@@ -187,7 +187,7 @@ public class InfoPanel extends JPanel {
         g2.setColor(fillColor);
         int fillW = (int) (w * pct);
         if (fillW > 0) {
-            int fillX = rightToLeft ? x + w - fillW : x;
+            int fillX = rightToLeft ? x + w - fillW : x; // Rellena desde la derecha cuando pertenece al Jugador 2
             g2.fillRoundRect(fillX, y, fillW, h, 6, 6);
         }
     }

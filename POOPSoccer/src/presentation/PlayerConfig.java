@@ -4,7 +4,6 @@ import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -46,20 +45,19 @@ import javax.swing.plaf.basic.ComboPopup;
  */
 public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hydrogen 4
 
-    private static final Color CARD_BG = new Color(18, 28, 48, 232);
-    private static final Color CARD_BORDER = new Color(245, 198, 45);
-    private static final Color P1_TITLE_COLOR = new Color(70, 210, 250);
-    private static final Color P2_TITLE_COLOR = new Color(255, 165, 50);
-    private static final Color MATCH_TITLE_COLOR = new Color(245, 198, 45);
-    private static final Color FIELD_BG = new Color(26, 38, 62);
-    private static final Color FIELD_LOCKED_BG = new Color(52, 62, 84);
-    private static final Color FIELD_DISABLED_FG = new Color(185, 195, 210);
-    private static final Color FIELD_BORDER = new Color(95, 130, 175);
-    private static final Color COMBO_HOVER_BG = new Color(34, 88, 130);
-    private static final Color PILL_BG = new Color(12, 18, 32, 225);
-    private static final Color P1_BTN_BG = new Color(14, 82, 110);
-    private static final Color P2_BTN_BG = new Color(195, 95, 12);
-    private static final Color START_BTN_BG = new Color(18, 168, 88);
+    private static final Color CARD_BG = new Color(18, 28, 48, 232); // Fondo azul marino traslúcido de la tarjeta principal
+    private static final Color CARD_BORDER = ArcadeUIStyle.CARD_BORDER; // Borde dorado compartido con los diálogos arcade
+    private static final Color P1_TITLE_COLOR = new Color(70, 210, 250); // Azul cian identificador de Jugador 1
+    private static final Color P2_TITLE_COLOR = new Color(255, 165, 50); // Naranja vibrante identificador de Jugador 2
+    private static final Color MATCH_TITLE_COLOR = new Color(245, 198, 45); // Dorado para el bloque de reglas del partido
+    private static final Color FIELD_BG = new Color(26, 38, 62); // Fondo oscuro unificado para campos y desplegables activos
+    private static final Color FIELD_LOCKED_BG = new Color(52, 62, 84); // Tono pizarra para campos bloqueados (ej. CPU)
+    private static final Color FIELD_DISABLED_FG = new Color(185, 195, 210); // Texto gris claro cuando una casilla no es editable
+    private static final Color FIELD_BORDER = new Color(95, 130, 175); // Contorno azul acero de cada caja de entrada
+    private static final Color COMBO_HOVER_BG = new Color(34, 88, 130); // Resalte de fila seleccionada al abrir un desplegable
+    private static final Color PILL_BG = new Color(12, 18, 32, 225); // Fondo oscuro de la píldora de puntos e historial
+    private static final Color P1_BTN_BG = new Color(14, 82, 110); // Color base de los botones de mejora del Jugador 1
+    private static final Color P2_BTN_BG = new Color(195, 95, 12); // Color base de los botones de mejora del Jugador 2
 
     private static final Font FONT_SECTION = new Font("Arial", Font.BOLD, 16);
     private static final Font FONT_LABEL = new Font("Arial", Font.BOLD, 12);
@@ -76,8 +74,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     private JComboBox<String> countryComboP2;
     private JComboBox<String> machineProfileComboP2;
 
-    // Configuración del tipo de partido
-    private JComboBox<String> matchTypeCombo;
+    private JComboBox<String> matchTypeCombo; // Selector entre partido por goles o por tiempo
     private JLabel limitLabel;
     private JComboBox<Integer> goalLimitCombo;
     private JComboBox<Integer> timeLimitCombo;
@@ -146,8 +143,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     }
 
     private void paintFormCardSurface(Graphics g, int width, int height) {
-        // Pinta la tarjeta oscura traslúcida con borde dorado estilo Head Soccer
-        Graphics2D g2 = (Graphics2D) g.create();
+        Graphics2D g2 = (Graphics2D) g.create(); // Pinta la tarjeta oscura traslúcida con borde dorado estilo Head Soccer
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(CARD_BG);
         g2.fillRoundRect(0, 0, width, height, 22, 22);
@@ -258,8 +254,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     }
 
     private void configureMachineNameField(JTextField nameField, JComboBox<String> profileCombo) {
-        // Bloquea la edición manual del nombre de la máquina y lo fija según el perfil elegido
-        nameField.setEditable(false);
+        nameField.setEditable(false); // Bloquea la edición manual de la máquina y lo fija según el perfil elegido
         nameField.setBackground(FIELD_LOCKED_BG);
         nameField.setForeground(FIELD_DISABLED_FG);
         nameField.setText("CPU " + profileCombo.getSelectedItem());
@@ -332,8 +327,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
 
     private void bindProfileNameListener(JTextField nameField, int playerNum, JLabel pointsLbl,
                                          JButton[] buttons, String[] stats) {
-        // Reacciona únicamente cuando cambia el texto del nombre para recargar el perfil desde la base de datos
-        Runnable refreshProfile = () -> {
+        Runnable refreshProfile = () -> { // Recarga el perfil desde la base de datos cada vez que cambia el nombre
             controller.selectPlayerProfile(playerNum, nameField.getText());
             pointsLbl.setText(formatProfileSummary(playerNum));
             refreshStatButtons(buttons, playerNum, stats);
@@ -375,7 +369,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
                 super.paintComponent(g);
             }
         };
-        configureArcadeButtonStyle(btn, FONT_LABEL, new Dimension(120, 30));
+        ArcadeUIStyle.configureCleanButton(btn, FONT_LABEL, new Dimension(120, 30));
         updateStatButtonText(btn, playerNum, statName);
         btn.addActionListener(e -> handleStatUpgradeClick(playerNum, statName, pointsLbl, allButtons, stats));
         return btn;
@@ -383,14 +377,13 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
 
     private void paintStatButtonSurface(Graphics g, AbstractButton btn, int playerNum,
                                         String statName, Color fillColor, Color accentColor) {
-        // Pinta cada botón de estadística con brillo cuando la mejora está disponible
-        Graphics2D g2 = (Graphics2D) g.create();
+        Graphics2D g2 = (Graphics2D) g.create(); // Pinta cada botón de estadística con brillo si la mejora está disponible
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         boolean affordable = isStatUpgradeAffordable(playerNum, statName);
-        Color bg = resolveHoverPressedColor(btn, fillColor);
+        Color bg = ArcadeUIStyle.resolveHoverFill(btn, fillColor);
         g2.setColor(bg);
         g2.fillRoundRect(0, 0, btn.getWidth(), btn.getHeight(), 16, 16);
-        g2.setColor(affordable ? accentColor : new Color(255, 255, 255, 90));
+        g2.setColor(affordable ? accentColor : new Color(255, 255, 255, 90)); // Resalta el borde si los puntos alcanzan
         g2.setStroke(new BasicStroke(affordable ? 2.0f : 1.2f));
         g2.drawRoundRect(1, 1, btn.getWidth() - 3, btn.getHeight() - 3, 16, 16);
         g2.dispose();
@@ -399,13 +392,6 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     private boolean isStatUpgradeAffordable(int playerNum, String statName) {
         return controller.getPlayerStatLevel(playerNum, statName) < 10
                 && controller.getPlayerPoints(playerNum) >= controller.getPlayerUpgradeCost(playerNum, statName);
-    }
-
-    private Color resolveHoverPressedColor(AbstractButton btn, Color baseColor) {
-        if (btn.getModel().isPressed()) {
-            return baseColor.darker();
-        }
-        return btn.getModel().isRollover() ? baseColor.brighter() : baseColor;
     }
 
     private void handleStatUpgradeClick(int playerNum, String statName, JLabel pointsLbl,
@@ -573,9 +559,9 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     }
 
     private Dimension[] buildScreenResolutions() {
-        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        double[] widthScales = { 0.25, 0.50, 0.75 };
-        double[] heightScales = { 0.35, 0.60, 0.78 };
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize(); // Lee la resolución física real del monitor
+        double[] widthScales = { 0.25, 0.50, 0.75 }; // Proporciones de ancho respecto a la pantalla (1/4, 1/2, 3/4)
+        double[] heightScales = { 0.35, 0.60, 0.78 }; // Proporciones de alto adaptadas para encajar con el HUD
         Dimension[] dims = new Dimension[widthScales.length];
         for (int i = 0; i < widthScales.length; i++) {
             int w = (int) Math.round(screen.width * widthScales[i]);
@@ -600,14 +586,13 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
                 paintBackArrowSurface(g, this);
             }
         };
-        configureArcadeButtonStyle(btn, FONT_LABEL, new Dimension(38, 34));
+        ArcadeUIStyle.configureCleanButton(btn, FONT_LABEL, new Dimension(38, 34));
         btn.setToolTipText("Volver al menú");
         return btn;
     }
 
     private void paintBackArrowSurface(Graphics g, AbstractButton btn) {
-        // Dibuja un botón redondeado traslúcido y una flecha vectorizada con antialiasing
-        Graphics2D g2 = (Graphics2D) g.create();
+        Graphics2D g2 = (Graphics2D) g.create(); // Dibuja un botón redondeado traslúcido y flecha vectorizada con antialiasing
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         boolean hovered = btn.getModel().isRollover() || btn.getModel().isPressed();
         g2.setColor(hovered ? new Color(25, 25, 35, 210) : new Color(25, 25, 35, 155));
@@ -635,8 +620,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         startBtn = createStartButton();
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 2));
         bottomPanel.setOpaque(false);
-        // Deja margen inferior para no tapar el copyright de la imagen de fondo
-        bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 34, 0));
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 34, 0)); // Deja margen inferior para no tapar el copyright
         bottomPanel.add(startBtn);
         add(bottomPanel, BorderLayout.SOUTH);
     }
@@ -645,35 +629,12 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         JButton btn = new JButton("Iniciar Partido") {
             @Override
             protected void paintComponent(Graphics g) {
-                paintStartButtonSurface(g, this);
+                ArcadeUIStyle.paintArcadeButton(g, this, ArcadeUIStyle.BTN_GREEN, 18);
                 super.paintComponent(g);
             }
         };
-        configureArcadeButtonStyle(btn, new Font("Arial", Font.BOLD, 16), new Dimension(215, 42));
+        ArcadeUIStyle.configureCleanButton(btn, new Font("Arial", Font.BOLD, 16), new Dimension(215, 42));
         return btn;
-    }
-
-    private void paintStartButtonSurface(Graphics g, AbstractButton btn) {
-        // Dibuja el botón principal redondeado estilo arcade
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(resolveHoverPressedColor(btn, START_BTN_BG));
-        g2.fillRoundRect(0, 0, btn.getWidth(), btn.getHeight(), 18, 18);
-        g2.setColor(new Color(255, 255, 255, 130));
-        g2.setStroke(new BasicStroke(1.8f));
-        g2.drawRoundRect(1, 1, btn.getWidth() - 3, btn.getHeight() - 3, 18, 18);
-        g2.dispose();
-    }
-
-    private void configureArcadeButtonStyle(JButton btn, Font font, Dimension size) {
-        btn.setFont(font);
-        btn.setForeground(Color.WHITE);
-        btn.setPreferredSize(size);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setOpaque(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
     private void prepareController() {
@@ -697,8 +658,8 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         }
         String p1Name = nameFieldP1.getText().trim();
         String p2Name = nameFieldP2.getText().trim();
-        if (p1Name.isEmpty() || p2Name.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Debe ingresar el nombre de ambos jugadores");
+        if (p1Name.length() < 4 || p2Name.length() < 4) { // Exige que ambos nombres tengan un mínimo de 4 caracteres
+            JOptionPane.showMessageDialog(this, "El nombre de cada jugador debe tener al menos 4 letras");
             return;
         }
         launchConfiguredMatch(p1Name, p2Name);
@@ -720,8 +681,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     }
 
     private boolean isMachineProfileChoiceValid(JComboBox<String> profileCombo) {
-        // Consulta al controlador si el perfil de máquina elegido está disponible
-        if (profileCombo != null && !controller.isMachineProfileAvailable((String) profileCombo.getSelectedItem())) {
+        if (profileCombo != null && !controller.isMachineProfileAvailable((String) profileCombo.getSelectedItem())) { // Verifica disponibilidad antes de iniciar
             JOptionPane.showMessageDialog(this, "Tipo de máquina en construcción, elija máquina torpe");
             return false;
         }
@@ -749,8 +709,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
 
         @Override
         public void paint(Graphics g, JComponent c) {
-            // Pinta todo el fondo antes del trazado estándar para evitar destellos blancos del Look and Feel
-            g.setColor(c.isEnabled() ? FIELD_BG : FIELD_LOCKED_BG);
+            g.setColor(c.isEnabled() ? FIELD_BG : FIELD_LOCKED_BG); // Pinta fondo completo para evitar destellos blancos del LAF
             g.fillRect(0, 0, c.getWidth(), c.getHeight());
             super.paint(g, c);
         }
@@ -763,8 +722,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
 
         @Override
         public void paintCurrentValue(Graphics g, Rectangle bounds, boolean hasFocus) {
-            // Renderiza el valor cerrado sin aplicar el resaltado claro de foco del sistema
-            Component c = prepareClosedValueComponent();
+            Component c = prepareClosedValueComponent(); // Renderiza el valor cerrado sin aplicar el resaltado claro de foco del sistema
             currentValuePane.paintComponent(
                     g, c, comboBox, bounds.x, bounds.y, bounds.width, bounds.height, c instanceof JPanel);
         }

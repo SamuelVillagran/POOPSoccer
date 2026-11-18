@@ -3,7 +3,6 @@ package presentation;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -32,12 +31,8 @@ import javax.swing.SwingUtilities;
  */
 public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hydrogen 4
 
-    private static final Color CARD_BG = new Color(18, 28, 48, 242);
-    private static final Color CARD_BORDER = new Color(245, 198, 45);
-    private static final Color SCORE_PILL_BG = new Color(10, 16, 28, 220);
-    private static final Color ROW_BG = new Color(26, 38, 62);
-    private static final Color LOSER_BORDER = new Color(95, 130, 175);
-    private static final Color BTN_ACCEPT = new Color(18, 168, 88);
+    private static final Color ROW_BG = new Color(26, 38, 62); // Fondo azul pizarra oscuro de las tarjetas de resumen
+    private static final Color LOSER_BORDER = new Color(95, 130, 175); // Borde azul acero suave para el segundo puesto o empate
 
     private static final Font FONT_TITLE = new Font("Arial", Font.BOLD, 21);
     private static final Font FONT_SCORE = new Font("Arial", Font.BOLD, 14);
@@ -47,7 +42,7 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
 
     private MatchSummaryDialog(Component owner, MatchResultSummary summary) {
         super(SwingUtilities.getWindowAncestor(owner), ModalityType.APPLICATION_MODAL);
-        configureWindow();
+        ArcadeUIStyle.configureModalDialog(this);
         setContentPane(buildCardPanel(summary));
         pack();
         setLocationRelativeTo(owner);
@@ -60,17 +55,6 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
     public static void showDialog(Component owner, MatchResultSummary summary) {
         MatchSummaryDialog dialog = new MatchSummaryDialog(owner, summary);
         dialog.setVisible(true);
-    }
-
-    private void configureWindow() {
-        setUndecorated(true);
-        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        // Aplica transparencia por píxel solo si el sistema gráfico la soporta
-        try {
-            setBackground(new Color(0, 0, 0, 0));
-        } catch (UnsupportedOperationException ignored) {
-            setBackground(new Color(18, 28, 48));
-        }
     }
 
     private JPanel buildCardPanel(MatchResultSummary summary) {
@@ -98,23 +82,12 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
         JPanel card = new JPanel(new GridBagLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
-                paintCardFrame(g, getWidth(), getHeight());
+                ArcadeUIStyle.paintRoundedCard(g, getWidth(), getHeight(), 26, 2.8f);
             }
         };
         card.setOpaque(false);
         card.setBorder(BorderFactory.createEmptyBorder(22, 28, 22, 28));
         return card;
-    }
-
-    private void paintCardFrame(Graphics g, int width, int height) {
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(CARD_BG);
-        g2.fillRoundRect(0, 0, width, height, 26, 26);
-        g2.setColor(CARD_BORDER);
-        g2.setStroke(new BasicStroke(2.8f));
-        g2.drawRoundRect(1, 1, width - 3, height - 3, 26, 26);
-        g2.dispose();
     }
 
     private GridBagConstraints createBaseConstraints() {
@@ -130,7 +103,7 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
         JPanel header = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         header.setOpaque(false);
         if (!isDraw) {
-            header.add(createTrophyIconPanel(24));
+            header.add(createTrophyIconPanel(24)); // Muestra el trofeo dorado únicamente cuando existe un ganador
         }
 
         JLabel title = new JLabel("FIN DEL PARTIDO");
@@ -147,7 +120,7 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
         JLabel badge = new JLabel("Marcador: " + scoreText, SwingConstants.CENTER) {
             @Override
             protected void paintComponent(Graphics g) {
-                paintScorePillSurface(g, getWidth(), getHeight());
+                ArcadeUIStyle.paintPillSurface(g, getWidth(), getHeight(), 18, ArcadeUIStyle.SCORE_PILL_BG);
                 super.paintComponent(g);
             }
         };
@@ -158,19 +131,11 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
         return holder;
     }
 
-    private void paintScorePillSurface(Graphics g, int width, int height) {
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(SCORE_PILL_BG);
-        g2.fillRoundRect(0, 0, width, height, 18, 18);
-        g2.dispose();
-    }
-
     private JPanel buildOutcomeRowsPanel(MatchResultSummary summary) {
         JPanel rows = new JPanel(new GridLayout(0, 1, 0, 10));
         rows.setOpaque(false);
         if (summary.isDraw()) {
-            rows.add(buildResultRowCard("¡EMPATE!", false, false));
+            rows.add(buildResultRowCard("¡EMPATE!", false, false)); // Tarjeta única neutra en caso de empate
             return rows;
         }
         rows.add(buildResultRowCard(formatWinnerText(summary), true, true));
@@ -209,7 +174,7 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(ROW_BG);
         g2.fillRoundRect(0, 0, width, height, 14, 14);
-        g2.setColor(highlightBorder ? CARD_BORDER : LOSER_BORDER);
+        g2.setColor(highlightBorder ? ArcadeUIStyle.CARD_BORDER : LOSER_BORDER);
         g2.setStroke(new BasicStroke(highlightBorder ? 1.8f : 1.2f));
         g2.drawRoundRect(1, 1, width - 3, height - 3, 14, 14);
         g2.dispose();
@@ -235,11 +200,10 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
     }
 
     private void paintVectorTrophy(Graphics g, int width, int height) {
-        // Dibuja un trofeo dorado vectorizado para no depender de fuentes emoji del sistema
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.scale(width / 24.0, height / 24.0);
-        g2.setColor(CARD_BORDER);
+        g2.scale(width / 24.0, height / 24.0); // Escala las coordenadas vectoriales de 24x24 al tamaño pedido
+        g2.setColor(ArcadeUIStyle.CARD_BORDER);
 
         Path2D cup = new Path2D.Float();
         cup.moveTo(6, 4);
@@ -249,12 +213,12 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
         cup.closePath();
         g2.fill(cup);
 
-        g2.fillRect(10, 14, 4, 4);
-        g2.fillRoundRect(7, 18, 10, 3, 2, 2);
+        g2.fillRect(10, 14, 4, 4); // Pedestal del trofeo
+        g2.fillRoundRect(7, 18, 10, 3, 2, 2); // Base rectangular redondeada
 
         g2.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.drawArc(3, 5, 4, 6, 90, 180);
-        g2.drawArc(17, 5, 4, 6, -90, 180);
+        g2.drawArc(3, 5, 4, 6, 90, 180); // Asa izquierda de la copa
+        g2.drawArc(17, 5, 4, 6, -90, 180); // Asa derecha de la copa
         g2.dispose();
     }
 
@@ -269,42 +233,21 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
         JButton btn = new JButton("Aceptar") {
             @Override
             protected void paintComponent(Graphics g) {
-                paintAcceptButtonSurface(g, this);
+                ArcadeUIStyle.paintArcadeButton(g, this, ArcadeUIStyle.BTN_GREEN, 14);
                 super.paintComponent(g);
             }
         };
-        btn.setFont(FONT_BUTTON);
-        btn.setForeground(Color.WHITE);
-        btn.setPreferredSize(new Dimension(148, 38));
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setOpaque(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        ArcadeUIStyle.configureCleanButton(btn, FONT_BUTTON, new Dimension(148, 38));
         btn.addActionListener(e -> dispose());
-        getRootPane().setDefaultButton(btn);
+        getRootPane().setDefaultButton(btn); // Permite confirmar con la tecla Enter directamente
         return btn;
     }
 
-    private void paintAcceptButtonSurface(Graphics g, JButton btn) {
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        Color fill = btn.getModel().isPressed() ? BTN_ACCEPT.darker()
-                : btn.getModel().isRollover() ? BTN_ACCEPT.brighter() : BTN_ACCEPT;
-        g2.setColor(fill);
-        g2.fillRoundRect(0, 0, btn.getWidth(), btn.getHeight(), 14, 14);
-        g2.setColor(new Color(255, 255, 255, 150));
-        g2.setStroke(new BasicStroke(1.6f));
-        g2.drawRoundRect(1, 1, btn.getWidth() - 3, btn.getHeight() - 3, 14, 14);
-        g2.dispose();
-    }
-
     private void registerCloseKeys() {
-        // Permite cerrar rápidamente con Escape
         getRootPane().registerKeyboardAction(
                 e -> dispose(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
-                JComponent.WHEN_IN_FOCUSED_WINDOW
+                JComponent.WHEN_IN_FOCUSED_WINDOW // Permite cerrar rápidamente con la tecla Escape
         );
     }
 }
