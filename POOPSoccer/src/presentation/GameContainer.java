@@ -22,9 +22,15 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
     private PlayerConfig activeConfigPanel;
     private GamePanel activeGamePanel;
     private final GameController controller;
+    private final AudioController audioController;
 
     public GameContainer(GameController controller) {
+        this(controller, new ClipAudioController());
+    }
+
+    public GameContainer(GameController controller, AudioController audioController) {
         this.controller = controller;
+        this.audioController = audioController;
         prepareView();
     }
 
@@ -47,15 +53,12 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
 
         cardLayout.show(cardPanel, ScreenView.MENU.name());
         add(cardPanel, BorderLayout.CENTER);
+        updateMusicForView(ScreenView.MENU);
     }
 
     @Override
-    public void onMatchInfoChanged(String p1Info, String score, float timeRemaining, boolean suddenDeath,
-                                   String p2Info, float hp1, float hp2,
-                                   float power1, float power2,
-                                   String activePower1, String activePower2) {
-        infoPanel.updateMatchInfo(p1Info, score, timeRemaining, suddenDeath, p2Info, hp1, hp2,
-                power1, power2, activePower1, activePower2);
+    public void onMatchInfoChanged(MatchHudSnapshot hud) {
+        infoPanel.updateMatchInfo(hud);
     }
 
     public void showView(ScreenView view) {
@@ -66,8 +69,27 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
             applyWindowDimension(new Dimension(800, 650), false);
         }
         cardLayout.show(cardPanel, view.name());
+        updateMusicForView(view);
         revalidate();
         repaint();
+    }
+
+    @Override
+    public void onMatchFinished(MatchResultSummary summary) {
+        if (audioController != null && summary != null && !summary.isDraw()) {
+            audioController.playOnceThenLoop(SoundTrack.WIN, SoundTrack.IN_GAME);
+        }
+    }
+
+    private void updateMusicForView(ScreenView view) {
+        if (audioController == null || view == null) {
+            return;
+        }
+        switch (view) {
+            case MENU -> audioController.playLoop(SoundTrack.MAIN_MENU);
+            case PLAYER_CONFIG -> audioController.playLoop(SoundTrack.PLAYER_CONFIG);
+            case GAME -> audioController.playLoop(SoundTrack.IN_GAME);
+        }
     }
 
     @Override
@@ -99,7 +121,7 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
     }
 
     private void applyWindowDimension(Dimension baseDim, boolean includeHud) {
-        int hudHeight = includeHud ? 68 : 0;
+        int hudHeight = includeHud ? (int) Math.round(baseDim.height * (80.0 / 600.0)) : 0;
         if (infoPanel != null && includeHud) {
             infoPanel.setPreferredSize(new Dimension(baseDim.width, hudHeight));
         }

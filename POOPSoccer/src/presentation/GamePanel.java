@@ -113,20 +113,8 @@ public class GamePanel extends JPanel implements Runnable {
 
     private long updateUI(long refreshTimer) {
         if (refreshTimer >= 100_000_000L) {
-            String score = controller.getGoalsP1() + " - " + controller.getGoalsP2();
-            String p1 = controller.getDisplayInfoP1();
-            String p2 = controller.getDisplayInfoP2();
-            float time = controller.getRemainingTime();
-            boolean suddenDeath = controller.isSuddenDeath();
-            float hp1 = controller.getHealthPercentP1();
-            float hp2 = controller.getHealthPercentP2();
-            float pow1 = controller.getPowerPercentP1();
-            float pow2 = controller.getPowerPercentP2();
-            String activePow1 = controller.getActivePowerNameP1();
-            String activePow2 = controller.getActivePowerNameP2();
-
-            SwingUtilities.invokeLater(() -> LISTENER.onMatchInfoChanged(
-                    p1, score, time, suddenDeath, p2, hp1, hp2, pow1, pow2, activePow1, activePow2));
+            MatchHudSnapshot hud = controller.getMatchHudSnapshot();
+            SwingUtilities.invokeLater(() -> LISTENER.onMatchInfoChanged(hud));
             return 0; // Reinicia el contador para la siguiente iteración
         }
         return refreshTimer;// Conserva el acumulado actual
@@ -277,6 +265,7 @@ public class GamePanel extends JPanel implements Runnable {
             stopThread();
             SwingUtilities.invokeLater(() -> {
                 MatchResultSummary summary = controller.getMatchResultSummary();
+                LISTENER.onMatchFinished(summary);
                 MatchSummaryDialog.showDialog(this, summary);
                 LISTENER.goToMenu(); // Vuelve prolijamente al menú
             });

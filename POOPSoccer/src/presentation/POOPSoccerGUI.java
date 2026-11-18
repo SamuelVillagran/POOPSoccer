@@ -188,53 +188,31 @@ public class POOPSoccerGUI implements GameController {
     }
 
     @Override
-    public String getDisplayInfoP1() {
-        return POOPSoccer.getGame().getDisplayInfoP1();
+    public MatchHudSnapshot getMatchHudSnapshot() {
+        var game = POOPSoccer.getGame();
+        PlayerHudInfo p1 = buildPlayerHudInfo(1, game.getDisplayInfoP1(), game.getHealthPercentP1(),
+                game.getPowerPercentP1(), game.getActivePowerNameP1());
+        PlayerHudInfo p2 = buildPlayerHudInfo(2, game.getDisplayInfoP2(), game.getHealthPercentP2(),
+                game.getPowerPercentP2(), game.getActivePowerNameP2());
+        String score = game.getGoalsP1() + " - " + game.getGoalsP2();
+        return new MatchHudSnapshot(p1, p2, score, game.getRemainingTime(), game.isSuddenDeath());
     }
 
-    @Override
-    public String getDisplayInfoP2() {
-        return POOPSoccer.getGame().getDisplayInfoP2();
-    }
-
-    @Override
-    public float getRemainingTime() {
-        return POOPSoccer.getGame().getRemainingTime();
-    }
-
-    @Override
-    public boolean isSuddenDeath() {
-        return POOPSoccer.getGame().isSuddenDeath();
-    }
-
-    @Override
-    public float getHealthPercentP1() {
-        return POOPSoccer.getGame().getHealthPercentP1();
-    }
-
-    @Override
-    public float getHealthPercentP2() {
-        return POOPSoccer.getGame().getHealthPercentP2();
-    }
-
-    @Override
-    public float getPowerPercentP1() {
-        return POOPSoccer.getGame().getPowerPercentP1();
-    }
-
-    @Override
-    public float getPowerPercentP2() {
-        return POOPSoccer.getGame().getPowerPercentP2();
-    }
-
-    @Override
-    public String getActivePowerNameP1() {
-        return POOPSoccer.getGame().getActivePowerNameP1();
-    }
-
-    @Override
-    public String getActivePowerNameP2() {
-        return POOPSoccer.getGame().getActivePowerNameP2();
+    private PlayerHudInfo buildPlayerHudInfo(int playerNum, String displayName,
+                                             float healthPercent, float powerPercent, String activePower) {
+        var game = POOPSoccer.getGame();
+        String statsSummary = "Vel:" + game.getStatLevel(playerNum, "speed")
+                + " Sal:" + game.getStatLevel(playerNum, "jump")
+                + " Pat:" + game.getStatLevel(playerNum, "kick")
+                + " Vid:" + game.getStatLevel(playerNum, "life");
+        return new PlayerHudInfo(
+                displayName,
+                game.getPlayerTeamName(playerNum),
+                healthPercent,
+                powerPercent,
+                activePower,
+                statsSummary
+        );
     }
 
     @Override

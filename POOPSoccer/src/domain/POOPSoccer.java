@@ -341,6 +341,11 @@ public class POOPSoccer implements Serializable {
         return player2 != null ? player2.getDisplayInfo() : "";
     }
 
+    public String getPlayerTeamName(int playerNum) {
+        Player p = getPlayerByNumber(playerNum);
+        return (p != null && p.getTeam() != null) ? p.getTeam().getDisplayName() : "";
+    }
+
     public float getHealthPercentP1() {
         return player1 != null ? player1.getHealthPercent() : 0f;
     }

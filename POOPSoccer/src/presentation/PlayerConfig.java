@@ -10,13 +10,13 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.Toolkit;
 import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
@@ -449,9 +449,9 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
 
         screenResolutions = buildScreenResolutions();
         resolutionCombo = createStyledComboBox(new String[] {
-                "Pequeña (75% - 4:3)",
-                "Estándar (90% - 4:3)",
-                "Grande (100% - 4:3)"
+                "Pequeña (1/4 de pantalla)",
+                "Mediana (1/2 de pantalla)",
+                "Grande (3/4 de pantalla)"
         });
         resolutionCombo.setSelectedIndex(1);
     }
@@ -573,17 +573,13 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     }
 
     private Dimension[] buildScreenResolutions() {
-        Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-        int maxPitchW = Math.max(800, screen.width - 280);
-        int maxPitchH = Math.max(540, screen.height - 90);
-
-        // Preserve 4:3 pitch aspect ratio bounded by the player's actual screen
-        int baseH = Math.min(maxPitchH, (maxPitchW * 3) / 4);
-        double[] scales = { 0.75, 0.90, 1.00 };
-        Dimension[] dims = new Dimension[3];
-        for (int i = 0; i < scales.length; i++) {
-            int h = Math.max(520, (int) Math.round(baseH * scales[i]));
-            int w = (int) Math.round(h * (4.0 / 3.0));
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        double[] widthScales = { 0.25, 0.50, 0.75 };
+        double[] heightScales = { 0.35, 0.60, 0.78 };
+        Dimension[] dims = new Dimension[widthScales.length];
+        for (int i = 0; i < widthScales.length; i++) {
+            int w = (int) Math.round(screen.width * widthScales[i]);
+            int h = (int) Math.round(screen.height * heightScales[i]);
             dims[i] = new Dimension(w, h);
         }
         return dims;
@@ -639,6 +635,8 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         startBtn = createStartButton();
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 2));
         bottomPanel.setOpaque(false);
+        // Deja margen inferior para no tapar el copyright de la imagen de fondo
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 34, 0));
         bottomPanel.add(startBtn);
         add(bottomPanel, BorderLayout.SOUTH);
     }
@@ -735,7 +733,8 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         if (screenResolutions != null && index >= 0 && index < screenResolutions.length) {
             return screenResolutions[index];
         }
-        return new Dimension(800, 600);
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        return new Dimension((int) Math.round(screen.width * 0.50), (int) Math.round(screen.height * 0.60));
     }
 
     private final class DarkComboBoxUI extends BasicComboBoxUI {

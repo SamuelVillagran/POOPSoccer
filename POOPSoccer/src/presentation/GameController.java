@@ -61,25 +61,7 @@ public interface GameController {
 
     int getGoalsP2();
 
-    String getDisplayInfoP1();
-
-    String getDisplayInfoP2();
-
-    float getRemainingTime();
-
-    boolean isSuddenDeath();
-
-    float getHealthPercentP1();
-
-    float getHealthPercentP2();
-
-    float getPowerPercentP1();
-
-    float getPowerPercentP2();
-
-    String getActivePowerNameP1();
-
-    String getActivePowerNameP2();
+    MatchHudSnapshot getMatchHudSnapshot();
 
     List<RenderElement> getRenderElements();
 }

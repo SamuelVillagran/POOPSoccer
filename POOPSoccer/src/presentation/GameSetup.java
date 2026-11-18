@@ -1,6 +1,7 @@
 package presentation;
 
 import java.awt.Dimension;
+import java.awt.Toolkit;
 
 /**
  * Stores the configuration parameters selected in the menus before starting a match.
@@ -24,7 +25,8 @@ public class GameSetup {
         this.matchType = "Por goles";
         this.goalLimit = 3;
         this.timeLimit = 2;
-        this.resolution = new Dimension(800, 600);
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        this.resolution = new Dimension((int) Math.round(screen.width * 0.50), (int) Math.round(screen.height * 0.60));
         this.nameP1 = "Jugador 1";
         this.teamP1 = "Corea del Sur";
         this.nameP2 = "Máquina";
