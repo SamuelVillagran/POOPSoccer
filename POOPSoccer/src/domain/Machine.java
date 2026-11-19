@@ -18,7 +18,7 @@ public class Machine extends Type {
 
     @Override
     public void action() {
-        if (player == null) throw new PlayerNotAssignedException();
+        if (player == null) throw new POOPSoccerException(POOPSoccerException.PLAYER_NOT_ASSIGNED);
         if (framesUntilNextDecision <= 0) {
             chooseRandomAction(); // Sortea una nueva acción al agotarse el intervalo actual
             framesUntilNextDecision = DECISION_FRAMES;

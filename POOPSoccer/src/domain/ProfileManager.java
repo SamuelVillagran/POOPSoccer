@@ -128,7 +128,7 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
      */
     public void recordMatchRewards(Player player1, Player player2, Player winner) {
         if (player1 == null || player2 == null) {
-            throw new InvalidPlayerException(InvalidPlayerException.NULL_PLAYER);
+            throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER);
         }
         if (winner == player1) {
             player1.addPoints(WINNER_POINTS_REWARD);

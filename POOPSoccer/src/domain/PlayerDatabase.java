@@ -29,10 +29,10 @@ public class PlayerDatabase implements PlayerDataGateway {
     @Override
     public void savePlayerProgress(Player player) {
         if (player == null) {
-            throw new InvalidPlayerException(InvalidPlayerException.NULL_PLAYER);
+            throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER);
         }
         if (player.getName() == null || player.getName().isBlank()) {
-            throw new InvalidPlayerException(InvalidPlayerException.INVALID_NAME);
+            throw new POOPSoccerException(POOPSoccerException.INVALID_PLAYER_NAME);
         }
         Map<String, String> records = readAllRecords(); // Carga los registros existentes antes de actualizar el perfil
         String key = normalizeKey(player.getName());
@@ -109,7 +109,7 @@ public class PlayerDatabase implements PlayerDataGateway {
 
     private void writeAllRecords(Map<String, String> records) {
         if (databaseFile == null) {
-            throw new PersistenceException(PersistenceException.NO_DATABASE_FILE);
+            throw new POOPSoccerException(POOPSoccerException.NO_DATABASE_FILE);
         }
         try {
             File parent = databaseFile.getParentFile();

@@ -13,7 +13,7 @@ public class Illusion extends Power {
 
     @Override
     public void launchBall(Ball ball, int direction) {
-        if (ball == null) throw new InvalidGameArgumentException("ball");
+        if (ball == null) throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "ball");
         ball.setVelocity(direction * 12.0f, -8.0f); // Lanza el balón real en arco elevado junto a los señuelos
     }
 

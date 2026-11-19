@@ -13,7 +13,7 @@ public class Tornado extends Power {
 
     @Override
     public void launchBall(Ball ball, int direction) {
-        if (ball == null) throw new InvalidGameArgumentException("ball");
+        if (ball == null) throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "ball");
         ball.setVelocity(direction * getShotSpeed(), 6.0f); // Lanza inicialmente hacia el suelo para iniciar el rebote rápido
     }
 

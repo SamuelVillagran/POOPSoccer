@@ -24,8 +24,8 @@ public class DecoyBallManager implements Serializable { // Responsabilidad de ba
      * Spawns decoy balls fanning out from the real ball when the shooter's power creates decoys.
      */
     public void spawnFrom(Ball realBall, Player shooter) {
-        if (realBall == null) throw new InvalidGameArgumentException("realBall");
-        if (shooter == null) throw new InvalidPlayerException(InvalidPlayerException.NULL_PLAYER);
+        if (realBall == null) throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "realBall");
+        if (shooter == null) throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER);
         if (shooter.getTeam() == null) return;
         Power power = shooter.getTeam().getPower();
         if (power == null) return;
@@ -64,7 +64,7 @@ public class DecoyBallManager implements Serializable { // Responsabilidad de ba
      * Resolves bounces of active decoy balls against field boundaries and solid obstacles.
      */
     public void resolveCollisions(CollisionChecker checker, Collection<Element> elements) {
-        if (checker == null) throw new InvalidGameArgumentException("checker");
+        if (checker == null) throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "checker");
         if (!isActive()) return;
         for (Ball decoy : balls) {
             checker.resolveBallEnvironmentCollisions(decoy, elements); // Rebota los balones falsos igual que el real
