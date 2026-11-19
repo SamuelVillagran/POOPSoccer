@@ -327,9 +327,10 @@ Los efectos de sonido empleados (`kick.wav` y `kickBall.wav`) son los siguientes
 - **Escenario del estadio (`POOPSoccer/resources/map/1.jpg`) y arte original:** La imagen del escenario fue encontrada y tomada del videojuego original **Head Soccer** desarrollado por **D&D Dream Corp.** (cuyo logo y banners promocionales aparecen en las vallas del estadio).
   - **D&D Dream Corp.** (2012). *Head Soccer* [Videojuego móvil; escenario original del estadio y material gráfico de referencia]. https://dnddream.com/dnddream_web/app_game_06.htm *(Sitio oficial: https://www.dnddream.com)*
 
-### 📚 Referencias del juego original y documentación
+### 📚 Referencias del juego original, documentación y bibliografía
 
 - **Head Soccer Wiki.** (s. f.). *Inicio* [Wiki]. https://headsoccer.wiki.gg
+- **Martin, R. C.** (2026). *Código Limpio: Manual de estilo para el desarrollo ágil de software* (2.ª ed., B. Pineda González, Trad.). Anaya Multimedia. *(Guía de buenas prácticas, principios SOLID y refactorización aplicada durante el desarrollo del proyecto; edición original en inglés: Clean Code, 2nd ed., Addison-Wesley Professional, 2025).*
 - **TouchArcade.** (s. f.). *Head Soccer* [Ficha de videojuego]. https://toucharcade.com/games/head-soccer
 
 ---
