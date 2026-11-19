@@ -13,7 +13,7 @@ public abstract class Power implements Serializable {
     public float getShotSpeed() { return 14f; } // Rapidez horizontal base por defecto al lanzar el balón
 
     public void launchBall(Ball ball, int direction) {
-        if (ball == null) return;
+        if (ball == null) throw new InvalidGameArgumentException("ball");
         ball.setVelocity(direction * getShotSpeed(), 0.0f); // Dispara el balón recto hacia el arco contrario
     }
 
@@ -32,7 +32,7 @@ public abstract class Power implements Serializable {
     }
 
     public void use(Player owner, Player target) {
-        if (target == null) return;
+        if (target == null) throw new InvalidPlayerException(InvalidPlayerException.NULL_PLAYER);
         target.takeDamage(getDamage() * owner.getKickMultiplier()); // Aplica el daño base multiplicado por Kick
         target.applyEffect(createEffect());
     }

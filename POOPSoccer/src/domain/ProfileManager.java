@@ -127,7 +127,9 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
      * Credits match points, records match outcomes into both profiles, and persists them.
      */
     public void recordMatchRewards(Player player1, Player player2, Player winner) {
-        if (player1 == null || player2 == null) return;
+        if (player1 == null || player2 == null) {
+            throw new InvalidPlayerException(InvalidPlayerException.NULL_PLAYER);
+        }
         if (winner == player1) {
             player1.addPoints(WINNER_POINTS_REWARD);
             player2.addPoints(LOSER_POINTS_REWARD);

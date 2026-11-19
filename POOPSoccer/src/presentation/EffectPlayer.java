@@ -16,7 +16,7 @@ import javax.sound.sampled.LineEvent;
  * Java Sound implementation of SoundEffectPlayer that preloads PCM buffers in memory
  * so sound effects play immediately at full volume without blocking the game loop.
  */
-public class ClipSoundEffectPlayer implements SoundEffectPlayer {
+public class EffectPlayer implements SoundEffectPlayer {
 
     private static final float TARGET_GAIN_DB = 6.0f; // Ganancia máxima en decibelios para destacar los efectos sobre la música
 
@@ -25,7 +25,7 @@ public class ClipSoundEffectPlayer implements SoundEffectPlayer {
 
     private final Map<SoundEffect, CachedAudio> cache = new EnumMap<>(SoundEffect.class); // Caché rápida indexada por enum
 
-    public ClipSoundEffectPlayer() {
+    public EffectPlayer() {
         preloadAll();
     }
 

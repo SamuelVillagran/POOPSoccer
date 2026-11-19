@@ -39,10 +39,6 @@ public class GamePanel extends JPanel implements Runnable {
     private final GameController controller; // Puente único hacia la lógica del juego
     private final SoundEffectPlayer soundEffectPlayer; // Reproductor no bloqueante de efectos de patada
 
-    public GamePanel(GamePanelListener listener, GameController controller, Dimension resolution) {
-        this(listener, controller, resolution, new ClipSoundEffectPlayer());
-    }
-
     public GamePanel(GamePanelListener listener, GameController controller,
                      Dimension resolution, SoundEffectPlayer soundEffectPlayer) {
         this.listener = listener;

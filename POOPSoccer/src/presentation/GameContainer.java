@@ -26,11 +26,7 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
     private final SoundEffectPlayer soundEffectPlayer; // Reproductor compartido para no recargar efectos WAV en cada partido
 
     public GameContainer(GameController controller) {
-        this(controller, new ClipAudioController(), new ClipSoundEffectPlayer());
-    }
-
-    public GameContainer(GameController controller, AudioController audioController) {
-        this(controller, audioController, new ClipSoundEffectPlayer());
+        this(controller, new MusicPlayer(), new EffectPlayer());
     }
 
     public GameContainer(GameController controller, AudioController audioController,

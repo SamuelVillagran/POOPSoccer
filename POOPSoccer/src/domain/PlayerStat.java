@@ -17,10 +17,6 @@ public enum PlayerStat {
         this.displayName = displayName;
     }
 
-    public String getKey() {
-        return key;
-    }
-
     public String getDisplayName() {
         return displayName;
     }

@@ -52,7 +52,7 @@ public class Ball extends ItemSoccer {
      * Applies an instantaneous impulse force to the ball velocity.
      */
     public void move(Vector2D force) {
-        if (force == null) return;
+        if (force == null) throw new InvalidGameArgumentException("force");
         velocity.add(force);
         clampVelocity();
     }

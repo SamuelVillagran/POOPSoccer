@@ -18,9 +18,9 @@ import javax.sound.sampled.LineListener;
 /**
  * Java Sound (Clip) implementation of AudioController managing lifecycle, caching, async loading, and transitions.
  */
-public class ClipAudioController implements AudioController {
+public class MusicPlayer implements AudioController {
 
-    private static final float[] VOLUME_DECIBELS = { -80f, -20f, -12f, -5f, 1f, 6f }; // Escala discreta de ganancia de silencio a máximo
+    private static final float TARGET_GAIN_DB = 1.0f; // Ganancia fija en decibelios para la música de fondo
 
     private record CachedAudio(AudioFormat format, byte[] pcmData) { // Conserva el audio PCM decodificado en memoria para cambios instantáneos
     }
@@ -37,7 +37,6 @@ public class ClipAudioController implements AudioController {
     private SoundTrack currentTrack;
     private boolean looping; // Indica si la pista actual se repite de forma continua
     private boolean loading = false; // Evita reiniciar la misma pista mientras termina de cargarse en segundo plano
-    private int volumeScale = 4; // Nivel de volumen inicial (índice sobre VOLUME_DECIBELS)
     private long playbackGeneration = 0; // Evita que eventos STOP o cargas viejas pisen la pista recién iniciada
 
     @Override
@@ -52,14 +51,6 @@ public class ClipAudioController implements AudioController {
     }
 
     @Override
-    public synchronized void playOnce(SoundTrack track) {
-        if (track == null) {
-            return;
-        }
-        startClip(track, false, null);
-    }
-
-    @Override
     public synchronized void playOnceThenLoop(SoundTrack onceTrack, SoundTrack followUpLoopTrack) {
         if (onceTrack == null) {
             return;
@@ -67,32 +58,8 @@ public class ClipAudioController implements AudioController {
         startClip(onceTrack, false, () -> playLoop(followUpLoopTrack)); // Encadena automáticamente el bucle al terminar el tema corto
     }
 
-    @Override
-    public synchronized void stop() {
-        playbackGeneration++; // Invalida cualquier oyente o carga pendiente de la generación anterior
-        closeActiveClip();
-        currentTrack = null;
-        looping = false;
-        loading = false;
-    }
-
-    @Override
-    public synchronized boolean isPlaying() {
+    private boolean isPlaying() {
         return activeClip != null && activeClip.isRunning();
-    }
-
-    @Override
-    public synchronized SoundTrack getCurrentTrack() {
-        return currentTrack;
-    }
-
-    public synchronized int getVolumeScale() {
-        return volumeScale;
-    }
-
-    public synchronized void setVolumeScale(int scale) {
-        this.volumeScale = Math.max(0, Math.min(VOLUME_DECIBELS.length - 1, scale)); // Acota el índice de volumen al rango válido
-        applyVolume(activeClip);
     }
 
     private void startClip(SoundTrack track, boolean loopContinuously, Runnable onNaturalCompletion) {
@@ -202,8 +169,7 @@ public class ClipAudioController implements AudioController {
             return;
         }
         FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-        float targetDb = VOLUME_DECIBELS[volumeScale];
-        float clampedDb = Math.max(gainControl.getMinimum(), Math.min(gainControl.getMaximum(), targetDb)); // Respeta límites del driver
+        float clampedDb = Math.max(gainControl.getMinimum(), Math.min(gainControl.getMaximum(), TARGET_GAIN_DB)); // Respeta límites del driver
         gainControl.setValue(clampedDb);
     }
 

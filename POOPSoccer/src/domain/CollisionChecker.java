@@ -66,7 +66,7 @@ public class CollisionChecker implements Serializable {
      * Applies kick damage when the attacker's foot reaches the rival.
      */
     public void resolveKickDamage(Player attacker, Player rival) {
-        if (attacker == null || rival == null) return;
+        if (attacker == null || rival == null) throw new InvalidPlayerException(InvalidPlayerException.NULL_PLAYER);
         if (attacker.isKicking() && checkKickReach(attacker, rival)) {
             attacker.hitWithKick(rival);
         }
@@ -243,7 +243,7 @@ public class CollisionChecker implements Serializable {
      * Keeps the player inside the horizontal field limits and standing on the grass.
      */
     public void resolvePlayerEnvironmentCollisions(Player player) {
-        if (player == null) return;
+        if (player == null) throw new InvalidPlayerException(InvalidPlayerException.NULL_PLAYER);
         float px = Math.max(0.0f, Math.min(FIELD_WIDTH - player.getWidth(), player.getX())); // Mantiene al jugador dentro de [0, 800]
         float py = player.getY();
 

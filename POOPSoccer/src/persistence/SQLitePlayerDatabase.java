@@ -1,5 +1,6 @@
 package persistence;
 
+import domain.InvalidPlayerException;
 import domain.Log;
 import domain.Player;
 import domain.PlayerDataGateway;
@@ -84,7 +85,12 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
 
     @Override
     public void savePlayerProgress(Player player) {
-        if (isInvalidPlayer(player)) return;
+        if (player == null) {
+            throw new InvalidPlayerException(InvalidPlayerException.NULL_PLAYER);
+        }
+        if (isInvalidPlayer(player)) {
+            throw new InvalidPlayerException(InvalidPlayerException.INVALID_NAME);
+        }
         // Inserta o actualiza la fila del jugador usando parámetros seguros contra inyección SQL
         try (Connection conn = openConnection();
              PreparedStatement stmt = conn.prepareStatement(UPSERT_PLAYER_SQL)) {

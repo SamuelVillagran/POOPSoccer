@@ -18,7 +18,7 @@ public class Machine extends Type {
 
     @Override
     public void action() {
-        if (player == null) return;
+        if (player == null) throw new PlayerNotAssignedException();
         if (framesUntilNextDecision <= 0) {
             chooseRandomAction(); // Sortea una nueva acción al agotarse el intervalo actual
             framesUntilNextDecision = DECISION_FRAMES;
