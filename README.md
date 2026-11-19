@@ -235,7 +235,7 @@ Apenas toma el relevo, Juan decide que los tiros rectos son demasiado aburridos 
 5. En pleno partido presiona **`Esc`** para abrir **`JUEGO EN PAUSA`**, muestra el marcador congelado y prueba las opciones `Continuar`, `Reiniciar` y finalmente `Volver al menú` (`RF-08`).
 
 **Video 2:**
-(Aquí va el link)
+https://youtu.be/W0TsHn0NlI0
 
 ---
 
@@ -276,7 +276,7 @@ Con todas las mecánicas probadas por separado contra la CPU, llega el momento d
 5. Mantienen el marcador empatado (ej. `1 - 1` o `2 - 2`) hasta que el cronómetro marca `0s` → el centro del HUD muestra **`¡MUERTE SÚBITA!`** en rojo y continúan jugando hasta el gol de oro ganador.
 
 **Video 4:**
-(Aquí va el link)
+https://youtu.be/r-dtDvdfvZU
 
 ---
 
