@@ -436,6 +436,13 @@ public class POOPSoccer implements Serializable {
     }
 
     /**
+     * Returns the shared directory where saved match files (.dat) are stored.
+     */
+    public File getSavesDirectory() {
+        return Log.getDataSubdirectory("saves");
+    }
+
+    /**
      * Saves the current match state to a .dat file.
      */
     public void save(File file) throws POOPSoccerException {

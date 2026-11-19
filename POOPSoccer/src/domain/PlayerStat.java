@@ -7,7 +7,7 @@ public enum PlayerStat {
     SPEED("speed", "Vel"), // Controla la rapidez de desplazamiento horizontal del personaje
     JUMP("jump", "Salto"), // Controla la altura que alcanza al saltar
     KICK("kick", "Patada"), // Aumenta el daño infligido al rival en patadas y tiros especiales
-    SURVIVAL("survival", "Vida"); // Aumenta la vida máxima antes de caer aturdido
+    LIFE("life", "Vida"); // Aumenta la vida máxima antes de caer aturdido
 
     private final String key; // Identificador técnico usado internamente y en pruebas
     private final String displayName; // Etiqueta corta en español mostrada al jugador en la interfaz
@@ -31,10 +31,13 @@ public enum PlayerStat {
     public static PlayerStat fromName(String name) {
         if (name == null) return null;
         String trimmed = name.trim();
-        for (PlayerStat stat : values()) { // Empareja por clave interna ("speed") o etiqueta visible ("Vel")
+        for (PlayerStat stat : values()) { // Empareja por clave interna ("speed", "life") o etiqueta visible ("Vel", "Vida")
             if (stat.key.equalsIgnoreCase(trimmed) || stat.displayName.equalsIgnoreCase(trimmed)) {
                 return stat;
             }
+        }
+        if ("survival".equalsIgnoreCase(trimmed)) {
+            return LIFE; // Acepta "survival" como alias heredado para compatibilidad hacia atrás
         }
         return null;
     }

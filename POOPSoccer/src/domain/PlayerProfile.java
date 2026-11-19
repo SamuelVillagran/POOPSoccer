@@ -15,7 +15,7 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
     private int speedStat = 1; // Nivel actual de velocidad (1 a 10)
     private int jumpStat = 1; // Nivel actual de salto (1 a 10)
     private int kickStat = 1; // Nivel actual de fuerza/daño de patada (1 a 10)
-    private int survivalStat = 1; // Nivel actual de resistencia/vida máxima (1 a 10)
+    private int lifeStat = 1; // Nivel actual de vida máxima (1 a 10)
     private int points = 0; // Puntos acumulados del perfil para comprar mejoras
     private int matchesPlayed = 0; // Total histórico de partidos jugados
     private int wins = 0; // Total histórico de partidos ganados
@@ -27,7 +27,7 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
     }
 
     public float getMaxLife() {
-        return BASE_LIFE * getStatBonusMultiplier(PlayerStat.SURVIVAL); // Parte en 100 HP y escala según supervivencia
+        return BASE_LIFE * getStatBonusMultiplier(PlayerStat.LIFE); // Parte en 100 HP y escala según el nivel de vida
     }
 
     public int getStatLevel(PlayerStat stat) {
@@ -36,7 +36,7 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
             case SPEED -> speedStat;
             case JUMP -> jumpStat;
             case KICK -> kickStat;
-            case SURVIVAL -> survivalStat;
+            case LIFE -> lifeStat;
         };
     }
 
@@ -65,33 +65,33 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
             case SPEED -> speedStat++;
             case JUMP -> jumpStat++;
             case KICK -> kickStat++;
-            case SURVIVAL -> survivalStat++;
+            case LIFE -> lifeStat++;
         }
     }
 
     public void copyFrom(PlayerProfile previous) {
         if (previous == null) return;
         loadProgress(previous.points, previous.speedStat, previous.jumpStat, previous.kickStat,
-                previous.survivalStat, previous.matchesPlayed, previous.wins, previous.goalsFor, previous.goalsAgainst);
+                previous.lifeStat, previous.matchesPlayed, previous.wins, previous.goalsFor, previous.goalsAgainst);
     }
 
     /**
      * Loads the stored points and stat levels into this profile.
      */
-    public void loadProgress(int points, int speed, int jump, int kick, int survival) {
-        loadProgress(points, speed, jump, kick, survival, 0, 0, 0, 0);
+    public void loadProgress(int points, int speed, int jump, int kick, int life) {
+        loadProgress(points, speed, jump, kick, life, 0, 0, 0, 0);
     }
 
     /**
      * Loads stored points, stat levels, and career match statistics into this profile.
      */
-    public void loadProgress(int points, int speed, int jump, int kick, int survival,
+    public void loadProgress(int points, int speed, int jump, int kick, int life,
                              int matchesPlayed, int wins, int goalsFor, int goalsAgainst) {
         this.points = Math.max(0, points); // Garantiza valores no negativos y niveles acotados entre 1 y 10
         this.speedStat = Math.max(1, Math.min(MAX_STAT, speed));
         this.jumpStat = Math.max(1, Math.min(MAX_STAT, jump));
         this.kickStat = Math.max(1, Math.min(MAX_STAT, kick));
-        this.survivalStat = Math.max(1, Math.min(MAX_STAT, survival));
+        this.lifeStat = Math.max(1, Math.min(MAX_STAT, life));
         this.matchesPlayed = Math.max(0, matchesPlayed);
         this.wins = Math.max(0, wins);
         this.goalsFor = Math.max(0, goalsFor);

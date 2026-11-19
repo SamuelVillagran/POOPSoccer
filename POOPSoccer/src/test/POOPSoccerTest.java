@@ -497,4 +497,99 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         assertEquals(1, winSummary.goalsP1());
         assertEquals(0, winSummary.goalsP2());
     }
+
+    @Test
+    void lifeStatUpgradeUpdatesMaxLifeAndHudSummary() {
+        p1.addPoints(3500); // 500 + 1000 + 2000
+        assertTrue(game.upgradeStat(1, "life"));
+        assertEquals(2, game.getStatLevel(1, "life"));
+        assertEquals(110f, p1.getMaxLife(), DELTA);
+
+        String hudStats = new presentation.POOPSoccerGUI().getMatchHudSnapshot().player1().statsSummary();
+        assertTrue(hudStats.contains("Vid:2"), "HUD summary must reflect upgraded life level: " + hudStats);
+
+        assertTrue(game.upgradeStat(1, "Vida"));
+        assertEquals(3, game.getStatLevel(1, "life"));
+        assertEquals(120f, p1.getMaxLife(), DELTA);
+
+        assertTrue(game.upgradeStat(1, "survival"));
+        assertEquals(4, game.getStatLevel(1, "life"));
+        assertEquals(130f, p1.getMaxLife(), DELTA);
+    }
+
+    @Test
+    void sqliteDatabaseMigratesLegacySurvivalColumnToLifeLevel() throws Exception {
+        java.io.File tempDb = java.io.File.createTempFile("poopsoccer_legacy_sqlite", ".db");
+        tempDb.deleteOnExit();
+
+        try (java.sql.Connection conn = java.sql.DriverManager.getConnection("jdbc:sqlite:" + tempDb.getPath());
+             java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("""
+                    CREATE TABLE players (
+                        profile_key TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        points INTEGER NOT NULL DEFAULT 0,
+                        speed_level INTEGER NOT NULL DEFAULT 1,
+                        jump_level INTEGER NOT NULL DEFAULT 1,
+                        kick_level INTEGER NOT NULL DEFAULT 1,
+                        survival_level INTEGER NOT NULL DEFAULT 1,
+                        matches_played INTEGER NOT NULL DEFAULT 0,
+                        wins INTEGER NOT NULL DEFAULT 0,
+                        goals_for INTEGER NOT NULL DEFAULT 0,
+                        goals_against INTEGER NOT NULL DEFAULT 0,
+                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """);
+            stmt.execute("""
+                    INSERT INTO players (profile_key, name, points, survival_level)
+                    VALUES ('legacyuser', 'LegacyUser', 4000, 4)
+                    """);
+        }
+
+        game.setDataGateway(new persistence.SQLitePlayerDatabase(tempDb));
+        game.selectPlayerProfile(1, "LegacyUser");
+        assertEquals(4, game.getStatLevel(1, "life"));
+        assertEquals(130f, game.getPlayer1().getMaxLife(), DELTA);
+
+        assertTrue(game.upgradeStat(1, "life")); // 4 -> 5 costs 4000 pts
+        game.selectPlayerProfile(1, "Otro");
+        game.selectPlayerProfile(1, "LegacyUser");
+        assertEquals(5, game.getStatLevel(1, "life"));
+        assertEquals(140f, game.getPlayer1().getMaxLife(), DELTA);
+    }
+
+    @Test
+    void logResolvesSharedDataDirectoryFromRepoRootModuleAndLib() throws Exception {
+        java.io.File repoRoot = java.nio.file.Files.createTempDirectory("poopsoccer_repo").toFile();
+        java.io.File standalone = java.nio.file.Files.createTempDirectory("poopsoccer_standalone").toFile();
+        try {
+            java.io.File docsDir = new java.io.File(repoRoot, "Docs");
+            java.io.File moduleDir = new java.io.File(repoRoot, "POOPSoccer");
+            java.io.File libDir = new java.io.File(moduleDir, "lib");
+            assertTrue(docsDir.mkdirs());
+            assertTrue(libDir.mkdirs());
+
+            java.io.File expectedShared = new java.io.File(repoRoot, "data").getCanonicalFile();
+            assertEquals(expectedShared, Log.getDataDirectory(repoRoot));
+            assertEquals(expectedShared, Log.getDataDirectory(moduleDir));
+            assertEquals(expectedShared, Log.getDataDirectory(libDir));
+
+            java.io.File expectedLocal = new java.io.File(standalone, "data").getCanonicalFile();
+            assertEquals(expectedLocal, Log.getDataDirectory(standalone));
+        } finally {
+            deleteRecursively(repoRoot);
+            deleteRecursively(standalone);
+        }
+    }
+
+    private static void deleteRecursively(java.io.File dir) {
+        if (dir == null || !dir.exists()) return;
+        java.io.File[] children = dir.listFiles();
+        if (children != null) {
+            for (java.io.File child : children) {
+                deleteRecursively(child);
+            }
+        }
+        dir.delete();
+    }
 }

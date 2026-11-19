@@ -117,10 +117,9 @@ public class Window extends JFrame {
     }
 
     private JFileChooser createSaveFileChooser() {
-        File dataDir = new File("../Docs").isDirectory() ? new File("../data") : new File("data"); // Ubica la carpeta data/ compartida junto a Docs/
-        File savesDir = new File(dataDir, "saves");
+        File savesDir = (controller != null) ? controller.getSavesDirectory() : new File("data/saves");
         try {
-            savesDir = savesDir.getCanonicalFile(); // Resuelve ".." a una ruta limpia para mostrarla en el selector
+            savesDir = savesDir.getCanonicalFile();
         } catch (Exception ignored) {
         }
         if (!savesDir.exists()) {

@@ -136,6 +136,11 @@ public class POOPSoccerGUI implements GameController {
     }
 
     @Override
+    public File getSavesDirectory() {
+        return POOPSoccer.getGame().getSavesDirectory();
+    }
+
+    @Override
     public void movePlayer1(char direction) {
         POOPSoccer.getGame().movePlayer1(direction);
     }

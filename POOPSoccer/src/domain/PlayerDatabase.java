@@ -14,7 +14,8 @@ import java.util.Map;
 public class PlayerDatabase implements PlayerDataGateway {
 
     private static final String DEFAULT_DB_NAME = "players_db.csv"; // Archivo CSV de respaldo cuando no hay SQLite disponible
-    private static final String HEADER = "name;points;speed;jump;kick;survival"; // Encabezado estándar de columnas separadas por punto y coma
+    private static final String HEADER = "name;points;speed;jump;kick;life"; // Encabezado estándar de columnas separadas por punto y coma
+    private static final String LEGACY_HEADER = "name;points;speed;jump;kick;survival"; // Encabezado heredado compatible con archivos previos
     private final File databaseFile; // Ruta del archivo CSV donde persisten los perfiles de respaldo
 
     public PlayerDatabase() {
@@ -57,7 +58,7 @@ public class PlayerDatabase implements PlayerDataGateway {
                 + profile.getStatLevel("speed") + ";"
                 + profile.getStatLevel("jump") + ";"
                 + profile.getStatLevel("kick") + ";"
-                + profile.getStatLevel("survival");
+                + profile.getStatLevel("life");
     }
 
     private boolean mapRowToPlayer(String row, Player player) {
@@ -70,8 +71,8 @@ public class PlayerDatabase implements PlayerDataGateway {
             int speed = Integer.parseInt(cols[2].trim());
             int jump = Integer.parseInt(cols[3].trim());
             int kick = Integer.parseInt(cols[4].trim());
-            int survival = Integer.parseInt(cols[5].trim());
-            player.getProfile().loadProgress(points, speed, jump, kick, survival); // Restaura puntos y niveles leídos desde disco
+            int life = Integer.parseInt(cols[5].trim());
+            player.getProfile().loadProgress(points, speed, jump, kick, life); // Restaura puntos y niveles leídos desde disco
             player.restoreFullHealth();
             return true;
         } catch (NumberFormatException e) {
@@ -89,7 +90,7 @@ public class PlayerDatabase implements PlayerDataGateway {
             String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
-                if (trimmed.isEmpty() || trimmed.equalsIgnoreCase(HEADER)) {
+                if (trimmed.isEmpty() || trimmed.equalsIgnoreCase(HEADER) || trimmed.equalsIgnoreCase(LEGACY_HEADER)) {
                     continue;
                 }
                 String[] parts = trimmed.split(";", 2);

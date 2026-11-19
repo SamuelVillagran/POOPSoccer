@@ -41,6 +41,8 @@ public interface GameController {
 
     void openGame(File file) throws Exception;
 
+    File getSavesDirectory();
+
     void movePlayer1(char direction);
 
     void movePlayer2(char direction);

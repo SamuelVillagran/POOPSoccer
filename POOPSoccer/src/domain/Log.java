@@ -17,7 +17,31 @@ public class Log {
      * Resolves the shared data directory at the repository root alongside Docs/.
      */
     public static File getDataDirectory() {
-        return new File("../Docs").isDirectory() ? new File("../data") : new File("data"); // Ubica data/ junto a Docs/ al correr dentro del módulo
+        return getDataDirectory(new File("."));
+    }
+
+    /**
+     * Resolves the shared data directory by walking up to 3 parent levels looking for Docs/.
+     */
+    public static File getDataDirectory(File startDir) {
+        File base = resolveCanonicalDirectory(startDir);
+        File cursor = base;
+        for (int depth = 0; depth <= 3 && cursor != null; depth++) {
+            if (new File(cursor, "Docs").isDirectory()) {
+                return new File(cursor, "data"); // Ubica data/ junto a Docs/ sin importar desde qué subcarpeta se ejecute
+            }
+            cursor = cursor.getParentFile();
+        }
+        return new File(base, "data"); // Respaldo local si el ejecutable se mueve fuera del repositorio
+    }
+
+    private static File resolveCanonicalDirectory(File dir) {
+        File target = (dir != null) ? dir : new File(".");
+        try {
+            return target.getCanonicalFile();
+        } catch (Exception e) {
+            return target.getAbsoluteFile();
+        }
     }
 
     /**

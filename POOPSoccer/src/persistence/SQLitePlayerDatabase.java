@@ -28,7 +28,7 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
                 speed_level INTEGER NOT NULL DEFAULT 1,
                 jump_level INTEGER NOT NULL DEFAULT 1,
                 kick_level INTEGER NOT NULL DEFAULT 1,
-                survival_level INTEGER NOT NULL DEFAULT 1,
+                life_level INTEGER NOT NULL DEFAULT 1,
                 matches_played INTEGER NOT NULL DEFAULT 0,
                 wins INTEGER NOT NULL DEFAULT 0,
                 goals_for INTEGER NOT NULL DEFAULT 0,
@@ -39,7 +39,7 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
     private static final String UPSERT_PLAYER_SQL = """
             INSERT INTO players (
                 profile_key, name, points, speed_level, jump_level, kick_level,
-                survival_level, matches_played, wins, goals_for, goals_against, updated_at
+                life_level, matches_played, wins, goals_for, goals_against, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(profile_key) DO UPDATE SET
                 name = excluded.name,
@@ -47,7 +47,7 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
                 speed_level = excluded.speed_level,
                 jump_level = excluded.jump_level,
                 kick_level = excluded.kick_level,
-                survival_level = excluded.survival_level,
+                life_level = excluded.life_level,
                 matches_played = excluded.matches_played,
                 wins = excluded.wins,
                 goals_for = excluded.goals_for,
@@ -55,7 +55,7 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
                 updated_at = CURRENT_TIMESTAMP
             """;
     private static final String SELECT_PLAYER_SQL = """
-            SELECT points, speed_level, jump_level, kick_level, survival_level,
+            SELECT points, speed_level, jump_level, kick_level, life_level,
                    matches_played, wins, goals_for, goals_against
             FROM players
             WHERE profile_key = ?
@@ -152,7 +152,27 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
         // Crea la tabla players si todavía no existe en el archivo de base de datos
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(CREATE_PLAYERS_TABLE_SQL);
-            schemaReady = true;
+        }
+        migrateLegacySurvivalColumn(conn);
+        schemaReady = true;
+    }
+
+    private void migrateLegacySurvivalColumn(Connection conn) throws SQLException {
+        boolean hasSurvival = false;
+        boolean hasLife = false;
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info(players)")) {
+            while (rs.next()) {
+                String col = rs.getString("name");
+                if ("survival_level".equalsIgnoreCase(col)) hasSurvival = true;
+                if ("life_level".equalsIgnoreCase(col)) hasLife = true;
+            }
+        }
+        if (hasSurvival && !hasLife) {
+            // Preserva datos previos al renombrar survival_level hacia life_level en bases existentes
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("ALTER TABLE players RENAME COLUMN survival_level TO life_level");
+            }
         }
     }
 
@@ -164,7 +184,7 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
         stmt.setInt(4, profile.getStatLevel("speed"));
         stmt.setInt(5, profile.getStatLevel("jump"));
         stmt.setInt(6, profile.getStatLevel("kick"));
-        stmt.setInt(7, profile.getStatLevel("survival"));
+        stmt.setInt(7, profile.getStatLevel("life"));
         stmt.setInt(8, profile.getMatchesPlayed());
         stmt.setInt(9, profile.getWins());
         stmt.setInt(10, profile.getGoalsFor());
@@ -177,7 +197,7 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
                 rs.getInt("speed_level"),
                 rs.getInt("jump_level"),
                 rs.getInt("kick_level"),
-                rs.getInt("survival_level"),
+                rs.getInt("life_level"),
                 rs.getInt("matches_played"),
                 rs.getInt("wins"),
                 rs.getInt("goals_for"),

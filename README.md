@@ -104,7 +104,7 @@ La barra de poder se llena en **`10` segundos** (y recibe un impulso instantáne
 | ⚡ **Vel** (`speed`) | Aumenta la velocidad de desplazamiento | `Velocidad = Base × (1 + 0.10 × (Nivel - 1))` |
 | 🦘 **Salto** (`jump`) | Aumenta la altura del salto | `Salto = Base × (1 + 0.10 × (Nivel - 1))` |
 | 💥 **Patada** (`kick`) | Multiplica daño de patadas (`10` base) y poderes | `DañoPatada = 10 × multKick` · `DañoPoder = DañoTiro × multKick` |
-| ❤️ **Vida** (`survival`) | Aumenta la vida máxima (`100` a `190` HP) | `VidaMax = 100 × (1 + 0.10 × (NivelVida - 1))` |
+| ❤️ **Vida** (`life`) | Aumenta la vida máxima (`100` a `190` HP) | `VidaMax = 100 × (1 + 0.10 × (NivelVida - 1))` |
 
 - 💰 **Costos de mejora:** Inician en `500` pts y se duplican en cada nivel (`500`, `1000`, `2000`, ... según `500 × 2^(nivel - 1)`).
 - 🏆 **Puntos por partido:** **`+100` puntos** al ganador y **`+25` puntos** al perdedor.
