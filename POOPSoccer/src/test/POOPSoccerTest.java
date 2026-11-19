@@ -582,6 +582,55 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         }
     }
 
+    @Test
+    void nigeriaTornadoExposesTornadoSpriteAndVisiblyBouncesAlongPitch() {
+        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 5,
+                "Obi", "Nigeria", "Luis", "Cameroon");
+        p1 = game.getPlayer1();
+        p2 = game.getPlayer2();
+        Ball ball = game.getBall();
+        p1.setPositions(120f, CollisionChecker.DEFAULT_FLOOR_Y - p1.getHeight());
+        p2.setPositions(10f, CollisionChecker.DEFAULT_FLOOR_Y - p2.getHeight());
+
+        playFrames(600);
+        game.movePlayer1('p');
+
+        ball.setPositions(p1.getX(), p1.getY());
+        playFrames(1);
+
+        assertTrue(ball.hasShotAura());
+        assertEquals("tornado", ball.getShotEffectSprite());
+        var ballSnapshot = game.getRenderElements().stream()
+                .filter(e -> "ball".equals(e.category()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("tornado", ballSnapshot.shotEffectSprite());
+
+        float floorBallY = CollisionChecker.DEFAULT_FLOOR_Y - ball.getHeight();
+        float minYFirstBounce = ball.getY();
+        boolean touchedNearFloorAgain = false;
+        float minYSecondBounce = floorBallY;
+
+        for (int i = 0; i < 60; i++) {
+            game.update();
+            if (!touchedNearFloorAgain) {
+                minYFirstBounce = Math.min(minYFirstBounce, ball.getY());
+                if (i > 10 && ball.getY() >= floorBallY - 6.0f) {
+                    touchedNearFloorAgain = true;
+                }
+            } else {
+                minYSecondBounce = Math.min(minYSecondBounce, ball.getY());
+            }
+        }
+
+        assertTrue(floorBallY - minYFirstBounce > 40.0f,
+                "First bounce should rise clearly above 40 px off the floor");
+        assertTrue(touchedNearFloorAgain,
+                "Ball should return to the grass to perform a second bounce");
+        assertTrue(floorBallY - minYSecondBounce > 40.0f,
+                "Second bounce should also rise clearly above 40 px off the floor");
+    }
+
     private static void deleteRecursively(java.io.File dir) {
         if (dir == null || !dir.exists()) return;
         java.io.File[] children = dir.listFiles();

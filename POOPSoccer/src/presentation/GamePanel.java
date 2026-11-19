@@ -4,14 +4,17 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 
 import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
@@ -30,8 +33,10 @@ public class GamePanel extends JPanel implements Runnable {
     private static final Color STUN_FILL = new Color(255, 60, 60, 120); // Tinte rojo sobre el jugador mientras está aturdido
     private static final Color EFFECT_FILL = new Color(255, 230, 0, 110); // Tinte amarillo para efectos rivales activos
     private static final Color SHOT_AURA_FILL = new Color(255, 180, 0, 140); // Halo naranja alrededor del balón en tiro de poder
+    private static final int SHOT_GIF_PADDING = 18;
 
     private static final HashMap<String, BufferedImage> CACHED_IMAGES = new HashMap<>(); // Caché en memoria para no leer sprites del disco cada frame
+    private static final HashMap<String, Image> CACHED_GIFS = new HashMap<>(); // Memory cache for animated shot effect GIFs
     private static BufferedImage background; // Imagen de fondo del estadio cargada una sola vez
 
     private volatile Thread gameThread; // Hilo dedicado que ejecuta el bucle del partido de forma segura entre hilos
@@ -222,6 +227,27 @@ public class GamePanel extends JPanel implements Runnable {
         return CACHED_IMAGES.get(path);
     }
 
+    private Image getAnimatedGif(String effectName) {
+        if (effectName == null || effectName.isBlank()) {
+            return null;
+        }
+        String path = "/ball/" + effectName + ".gif";
+        if (!CACHED_GIFS.containsKey(path)) {
+            URL url = getClass().getResource(path);
+            Image gif = null;
+            if (url != null) {
+                ImageIcon icon = new ImageIcon(url);
+                if (icon.getIconWidth() > 0 && icon.getIconHeight() > 0) {
+                    gif = icon.getImage();
+                }
+            } else {
+                System.err.println("No se encontró GIF en: " + path);
+            }
+            CACHED_GIFS.put(path, gif);
+        }
+        return CACHED_GIFS.get(path);
+    }
+
     public void draw(Graphics2D g2) {
         if (background != null) {
             g2.drawImage(background, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, null);
@@ -234,6 +260,7 @@ public class GamePanel extends JPanel implements Runnable {
                 if (sprite != null) {
                     drawElementAuraOrEffects(g2, elem);
                     g2.drawImage(sprite, elem.x(), elem.y(), elem.width(), elem.height(), null);
+                    drawShotEffectOverlay(g2, elem);
                 }
             }
         }
@@ -259,9 +286,27 @@ public class GamePanel extends JPanel implements Runnable {
             g2.setColor(stunned ? Color.RED : Color.YELLOW);
             g2.drawString(statusText, x - 2, y - 8); // Dibuja la etiqueta de estado flotando sobre el jugador
         }
-        if (elem.shotAura()) {
+        if (elem.shotAura() && getAnimatedGif(elem.shotEffectSprite()) == null) {
             g2.setColor(SHOT_AURA_FILL);
             g2.fillOval(x - 6, y - 6, width + 12, height + 12);
+        }
+    }
+
+    private void drawShotEffectOverlay(Graphics2D g2, RenderElement elem) {
+        if (!elem.shotAura()) {
+            return;
+        }
+        Image shotGif = getAnimatedGif(elem.shotEffectSprite());
+        if (shotGif != null) {
+            int pad = SHOT_GIF_PADDING;
+            g2.drawImage(
+                    shotGif,
+                    elem.x() - pad,
+                    elem.y() - pad,
+                    elem.width() + pad * 2,
+                    elem.height() + pad * 2,
+                    this
+            );
         }
     }
 

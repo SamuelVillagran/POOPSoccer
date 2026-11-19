@@ -31,6 +31,13 @@ public abstract class Power implements Serializable {
         return getDecoyBallCount() == 0; // Oculta el aura para no delatar cuál es el balón real en Ilusión
     }
 
+    /**
+     * Returns the visual effect sprite key associated with this power shot, or empty if none.
+     */
+    public String getShotEffectSprite() {
+        return "";
+    }
+
     public void use(Player owner, Player target) {
         if (target == null) throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER);
         target.takeDamage(getDamage() * owner.getKickMultiplier()); // Aplica el daño base multiplicado por Kick

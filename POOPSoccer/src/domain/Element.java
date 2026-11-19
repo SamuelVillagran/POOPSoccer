@@ -38,6 +38,10 @@ public interface Element extends Serializable {
         return false;
     }
 
+    default String getShotEffectSprite() {
+        return "";
+    }
+
     default boolean isStuned() {
         return false;
     }

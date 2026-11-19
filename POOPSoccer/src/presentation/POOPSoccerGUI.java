@@ -251,7 +251,8 @@ public class POOPSoccerGUI implements GameController {
                     item.powerAura(),
                     item.stunned(),
                     item.statusText(),
-                    item.shotAura()
+                    item.shotAura(),
+                    item.shotEffectSprite()
             ));
         }
         return Collections.unmodifiableList(renderList);

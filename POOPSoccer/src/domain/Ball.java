@@ -31,6 +31,11 @@ public class Ball extends ItemSoccer {
         return activePowerShot != null && activePowerShot.showsShotAura();
     }
 
+    @Override
+    public String getShotEffectSprite() {
+        return hasShotAura() ? activePowerShot.getShotEffectSprite() : "";
+    }
+
     public boolean hasPowerShotAgainst(Player target) {
         return activePowerShot != null && powerShotOwner != null && powerShotOwner != target; // Evita fuego amigo del tiro especial
     }

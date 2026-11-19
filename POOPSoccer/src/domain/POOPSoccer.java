@@ -27,7 +27,21 @@ public class POOPSoccer implements Serializable {
             boolean powerAura,
             boolean stunned,
             String statusText,
-            boolean shotAura) {
+            boolean shotAura,
+            String shotEffectSprite) {
+        public RenderElementData(
+                String category,
+                String variant,
+                int x,
+                int y,
+                int width,
+                int height,
+                boolean powerAura,
+                boolean stunned,
+                String statusText,
+                boolean shotAura) {
+            this(category, variant, x, y, width, height, powerAura, stunned, statusText, shotAura, "");
+        }
     }
 
     private static final float DELTA_TIME = 1.0f / 60.0f; // Paso temporal fijo por frame (60 FPS)
@@ -425,7 +439,8 @@ public class POOPSoccer implements Serializable {
                 elem.isPowerActive(),
                 elem.isStuned(),
                 elem.getStatusText(),
-                elem.hasShotAura()
+                elem.hasShotAura(),
+                elem.getShotEffectSprite()
         ));
     }
 
