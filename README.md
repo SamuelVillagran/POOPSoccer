@@ -216,7 +216,7 @@ Sin decir una palabra, Samuel abre el juego con la seriedad de un auditor profes
 5. Completa los `3` goles para mostrar el diálogo modal **`FIN DEL PARTIDO`** con el trofeo dorado, el marcador, `"¡Ganador: Samuel (+100 pts | Total: ... pts)!"` y `"Perdedor: CPU Torpe (+25 pts | Total: ... pts)"`.
 
 **Video 1:**
-(Aquí va el link)
+https://youtu.be/W0TsHn0NlI0
 
 ---
 
@@ -235,7 +235,7 @@ Apenas toma el relevo, Juan decide que los tiros rectos son demasiado aburridos 
 5. En pleno partido presiona **`Esc`** para abrir **`JUEGO EN PAUSA`**, muestra el marcador congelado y prueba las opciones `Continuar`, `Reiniciar` y finalmente `Volver al menú` (`RF-08`).
 
 **Video 2:**
-https://youtu.be/W0TsHn0NlI0
+(Link de video)
 
 ---
 
