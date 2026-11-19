@@ -319,6 +319,12 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
                 .filter(e -> e instanceof Ball)
                 .count();
         assertEquals(8L, ballCount, "1 real ball + 7 decoy balls");
+
+        playFrames(151); // 2.5 seconds at 60 FPS
+        long ballCountAfterExpiry = game.getElementsToDraw().values().stream()
+                .filter(e -> e instanceof Ball)
+                .count();
+        assertEquals(1L, ballCountAfterExpiry, "Only the real ball remains after decoy duration expires");
     }
 
     @Test
@@ -485,9 +491,9 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         MatchSummarySnapshot winSummary = game.getMatchSummary();
         assertFalse(winSummary.isDraw());
         assertEquals("Samuel", winSummary.winnerName());
-        assertEquals(POOPSoccer.WINNER_POINTS_REWARD, winSummary.winnerPointsAwarded());
+        assertEquals(ProfileManager.WINNER_POINTS_REWARD, winSummary.winnerPointsAwarded());
         assertEquals("Atun", winSummary.loserName());
-        assertEquals(POOPSoccer.LOSER_POINTS_REWARD, winSummary.loserPointsAwarded());
+        assertEquals(ProfileManager.LOSER_POINTS_REWARD, winSummary.loserPointsAwarded());
         assertEquals(1, winSummary.goalsP1());
         assertEquals(0, winSummary.goalsP2());
     }

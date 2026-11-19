@@ -8,7 +8,7 @@ import java.util.TreeMap;
 /**
  * Builds the board elements (players, ball, pitch and goals) from the map configuration file.
  */
-public class MapLoader { // Ayudado a hacer con Gemini 4 Hydrogen
+public class MapLoader { // Responsabilidad de carga del mapa extraída de la fachada POOPSoccer para perfeccionar el principio S con ayuda de Gemini 4 Hydrogen
 
     /**
      * Result of loading a map: board elements, goals by side and the main ball.

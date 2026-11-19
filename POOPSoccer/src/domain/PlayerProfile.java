@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * Persistent player progression profile holding points, stat levels, and career match history.
  */
-public class PlayerProfile implements Serializable {
+public class PlayerProfile implements Serializable { // Responsabilidad de progreso y estadísticas extraída de Player para perfeccionar el principio S
 
     private static final int MAX_STAT = 10; // Nivel máximo alcanzable por cada estadística
     private static final int BASE_UPGRADE_COST = 500; // Costo en puntos de la primera mejora (nivel 1 a 2)
