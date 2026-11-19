@@ -23,14 +23,21 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
     private GamePanel activeGamePanel;
     private final GameController controller;
     private final AudioController audioController;
+    private final SoundEffectPlayer soundEffectPlayer; // Reproductor compartido para no recargar efectos WAV en cada partido
 
     public GameContainer(GameController controller) {
-        this(controller, new ClipAudioController());
+        this(controller, new ClipAudioController(), new ClipSoundEffectPlayer());
     }
 
     public GameContainer(GameController controller, AudioController audioController) {
+        this(controller, audioController, new ClipSoundEffectPlayer());
+    }
+
+    public GameContainer(GameController controller, AudioController audioController,
+                         SoundEffectPlayer soundEffectPlayer) {
         this.controller = controller;
         this.audioController = audioController;
+        this.soundEffectPlayer = soundEffectPlayer;
         prepareView();
     }
 
@@ -157,7 +164,7 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
             activeGamePanel.stopThread(); // Detiene el hilo del partido anterior antes de desmontarlo
             cardPanel.remove(activeGamePanel);
         }
-        activeGamePanel = new GamePanel(this, controller, setup.getResolution());
+        activeGamePanel = new GamePanel(this, controller, setup.getResolution(), soundEffectPlayer);
         cardPanel.add(activeGamePanel, ScreenView.GAME.name());
         showView(ScreenView.GAME);
         activeGamePanel.startGameThread();

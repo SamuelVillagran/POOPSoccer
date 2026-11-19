@@ -111,7 +111,7 @@ public class GamePanel extends JPanel implements Runnable {
                 }
                 delta--;
             }
-            if (!optimizeThread()) break;
+            if (!waitForNextFrame(delta, nsInterval)) break;
         }
     }
 
@@ -188,9 +188,14 @@ public class GamePanel extends JPanel implements Runnable {
         g2.dispose();
     }
 
-    private boolean optimizeThread() {
+    private boolean waitForNextFrame(double delta, double nsInterval) {
+        if (delta >= 1.0) {
+            return true; // Continúa sin pausa cuando hay otro frame acumulado por procesar
+        }
+        long remainingMs = (long) (((1.0 - delta) * nsInterval) / 1_000_000L);
+        long sleepMs = Math.max(1L, remainingMs - 1L); // Duerme el tiempo restante hasta el próximo frame para bajar CPU
         try {
-            Thread.sleep(2); // Cede 2 ms de CPU entre iteraciones para evitar saturación del procesador
+            Thread.sleep(sleepMs);
             return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

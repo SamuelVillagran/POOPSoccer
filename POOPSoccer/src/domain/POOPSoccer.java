@@ -65,7 +65,7 @@ public class POOPSoccer implements Serializable {
         this.profileManager.loadIfPresent(player2);
     }
 
-    public static POOPSoccer getGame() {
+    public static synchronized POOPSoccer getGame() {
         if (game == null) {
             game = new POOPSoccer();
         }
@@ -402,24 +402,31 @@ public class POOPSoccer implements Serializable {
      * Returns an immutable thread-safe snapshot of all board elements for the view to render.
      */
     public synchronized List<RenderElementData> getRenderElements() {
-        Map<Integer, Element> elementsToDraw = getElementsToDraw();
-        List<RenderElementData> snapshots = new ArrayList<>(elementsToDraw.size());
-        for (Element elem : elementsToDraw.values()) { // Traduce entidades del dominio a DTOs visuales inmutables
-            if (elem == null || elem.getPosition() == null) continue;
-            snapshots.add(new RenderElementData(
-                    elem.getClass().getSimpleName().toLowerCase(),
-                    elem.getVariantName(),
-                    (int) elem.getX(),
-                    (int) elem.getY(),
-                    (int) elem.getWidth(),
-                    (int) elem.getHeight(),
-                    elem.isPowerActive(),
-                    elem.isStuned(),
-                    elem.getStatusText(),
-                    elem.hasShotAura()
-            ));
+        List<Ball> decoys = decoyBalls.isActive() ? decoyBalls.getBalls() : List.of();
+        List<RenderElementData> snapshots = new ArrayList<>(elements.size() + decoys.size());
+        for (Element elem : elements.values()) { // Traduce entidades del dominio a DTOs visuales inmutables
+            addRenderSnapshot(snapshots, elem);
+        }
+        for (Ball decoy : decoys) {
+            addRenderSnapshot(snapshots, decoy); // Incluye señuelos activos sin clonar el TreeMap en cada frame
         }
         return snapshots;
+    }
+
+    private void addRenderSnapshot(List<RenderElementData> snapshots, Element elem) {
+        if (elem == null || elem.getPosition() == null) return;
+        snapshots.add(new RenderElementData(
+                elem.getClass().getSimpleName().toLowerCase(),
+                elem.getVariantName(),
+                (int) elem.getX(),
+                (int) elem.getY(),
+                (int) elem.getWidth(),
+                (int) elem.getHeight(),
+                elem.isPowerActive(),
+                elem.isStuned(),
+                elem.getStatusText(),
+                elem.hasShotAura()
+        ));
     }
 
     public void startGame(GameMode gameMode, MatchType matchType, int goalLimit,

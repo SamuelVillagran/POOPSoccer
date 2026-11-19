@@ -84,19 +84,25 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
 
     private JButton backBtn;
     private JButton startBtn;
-    private BufferedImage background;
+    private static BufferedImage background; // Imagen de fondo compartida y cacheada en memoria
 
     public PlayerConfig(PlayerConfigListener listener, GameController controller, String mode) {
         this.mode = mode;
         this.listener = listener;
         this.controller = controller;
-        loadBackground();
+        preloadBackground();
         prepareView();
         prepareController();
     }
 
-    private void loadBackground() {
-        try (InputStream is = getClass().getResourceAsStream("/menu/playerconfig.jpg")) {
+    /**
+     * Loads and caches the player configuration background image once for all instances.
+     */
+    public static synchronized void preloadBackground() {
+        if (background != null) {
+            return;
+        }
+        try (InputStream is = PlayerConfig.class.getResourceAsStream("/menu/playerconfig.jpg")) {
             if (is != null) {
                 background = ImageIO.read(is);
             }

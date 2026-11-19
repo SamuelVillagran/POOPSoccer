@@ -30,7 +30,17 @@ public class POOPSoccerGUI implements GameController {
     public void start() {
         if (window != null) {
             window.setVisible(true);
+            preloadStartupResources();
         }
+    }
+
+    private void preloadStartupResources() {
+        Thread preloader = new Thread(() -> {
+            POOPSoccer.getGame(); // Inicializa dominio y SQLite en segundo plano mientras el usuario ve el menú
+            PlayerConfig.preloadBackground(); // Decodifica una sola vez el fondo de configuración en memoria
+        }, "StartupPreloader-Thread");
+        preloader.setDaemon(true);
+        preloader.start();
     }
 
     /**
