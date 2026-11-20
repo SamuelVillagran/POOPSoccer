@@ -6,17 +6,13 @@ import java.util.Map;
 public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     private static final int KICK_ACTIVE_FRAMES = 10; // Duración en frames de la animación y alcance de patada
     private static final int JUMP_HALF_FRAMES = 18; // Frames de subida del salto; el ciclo total dura el doble
-    private static final int STUN_FRAMES = 180; // Duración del aturdimiento: 3 segundos exactos a 60 FPS
     private static final int KICK_COOLDOWN_FRAMES = 30; // Pausa de 0.5 segundos antes de permitir otra patada
+    private static final float FRAME_DELTA_TIME = 1.0f / 60.0f; // Paso temporal fijo por frame (60 FPS)
 
     private static final float BASE_SPEED = 3.0f; // Velocidad horizontal base en píxeles por frame
     private static final float BASE_JUMP = 3.0f; // Estadística base usada en el cálculo de altura de salto
     private static final float BALL_KICK_FORCE = 3.0f; // Impulso constante aplicado al balón al patearlo
     private static final float BASE_KICK_DAMAGE = 10.0f; // Daño base de una patada antes del multiplicador
-    private static final float MAX_POWER = 100.0f; // Capacidad total de la barra de carga de poder
-    private static final int POWER_CHARGE_FRAMES = 600; // Tiempo de recarga completo: 10 segundos a 60 FPS
-    private static final float POWER_RECHARGE_PER_FRAME = MAX_POWER / POWER_CHARGE_FRAMES; // Incremento por frame de la barra de poder
-    private static final float GOAL_CONCEDED_POWER_BONUS = MAX_POWER * 0.25f; // Recarga el 25% de la barra cuando recibe un gol
 
     private int kickCooldown = 0; // Frames restantes antes de poder patear nuevamente
     private boolean kickAlreadyHit = false; // Evita que una misma patada golpee en varios frames consecutivos
@@ -24,13 +20,10 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     private transient boolean kickBallContact = false; // Señal temporal de impacto del pie contra el balón
 
     private final PlayerProfile profile = new PlayerProfile(); // Perfil persistente con puntos, estadísticas e historial
+    private final PlayerHealth health; // Estado de salud y aturdimiento encapsulado
+    private final PowerCharge powerCharge = new PowerCharge(); // Barra de recarga y aura de poder encapsulada
     private String name; // Nombre visible del jugador en la interfaz
     private int goals = 0; // Goles anotados en el partido actual
-    private boolean isStuned; // Indica si el jugador perdió toda su vida y está aturdido
-    private int stunFramesLeft = 0; // Frames restantes para salir del aturdimiento
-    private float currentHealth; // Vida actual antes de quedar aturdido
-    private float currentPower = 0.0f; // Carga actual de la barra de poder (0 a 100)
-    private boolean powerActive = false; // Indica si el jugador activó su aura de poder y espera tocar el balón
     private Team team; // País seleccionado que determina aspecto y tiro de poder
     private int jumpFrames = 0; // Contador de avance dentro de la parábola de salto
     private int kickFrames = 0; // Contador regresivo mientras el pie permanece extendido
@@ -48,7 +41,7 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         }
         this.name = name;
         this.team = team;
-        this.currentHealth = getMaxLife();
+        this.health = new PlayerHealth(getMaxLife());
     }
 
     public PlayerProfile getProfile() {
@@ -56,7 +49,7 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     }
 
     public void restoreFullHealth() {
-        this.currentHealth = getMaxLife(); // Sincroniza la vida actual con el nivel de resistencia del perfil
+        health.restoreFull(getMaxLife()); // Sincroniza la vida actual con el nivel de resistencia del perfil
     }
 
     public void addPoints(int amount) {
@@ -74,7 +67,7 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
      * Executes an action command on this player unless stunned.
      */
     public void execute(PlayerAction action) {
-        if (isStuned || action == null) return; // Bloquea toda acción mientras el jugador está aturdido
+        if (isStuned() || action == null) return; // Bloquea toda acción mientras el jugador está aturdido
         action.execute(this);
     }
 
@@ -110,11 +103,9 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
 
     @Override
     public void update() {
-        if (currentPower < MAX_POWER) {
-            currentPower = Math.min(MAX_POWER, currentPower + POWER_RECHARGE_PER_FRAME); // Recarga la barra gradualmente hasta el 100%
-        }
+        powerCharge.rechargeStep();
         updateEffect();
-        if (updateStun()) return; // Detiene movimiento y acciones mientras dure el aturdimiento
+        if (health.updateStun(getMaxLife())) return; // Detiene movimiento y acciones mientras dure el aturdimiento
         if (type != null) {
             type.action(); // Delega la decisión automática cuando el jugador pertenece a la máquina
         }
@@ -125,22 +116,15 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     }
 
     private void updateEffect() {
-        if (effect != null) {
-            effect.update(1.0f / 60.0f); // Descuenta un frame (1/60 s) del efecto temporal activo
-            if (effect.isFinished()) {
-                effect = null;
+        Effect activeEffect = this.effect;
+        if (activeEffect != null) {
+            activeEffect.update(FRAME_DELTA_TIME); // Descuenta un frame (1/60 s) del efecto temporal activo
+            activeEffect.onTick(this, FRAME_DELTA_TIME);
+            if (this.effect == activeEffect && activeEffect.isFinished()) {
+                this.effect = null;
+                activeEffect.onExpire(this);
             }
         }
-    }
-
-    private boolean updateStun() {
-        if (!isStuned) return false;
-        stunFramesLeft--;
-        if (stunFramesLeft <= 0) {
-            isStuned = false;
-            restoreFullHealth(); // Restaura la vida completa al despertar del aturdimiento
-        }
-        return true;
     }
 
     private void updatePush() {
@@ -167,11 +151,7 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
      * Applies damage to this player. If health drops to zero, triggers stun.
      */
     public void takeDamage(float damage) {
-        if (isStuned) return; // Ignora daño adicional si el jugador ya se encuentra aturdido
-        currentHealth = Math.max(0f, currentHealth - damage);
-        if (currentHealth <= 0f) {
-            isStuned = true;
-            stunFramesLeft = STUN_FRAMES;
+        if (health.takeDamage(damage)) {
             jumpFrames = 0; // Cancela cualquier salto pendiente al caer aturdido
             kickFrames = 0;
             if (groundY >= 0.0f) {
@@ -180,50 +160,70 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         }
     }
 
+    /**
+     * Restores up to the given health amount, clamped to maxLife, unless stunned.
+     */
+    public void heal(float amount) {
+        health.heal(amount, getMaxLife());
+    }
+
+    /**
+     * Adds charge to this player's power bar.
+     */
+    public void addPowerCharge(float amount) {
+        powerCharge.addCharge(amount);
+    }
+
+    /**
+     * Drains charge from this player's power bar.
+     */
+    public void drainPowerCharge(float amount) {
+        powerCharge.drainCharge(amount);
+    }
+
     /** Returns health as a 0.0–1.0 fraction for the HUD bar. */
     public float getHealthPercent() {
-        return currentHealth / getMaxLife();
+        return health.getPercent(getMaxLife());
     }
 
     public float getCurrentHealth() {
-        return currentHealth;
+        return health.getCurrentHealth();
     }
 
     /** Returns power charge as a 0.0–1.0 fraction for the HUD bar. */
     public float getPowerPercent() {
-        return currentPower / MAX_POWER;
+        return powerCharge.getPercent();
     }
 
     public boolean isPowerFull() {
-        return currentPower >= MAX_POWER - 0.001f;
+        return powerCharge.isFull();
     }
 
     @Override
     public boolean isPowerActive() {
-        return powerActive;
+        return powerCharge.isActive();
     }
 
     public void activatePower() {
-        if (isStuned || !isPowerFull() || powerActive) return;
-        powerActive = true;
-        currentPower = 0.0f; // Vacía la barra al instante para reiniciar su recarga de inmediato
+        if (!isStuned()) {
+            powerCharge.activate();
+        }
     }
 
     /** Rule 1: When a player receives a goal, their power bar increases by 1/4 (25%). */
     public void onGoalConceded() {
-        currentPower = Math.min(MAX_POWER, currentPower + GOAL_CONCEDED_POWER_BONUS);
+        powerCharge.onGoalConceded();
     }
 
     public void triggerActivePowerOnBallHit(Ball ball) {
-        if (!powerActive) return;
-        powerActive = false;
+        if (!powerCharge.consumeActive()) return;
         if (team != null && ball != null) {
             team.launchPowerShot(this, ball);
         }
     }
 
     public String getActivePowerName() {
-        if (team == null || !powerActive) return "";
+        if (team == null || !powerCharge.isActive()) return "";
         return team.getPowerName();
     }
 
@@ -330,7 +330,7 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
 
     @Override
     public boolean isStuned() {
-        return isStuned;
+        return health.isStunned();
     }
 
     /** Damage = 10 x kick multiplier. Only the first frame of the kick that reaches the rival counts. */
@@ -368,7 +368,8 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     public void applyEffect(Effect newEffect) {
         if (newEffect != null) {
             effect = newEffect; // Reemplaza el efecto anterior sin acumularlos
-            if (newEffect.launchesIntoAir() && !isStuned && jumpFrames == 0) {
+            newEffect.onApply(this);
+            if (newEffect.launchesIntoAir() && !isStuned() && jumpFrames == 0) {
                 jumpFrames = 1; // Eleva al rival automáticamente cuando el efecto lo lanza por los aires
             }
         }

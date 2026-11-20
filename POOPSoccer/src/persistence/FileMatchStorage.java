@@ -1,7 +1,6 @@
 package persistence;
 
 import domain.MatchStorageGateway;
-import domain.POOPSoccer;
 import domain.POOPSoccerException;
 
 import java.io.File;
@@ -9,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 
 /**
  * File-system serialization adapter implementing MatchStorageGateway for saving and loading matches (.dat).
@@ -21,12 +21,12 @@ public class FileMatchStorage implements MatchStorageGateway { /*Perfeccionado c
     }
 
     @Override
-    public void saveMatch(POOPSoccer match, File file) throws POOPSoccerException {
-        if (match == null || file == null) {
+    public void saveMatch(Serializable matchState, File file) throws POOPSoccerException {
+        if (matchState == null || file == null) {
             throw new POOPSoccerException(POOPSoccerException.INVALID_FILE);
         }
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) { // Serializa la instancia completa del juego
-            out.writeObject(match);
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) { // Serializes the match state
+            out.writeObject(matchState);
         } catch (Exception e) {
             Log.record(e);
             throw new POOPSoccerException(POOPSoccerException.SAVE_ERROR);
@@ -34,12 +34,12 @@ public class FileMatchStorage implements MatchStorageGateway { /*Perfeccionado c
     }
 
     @Override
-    public POOPSoccer loadMatch(File file) throws POOPSoccerException {
-        if (file == null || !file.exists()) {
+    public <T extends Serializable> T loadMatch(File file, Class<T> expectedType) throws POOPSoccerException {
+        if (file == null || !file.exists() || expectedType == null) {
             throw new POOPSoccerException(POOPSoccerException.INVALID_FILE);
         }
-        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) { // Deserializa el partido guardado
-            return (POOPSoccer) in.readObject();
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) { // Deserializes the saved match state
+            return expectedType.cast(in.readObject());
         } catch (Exception e) {
             Log.record(e);
             throw new POOPSoccerException(POOPSoccerException.OPEN_ERROR);

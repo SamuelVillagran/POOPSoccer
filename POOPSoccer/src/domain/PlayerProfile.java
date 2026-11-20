@@ -108,6 +108,42 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
     }
 
     /**
+     * Captures an immutable snapshot of this profile's current progression state.
+     */
+    public PlayerProfileSnapshot toSnapshot(String playerName) {
+        return new PlayerProfileSnapshot(
+                playerName,
+                points,
+                getStatLevel(PlayerStat.SPEED),
+                getStatLevel(PlayerStat.JUMP),
+                getStatLevel(PlayerStat.KICK),
+                getStatLevel(PlayerStat.LIFE),
+                matchesPlayed,
+                wins,
+                goalsFor,
+                goalsAgainst
+        );
+    }
+
+    /**
+     * Applies values from a persisted profile snapshot into this profile.
+     */
+    public void applySnapshot(PlayerProfileSnapshot snapshot) {
+        if (snapshot == null) return;
+        loadProgress(
+                snapshot.points(),
+                snapshot.speedLevel(),
+                snapshot.jumpLevel(),
+                snapshot.kickLevel(),
+                snapshot.lifeLevel(),
+                snapshot.matchesPlayed(),
+                snapshot.wins(),
+                snapshot.goalsFor(),
+                snapshot.goalsAgainst()
+        );
+    }
+
+    /**
      * Resets this profile to initial level 1 values and zero points.
      */
     public void reset() {

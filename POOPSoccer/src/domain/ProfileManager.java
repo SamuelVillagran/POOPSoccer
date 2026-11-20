@@ -2,6 +2,7 @@ package domain;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Optional;
 import java.util.ServiceLoader;
 
 /**
@@ -76,7 +77,7 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
      */
     public void loadIfPresent(Player player) {
         if (dataGateway == null || player == null) return;
-        dataGateway.loadPlayerProgress(player);
+        loadIntoPlayer(player);
         player.restoreFullHealth();
     }
 
@@ -85,8 +86,7 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
      */
     public void restoreProgress(Player current, Player previous) {
         if (current == null) return;
-        if (dataGateway != null && dataGateway.loadPlayerProgress(current)) { // Prioriza los datos almacenados en la base de datos
-            current.restoreFullHealth();
+        if (loadIntoPlayer(current)) {
             return;
         }
         if (previous != null && previous.getName() != null
@@ -101,7 +101,7 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
      */
     public void save(Player player) {
         if (dataGateway != null && player != null) {
-            dataGateway.savePlayerProgress(player); // Persiste puntos, niveles e historial a través del gateway activo
+            dataGateway.savePlayerProfile(player.getProfile().toSnapshot(player.getName()));
         }
     }
 
@@ -111,10 +111,23 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
     public void selectProfile(Player player, String playerName) {
         if (player == null || playerName == null || playerName.isBlank()) return;
         player.setName(playerName.trim());
-        if (dataGateway == null || !dataGateway.loadPlayerProgress(player)) {
+        if (!loadIntoPlayer(player)) {
             player.getProfile().reset(); // Inicializa nivel 1 y 0 puntos si el nombre es nuevo
         }
         player.restoreFullHealth();
+    }
+
+    private boolean loadIntoPlayer(Player player) {
+        if (dataGateway == null || player == null || player.getName() == null || player.getName().isBlank()) {
+            return false;
+        }
+        Optional<PlayerProfileSnapshot> snapshot = dataGateway.loadPlayerProfile(player.getName());
+        if (snapshot.isEmpty()) {
+            return false;
+        }
+        player.getProfile().applySnapshot(snapshot.get());
+        player.restoreFullHealth();
+        return true;
     }
 
     /**

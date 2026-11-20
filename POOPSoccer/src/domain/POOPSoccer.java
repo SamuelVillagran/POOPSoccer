@@ -479,7 +479,7 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
      * Loads a saved match through the configured MatchStorageGateway and restores runtime ports.
      */
     public void open(File file) throws POOPSoccerException {
-        POOPSoccer loadedGame = getMatchStorage().loadMatch(file);
+        POOPSoccer loadedGame = getMatchStorage().loadMatch(file, POOPSoccer.class);
         if (loadedGame == null) {
             throw new POOPSoccerException(POOPSoccerException.OPEN_ERROR);
         }

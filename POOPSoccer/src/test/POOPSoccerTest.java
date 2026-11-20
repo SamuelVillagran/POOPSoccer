@@ -38,9 +38,11 @@ import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1307,22 +1309,157 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     void poopSoccerDelegatesSaveAndOpenThroughMatchStorageGateway() {
         File expectedDir = new File("custom_saves");
         File dummyFile = new File("dummy_match.dat");
-        AtomicReference<POOPSoccer> savedMatch = new AtomicReference<>();
+        AtomicReference<Serializable> savedMatch = new AtomicReference<>();
         AtomicReference<File> savedFile = new AtomicReference<>();
 
         game.setMatchStorageGateway(new MatchStorageGateway() {
             @Override public File getSavesDirectory() { return expectedDir; }
-            @Override public void saveMatch(POOPSoccer match, File file) {
-                savedMatch.set(match);
+            @Override public void saveMatch(Serializable matchState, File file) {
+                savedMatch.set(matchState);
                 savedFile.set(file);
             }
-            @Override public POOPSoccer loadMatch(File file) { return game; }
+            @Override public <T extends Serializable> T loadMatch(File file, Class<T> expectedType) {
+                return expectedType.cast(game);
+            }
         });
 
         assertEquals(expectedDir, game.getSavesDirectory());
         game.save(dummyFile);
         assertEquals(game, savedMatch.get());
         assertEquals(dummyFile, savedFile.get());
+    }
+
+    @Test
+    void playerHealthEncapsulatesDamageStunRecoveryAndHealing() {
+        PlayerHealth health = new PlayerHealth(100f);
+        assertFalse(health.takeDamage(40f));
+        assertEquals(60f, health.getCurrentHealth(), DELTA);
+
+        health.heal(25f, 100f);
+        assertEquals(85f, health.getCurrentHealth(), DELTA);
+        health.heal(50f, 100f);
+        assertEquals(100f, health.getCurrentHealth(), DELTA);
+
+        assertTrue(health.takeDamage(100f));
+        assertTrue(health.isStunned());
+        assertFalse(health.takeDamage(20f));
+        health.heal(50f, 100f);
+        assertEquals(0f, health.getCurrentHealth(), DELTA);
+
+        for (int i = 0; i < 179; i++) {
+            assertTrue(health.updateStun(100f));
+        }
+        assertTrue(health.updateStun(100f));
+        assertFalse(health.isStunned());
+        assertEquals(100f, health.getCurrentHealth(), DELTA);
+    }
+
+    @Test
+    void powerChargeEncapsulatesRechargeActivationBonusAndDrain() {
+        PowerCharge charge = new PowerCharge();
+        assertFalse(charge.activate());
+
+        charge.onGoalConceded();
+        assertEquals(0.25f, charge.getPercent(), DELTA);
+        charge.drainCharge(10f);
+        assertEquals(0.15f, charge.getPercent(), DELTA);
+        charge.drainCharge(50f);
+        assertEquals(0f, charge.getPercent(), DELTA);
+
+        for (int i = 0; i < 600; i++) {
+            charge.rechargeStep();
+        }
+        assertTrue(charge.isFull());
+        assertTrue(charge.activate());
+        assertTrue(charge.isActive());
+        assertEquals(0f, charge.getPercent(), DELTA);
+        assertTrue(charge.consumeActive());
+        assertFalse(charge.isActive());
+    }
+
+    @Test
+    void effectLifecycleHooksRunOnApplyTickAndExpireWithoutModifyingPlayer() {
+        AtomicBoolean expired = new AtomicBoolean(false);
+        Effect hookEffect = new Timed(0.5f) {
+            @Override
+            public void onApply(Player affected) {
+                affected.addPowerCharge(20f);
+            }
+
+            @Override
+            public void onTick(Player affected, float deltaTime) {
+                affected.takeDamage(0.5f);
+            }
+
+            @Override
+            public void onExpire(Player affected) {
+                affected.heal(10f);
+                expired.set(true);
+            }
+        };
+
+        p1.applyEffect(hookEffect);
+        assertEquals(0.20f, p1.getPowerPercent(), DELTA);
+
+        playFrames(30); // 0.5s * 60 FPS = 30 ticks -> 15 dmg then +10 heal = 95 HP
+        assertTrue(expired.get());
+        assertEquals(95f, p1.getCurrentHealth(), 0.1f);
+    }
+
+    @Test
+    void persistenceAdaptersPersistProfileSnapshotsWithoutDomainEntities() throws Exception {
+        File tempCsv = File.createTempFile("snapshot_csv_test", ".csv");
+        tempCsv.deleteOnExit();
+        PlayerDataGateway csvGateway = new persistence.PlayerDatabase(tempCsv);
+
+        PlayerProfileSnapshot csvSnapshot = new PlayerProfileSnapshot("Ana", 750, 2, 3, 4, 5);
+        csvGateway.savePlayerProfile(csvSnapshot);
+
+        Optional<PlayerProfileSnapshot> loadedCsv = csvGateway.loadPlayerProfile(" ana ");
+        assertTrue(loadedCsv.isPresent());
+        assertEquals("Ana", loadedCsv.get().name());
+        assertEquals(750, loadedCsv.get().points());
+        assertEquals(2, loadedCsv.get().speedLevel());
+        assertEquals(3, loadedCsv.get().jumpLevel());
+        assertEquals(4, loadedCsv.get().kickLevel());
+        assertEquals(5, loadedCsv.get().lifeLevel());
+        assertTrue(csvGateway.loadPlayerProfile("UnknownPlayer").isEmpty());
+        assertTrue(csvGateway.loadPlayerProfile("   ").isEmpty());
+        assertThrows(POOPSoccerException.class, () -> csvGateway.savePlayerProfile(null));
+        assertThrows(POOPSoccerException.class,
+                () -> csvGateway.savePlayerProfile(new PlayerProfileSnapshot("  ", 0, 1, 1, 1, 1)));
+
+        File tempDb = File.createTempFile("snapshot_sqlite_test", ".db");
+        tempDb.deleteOnExit();
+        PlayerDataGateway sqliteGateway = new persistence.SQLitePlayerDatabase(tempDb);
+
+        PlayerProfileSnapshot sqliteSnapshot = new PlayerProfileSnapshot(
+                "O'Reilly", 900, 3, 2, 4, 5, 10, 7, 25, 12);
+        sqliteGateway.savePlayerProfile(sqliteSnapshot);
+
+        Optional<PlayerProfileSnapshot> loadedSqlite = sqliteGateway.loadPlayerProfile(" o'reilly ");
+        assertTrue(loadedSqlite.isPresent());
+        assertEquals(sqliteSnapshot, loadedSqlite.get());
+        assertTrue(sqliteGateway.loadPlayerProfile("UnknownPlayer").isEmpty());
+        assertTrue(sqliteGateway.loadPlayerProfile("").isEmpty());
+        assertTrue(sqliteGateway.loadPlayerProfile(null).isEmpty());
+        assertThrows(POOPSoccerException.class, () -> sqliteGateway.savePlayerProfile(null));
+        assertThrows(POOPSoccerException.class,
+                () -> sqliteGateway.savePlayerProfile(new PlayerProfileSnapshot(" ", 0, 1, 1, 1, 1)));
+    }
+
+    @Test
+    void fileMatchStorageRoundTripsGenericSerializableWithoutPOOPSoccer() throws Exception {
+        File tempDat = File.createTempFile("generic_state_test", ".dat");
+        tempDat.deleteOnExit();
+        MatchStorageGateway storage = new persistence.FileMatchStorage();
+
+        ArrayList<String> payload = new ArrayList<>(List.of("round-1", "score-2-1"));
+        storage.saveMatch(payload, tempDat);
+
+        ArrayList<?> restored = storage.loadMatch(tempDat, ArrayList.class);
+        assertEquals(payload, restored);
+        assertThrows(POOPSoccerException.class, () -> storage.loadMatch(tempDat, Integer.class));
     }
 
     private static <T extends Component> List<T> findComponents(Container root, Class<T> type) {

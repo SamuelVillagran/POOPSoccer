@@ -1,6 +1,7 @@
 package domain;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.ServiceLoader;
 
 /**
@@ -10,9 +11,9 @@ public interface MatchStorageGateway { /*Perfeccionado con Antigravity.*/
 
     File getSavesDirectory();
 
-    void saveMatch(POOPSoccer match, File file) throws POOPSoccerException;
+    void saveMatch(Serializable matchState, File file) throws POOPSoccerException;
 
-    POOPSoccer loadMatch(File file) throws POOPSoccerException;
+    <T extends Serializable> T loadMatch(File file, Class<T> expectedType) throws POOPSoccerException;
 
     /**
      * Resolves the default MatchStorageGateway implementation discovered via SPI.

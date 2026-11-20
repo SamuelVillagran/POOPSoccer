@@ -2,6 +2,7 @@ package domain;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Boundary interface (Data Gateway) that decouples domain logic from the database implementation.
@@ -9,14 +10,14 @@ import java.util.List;
 public interface PlayerDataGateway extends Serializable { /*Perfeccionado con Antigravity.*/
 
     /**
-     * Saves the player points and stat levels into the persistence store.
+     * Saves the player profile snapshot into the persistence store.
      */
-    void savePlayerProgress(Player player);
+    void savePlayerProfile(PlayerProfileSnapshot profile);
 
     /**
-     * Loads the stored points and stat levels for the given player if a record exists.
+     * Loads the stored profile snapshot for the given player name if a record exists.
      */
-    boolean loadPlayerProgress(Player player);
+    Optional<PlayerProfileSnapshot> loadPlayerProfile(String playerName);
 
     /**
      * Returns the most recently used human player names stored in the database.

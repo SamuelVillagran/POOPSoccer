@@ -1,8 +1,8 @@
 package persistence;
 
 import domain.POOPSoccerException;
-import domain.Player;
 import domain.PlayerDataGateway;
+import domain.PlayerProfileSnapshot;
 
 import java.io.File;
 import java.sql.Connection;
@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * SQLite database and data mapper implementation for the PlayerDataGateway boundary.
@@ -56,7 +57,7 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
                 updated_at = CURRENT_TIMESTAMP
             """;
     private static final String SELECT_PLAYER_SQL = """
-            SELECT points, speed_level, jump_level, kick_level, life_level,
+            SELECT name, points, speed_level, jump_level, kick_level, life_level,
                    matches_played, wins, goals_for, goals_against
             FROM players
             WHERE profile_key = ?
@@ -84,17 +85,17 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
     }
 
     @Override
-    public void savePlayerProgress(Player player) {
-        if (player == null) {
+    public void savePlayerProfile(PlayerProfileSnapshot profile) {
+        if (profile == null) {
             throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER);
         }
-        if (isInvalidPlayer(player)) {
+        if (isInvalidName(profile.name())) {
             throw new POOPSoccerException(POOPSoccerException.INVALID_PLAYER_NAME);
         }
-        // Inserta o actualiza la fila del jugador usando parámetros seguros contra inyección SQL
+        // Upserts the player row using parameterized SQL to prevent injection
         try (Connection conn = openConnection();
              PreparedStatement stmt = conn.prepareStatement(UPSERT_PLAYER_SQL)) {
-            bindPlayerToStatement(stmt, player);
+            bindSnapshotToStatement(stmt, profile);
             stmt.executeUpdate();
         } catch (SQLException e) {
             Log.record(e);
@@ -102,22 +103,21 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
     }
 
     @Override
-    public boolean loadPlayerProgress(Player player) {
-        if (isInvalidPlayer(player)) return false;
-        // Consulta el perfil por su clave normalizada y carga sus estadísticas en la entidad
+    public Optional<PlayerProfileSnapshot> loadPlayerProfile(String playerName) {
+        if (isInvalidName(playerName)) return Optional.empty();
+        // Queries the profile by its normalized key and maps it into an immutable snapshot
         try (Connection conn = openConnection();
              PreparedStatement stmt = conn.prepareStatement(SELECT_PLAYER_SQL)) {
-            stmt.setString(1, normalizeKey(player.getName()));
+            stmt.setString(1, normalizeKey(playerName));
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    mapResultSetToPlayer(rs, player);
-                    return true;
+                    return Optional.of(mapResultSetToSnapshot(rs));
                 }
             }
         } catch (SQLException e) {
             Log.record(e);
         }
-        return false;
+        return Optional.empty();
     }
 
     @Override
@@ -182,23 +182,23 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
         }
     }
 
-    private void bindPlayerToStatement(PreparedStatement stmt, Player player) throws SQLException {
-        var profile = player.getProfile();
-        stmt.setString(1, normalizeKey(player.getName()));
-        stmt.setString(2, player.getName().trim());
-        stmt.setInt(3, profile.getPoints());
-        stmt.setInt(4, profile.getStatLevel("speed"));
-        stmt.setInt(5, profile.getStatLevel("jump"));
-        stmt.setInt(6, profile.getStatLevel("kick"));
-        stmt.setInt(7, profile.getStatLevel("life"));
-        stmt.setInt(8, profile.getMatchesPlayed());
-        stmt.setInt(9, profile.getWins());
-        stmt.setInt(10, profile.getGoalsFor());
-        stmt.setInt(11, profile.getGoalsAgainst());
+    private void bindSnapshotToStatement(PreparedStatement stmt, PlayerProfileSnapshot profile) throws SQLException {
+        stmt.setString(1, normalizeKey(profile.name()));
+        stmt.setString(2, profile.name().trim());
+        stmt.setInt(3, profile.points());
+        stmt.setInt(4, profile.speedLevel());
+        stmt.setInt(5, profile.jumpLevel());
+        stmt.setInt(6, profile.kickLevel());
+        stmt.setInt(7, profile.lifeLevel());
+        stmt.setInt(8, profile.matchesPlayed());
+        stmt.setInt(9, profile.wins());
+        stmt.setInt(10, profile.goalsFor());
+        stmt.setInt(11, profile.goalsAgainst());
     }
 
-    private void mapResultSetToPlayer(ResultSet rs, Player player) throws SQLException {
-        player.getProfile().loadProgress(
+    private PlayerProfileSnapshot mapResultSetToSnapshot(ResultSet rs) throws SQLException {
+        return new PlayerProfileSnapshot(
+                rs.getString("name"),
                 rs.getInt("points"),
                 rs.getInt("speed_level"),
                 rs.getInt("jump_level"),
@@ -209,11 +209,10 @@ public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a imp
                 rs.getInt("goals_for"),
                 rs.getInt("goals_against")
         );
-        player.restoreFullHealth();
     }
 
-    private boolean isInvalidPlayer(Player player) {
-        return player == null || player.getName() == null || player.getName().isBlank();
+    private boolean isInvalidName(String playerName) {
+        return playerName == null || playerName.isBlank();
     }
 
     private String normalizeKey(String playerName) {

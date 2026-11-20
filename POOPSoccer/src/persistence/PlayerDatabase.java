@@ -1,8 +1,8 @@
 package persistence;
 
 import domain.POOPSoccerException;
-import domain.Player;
 import domain.PlayerDataGateway;
+import domain.PlayerProfileSnapshot;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -11,6 +11,7 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Database and Data Mapper implementation that persists player profiles in a structured table file.
@@ -31,47 +32,46 @@ public class PlayerDatabase implements PlayerDataGateway { /*Perfeccionado con A
     }
 
     @Override
-    public void savePlayerProgress(Player player) {
-        if (player == null) {
+    public void savePlayerProfile(PlayerProfileSnapshot profile) {
+        if (profile == null) {
             throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER);
         }
-        if (player.getName() == null || player.getName().isBlank()) {
+        if (profile.name() == null || profile.name().isBlank()) {
             throw new POOPSoccerException(POOPSoccerException.INVALID_PLAYER_NAME);
         }
-        Map<String, String> records = readAllRecords(); // Carga los registros existentes antes de actualizar el perfil
-        String key = normalizeKey(player.getName());
-        records.put(key, mapPlayerToRow(player));
+        Map<String, String> records = readAllRecords(); // Loads existing records before updating the profile
+        String key = normalizeKey(profile.name());
+        records.put(key, mapSnapshotToRow(profile));
         writeAllRecords(records);
     }
 
     @Override
-    public boolean loadPlayerProgress(Player player) {
-        if (player == null || player.getName() == null || player.getName().isBlank()) {
-            return false;
+    public Optional<PlayerProfileSnapshot> loadPlayerProfile(String playerName) {
+        if (playerName == null || playerName.isBlank()) {
+            return Optional.empty();
         }
         Map<String, String> records = readAllRecords();
-        String row = records.get(normalizeKey(player.getName())); // Busca al jugador ignorando mayúsculas y espacios extras
+        String row = records.get(normalizeKey(playerName)); // Looks up player ignoring case and extra whitespace
         if (row == null) {
-            return false;
+            return Optional.empty();
         }
-        return mapRowToPlayer(row, player);
+        return mapRowToSnapshot(row);
     }
 
-    private String mapPlayerToRow(Player player) {
-        String cleanName = player.getName().trim().replace(";", ","); // Evita que un punto y coma corrompa las columnas del CSV
-        var profile = player.getProfile();
+    private String mapSnapshotToRow(PlayerProfileSnapshot profile) {
+        String cleanName = profile.name().trim().replace(";", ","); // Prevents semicolons from corrupting CSV columns
         return cleanName + ";"
-                + profile.getPoints() + ";"
-                + profile.getStatLevel("speed") + ";"
-                + profile.getStatLevel("jump") + ";"
-                + profile.getStatLevel("kick") + ";"
-                + profile.getStatLevel("life");
+                + profile.points() + ";"
+                + profile.speedLevel() + ";"
+                + profile.jumpLevel() + ";"
+                + profile.kickLevel() + ";"
+                + profile.lifeLevel();
     }
 
-    private boolean mapRowToPlayer(String row, Player player) {
+    private Optional<PlayerProfileSnapshot> mapRowToSnapshot(String row) {
         String[] cols = row.split(";");
         if (cols.length < 6) {
-            return false;
+            return Optional.empty();
         }
         try {
             int points = Integer.parseInt(cols[1].trim());
@@ -79,12 +79,10 @@ public class PlayerDatabase implements PlayerDataGateway { /*Perfeccionado con A
             int jump = Integer.parseInt(cols[3].trim());
             int kick = Integer.parseInt(cols[4].trim());
             int life = Integer.parseInt(cols[5].trim());
-            player.getProfile().loadProgress(points, speed, jump, kick, life); // Restaura puntos y niveles leídos desde disco
-            player.restoreFullHealth();
-            return true;
+            return Optional.of(new PlayerProfileSnapshot(cols[0].trim(), points, speed, jump, kick, life));
         } catch (NumberFormatException e) {
             Log.record(e);
-            return false;
+            return Optional.empty();
         }
     }
 
