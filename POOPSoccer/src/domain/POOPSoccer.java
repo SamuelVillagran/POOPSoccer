@@ -14,47 +14,14 @@ import java.util.TreeMap;
 
 public class POOPSoccer implements Serializable {
 
-    /**
-     * Immutable visual snapshot of a board element exposed for presentation rendering.
-     */
-    public record RenderElementData(
-            String category,
-            String variant,
-            int x,
-            int y,
-            int width,
-            int height,
-            boolean powerAura,
-            boolean stunned,
-            String statusText,
-            boolean shotAura,
-            String shotEffectSprite) {
-        public RenderElementData(
-                String category,
-                String variant,
-                int x,
-                int y,
-                int width,
-                int height,
-                boolean powerAura,
-                boolean stunned,
-                String statusText,
-                boolean shotAura) {
-            this(category, variant, x, y, width, height, powerAura, stunned, statusText, shotAura, "");
-        }
-    }
-
     private static final float DELTA_TIME = 1.0f / 60.0f; // Paso temporal fijo por frame (60 FPS)
 
     private static POOPSoccer game; // Instancia única del motor de juego (Singleton)
     private boolean isPaused; // Detiene la física y el reloj mientras el menú de pausa está abierto
     private Player player1, player2; // Entidades activas del jugador izquierdo y derecho
     private Ball ball; // Balón principal con física y posibles tiros de poder
-    private int goalLimit; // Meta de goles necesaria para ganar cuando se juega por goles
-
-    private MatchType matchType; // Modalidad de victoria: por goles o por tiempo límite
-    private float remainingTimeSeconds; // Segundos restantes del reloj cuando el partido se juega por tiempo
-    private boolean suddenDeath; // Activa el desempate inmediato al primer gol tras agotarse el tiempo
+    private TypeMatch typeMatch; // Estrategia de modalidad de juego activa (PVP, PVM, MVM o extensión)
+    private MatchRule matchRule; // Estrategia de regla de victoria activa (por goles, por tiempo o extensión)
 
     private CollisionChecker cChecker; // Gestor central de colisiones físicas
     private ProfileManager profileManager; // Gestor de perfiles, recompensas y persistencia de progreso
@@ -72,9 +39,11 @@ public class POOPSoccer implements Serializable {
         cChecker = CollisionChecker.getInstance();
         this.profileManager = profileManager;
         goalPlayers = new TreeMap<>();
+        this.typeMatch = new PVP();
+        this.matchRule = new GoalMatch(3);
         String[] defaultNames = this.profileManager.resolveDefaultNames("Jugador 1", "Jugador 2");
-        player1 = new Player(new Normal(), defaultNames[0], Team.COREA_DEL_SUR, NumberPlayer.PLAYER1);
-        player2 = new Player(new Normal(), defaultNames[1], Team.CAMEROON, NumberPlayer.PLAYER2);
+        player1 = this.typeMatch.createPlayer1(defaultNames[0], Team.COREA_DEL_SUR);
+        player2 = this.typeMatch.createPlayer2(defaultNames[1], Team.CAMEROON);
         this.profileManager.loadIfPresent(player1);
         this.profileManager.loadIfPresent(player2);
     }
@@ -89,38 +58,49 @@ public class POOPSoccer implements Serializable {
     public void startGame(String gameMode, String matchType, int goalLimit, int timeLimitMinutes,
                           String nameP1, String teamP1,
                           String nameP2, String teamP2) {
-        startGame(GameMode.fromName(gameMode), MatchType.fromDisplayName(matchType), // Traduce los textos de presentación a enums del dominio
-                goalLimit, timeLimitMinutes, nameP1, teamP1, nameP2, teamP2);
+        MatchRule resolvedRule = MatchType.fromDisplayName(matchType).createMatchRule(goalLimit, timeLimitMinutes);
+        startGame(TypeMatch.fromName(gameMode), resolvedRule, nameP1, teamP1, nameP2, teamP2);
     }
 
     public synchronized void startGame(GameMode gameMode, MatchType matchType, int goalLimit, int timeLimitMinutes,
                                        String nameP1, String teamP1,
                                        String nameP2, String teamP2) {
-        initMatchState(matchType, goalLimit, timeLimitMinutes);
-        initPlayers(gameMode, nameP1, teamP1, nameP2, teamP2);
+        TypeMatch resolvedMode = (gameMode != null ? gameMode : GameMode.PVM).createTypeMatch();
+        MatchRule resolvedRule = (matchType != null ? matchType : MatchType.PER_GOALS)
+                .createMatchRule(goalLimit, timeLimitMinutes);
+        startGame(resolvedMode, resolvedRule, nameP1, teamP1, nameP2, teamP2);
+    }
+
+    public synchronized void startGame(TypeMatch typeMatch, MatchType matchType, int goalLimit, int timeLimitMinutes,
+                                       String nameP1, String teamP1,
+                                       String nameP2, String teamP2) {
+        MatchRule resolvedRule = (matchType != null ? matchType : MatchType.PER_GOALS)
+                .createMatchRule(goalLimit, timeLimitMinutes);
+        startGame(typeMatch, resolvedRule, nameP1, teamP1, nameP2, teamP2);
+    }
+
+    public synchronized void startGame(TypeMatch typeMatch, MatchRule matchRule,
+                                       String nameP1, String teamP1,
+                                       String nameP2, String teamP2) {
+        initMatchState(matchRule);
+        initPlayers(typeMatch, nameP1, teamP1, nameP2, teamP2);
         initFieldElements();
     }
 
-    private void initMatchState(MatchType matchType, int goalLimit, int timeLimitMinutes) {
-        this.goalLimit = goalLimit;
-        this.matchType = matchType;
-        this.remainingTimeSeconds = (matchType == MatchType.PER_TIME) ? timeLimitMinutes * 60f : 0f; // Convierte minutos a segundos
-        this.suddenDeath = false;
+    private void initMatchState(MatchRule matchRule) {
+        this.matchRule = (matchRule != null) ? matchRule : new GoalMatch(3);
         this.isPaused = false;
         this.decoyBalls.clear();
         this.pointsAwarded = false;
     }
 
-    private void initPlayers(GameMode gameMode, String nameP1, String teamP1, String nameP2, String teamP2) {
+    private void initPlayers(TypeMatch typeMatch, String nameP1, String teamP1, String nameP2, String teamP2) {
         Player prevP1 = this.player1;
         Player prevP2 = this.player2;
 
-        Type typeP1 = (gameMode == GameMode.MVM) ? new Machine() : new Normal();
-        Type typeP2 = (gameMode == GameMode.PVP) ? new Normal() : new Machine();
-        String nameP2Final = (nameP2 != null && !nameP2.isBlank()) ? nameP2 : "CPU";
-
-        player1 = new Player(typeP1, nameP1, Team.fromDisplayName(teamP1), NumberPlayer.PLAYER1);
-        player2 = new Player(typeP2, nameP2Final, Team.fromDisplayName(teamP2), NumberPlayer.PLAYER2);
+        this.typeMatch = (typeMatch != null) ? typeMatch : new PVM();
+        player1 = this.typeMatch.createPlayer1(nameP1, Team.fromDisplayName(teamP1));
+        player2 = this.typeMatch.createPlayer2(nameP2, Team.fromDisplayName(teamP2));
         profileManager.restoreProgress(player1, prevP1);
         profileManager.restoreProgress(player2, prevP2);
         profileManager.save(player1);
@@ -140,22 +120,10 @@ public class POOPSoccer implements Serializable {
 
     public synchronized void update() {
         if (isPaused) return;
-        timerUpdate();
+        matchRule.update(DELTA_TIME, player1, player2);
         elementsUpdate();
         collisionsUpdate();
         checkGoal();
-    }
-
-    private void timerUpdate() {
-        if (matchType == MatchType.PER_TIME && !suddenDeath) {
-            remainingTimeSeconds -= DELTA_TIME;
-            if (remainingTimeSeconds <= 0f) {
-                remainingTimeSeconds = 0f;
-                if (player1.getGoals() == player2.getGoals()) {
-                    suddenDeath = true; // Activa muerte súbita si el reloj expira con el marcador empatado
-                }
-            }
-        }
     }
 
     private void elementsUpdate() {
@@ -187,15 +155,15 @@ public class POOPSoccer implements Serializable {
     }
 
     public synchronized void movePlayer1(char direction) {
-        movePlayer(player1, player2, direction);
+        movePlayer(1, player1, player2, direction);
     }
 
     public synchronized void movePlayer2(char direction) {
-        movePlayer(player2, player1, direction);
+        movePlayer(2, player2, player1, direction);
     }
 
-    private void movePlayer(Player mover, Player blocker, char direction) {
-        if (mover != null && !isPaused) {
+    private void movePlayer(int playerNum, Player mover, Player blocker, char direction) {
+        if (mover != null && !isPaused && (typeMatch == null || typeMatch.canControlManually(playerNum))) {
             mover.move(direction);
             if (direction == 'l' || direction == 'r') {
                 cChecker.resolvePlayerMovementCollision(mover, blocker); // Evita atravesar al rival al caminar
@@ -379,25 +347,16 @@ public class POOPSoccer implements Serializable {
     }
 
     public boolean isGameFinished() {
-        if (matchType == MatchType.PER_GOALS) {
-            return player1.getGoals() >= goalLimit || player2.getGoals() >= goalLimit;
-        }
-        if (remainingTimeSeconds <= 0f && !suddenDeath) {
-            return true; // Finaliza al cumplirse el tiempo cuando hay ventaja en el marcador
-        }
-        if (suddenDeath && player1.getGoals() != player2.getGoals()) {
-            return true; // Finaliza al instante en muerte súbita cuando alguien anota el gol decisivo
-        }
-        return false;
+        return matchRule.isFinished(player1, player2);
     }
 
     /** Returns remaining seconds (shown in HUD). */
     public float getRemainingTime() {
-        return remainingTimeSeconds;
+        return matchRule.getRemainingTime();
     }
 
     public boolean isSuddenDeath() {
-        return suddenDeath;
+        return matchRule.isSuddenDeath();
     }
 
     public Map<Integer, Element> getElementsToDraw() {
@@ -483,6 +442,12 @@ public class POOPSoccer implements Serializable {
             } else {
                 loadedGame.profileManager.ensureGatewayConnected(); // Reconecta el gateway si faltaba en el binario guardado
             }
+            if (loadedGame.typeMatch == null) {
+                loadedGame.typeMatch = new PVP();
+            }
+            if (loadedGame.matchRule == null) {
+                loadedGame.matchRule = new GoalMatch(3);
+            }
             game = loadedGame;
         } catch (Exception e) {
             Log.record(e);
@@ -505,4 +470,6 @@ public class POOPSoccer implements Serializable {
     public Player getPlayer1() { return player1; }
     public Player getPlayer2() { return player2; }
     public Ball getBall() { return ball; }
+    public TypeMatch getTypeMatch() { return typeMatch; }
+    public MatchRule getMatchRule() { return matchRule; }
 }

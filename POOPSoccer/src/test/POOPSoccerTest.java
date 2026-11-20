@@ -631,6 +631,248 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
                 "Second bounce should also rise clearly above 40 px off the floor");
     }
 
+    @Test
+    void pvpModeAllowsManualControlForBothPlayers() {
+        assertTrue(game.getTypeMatch() instanceof PVP);
+        assertTrue(game.getTypeMatch().canControlManually(1));
+        assertTrue(game.getTypeMatch().canControlManually(2));
+
+        float p1X = p1.getX();
+        float p2X = p2.getX();
+        game.movePlayer1('r');
+        game.movePlayer2('l');
+
+        assertTrue(p1.getX() > p1X);
+        assertTrue(p2.getX() < p2X);
+
+        float p1XAfter = p1.getX();
+        float p2XAfter = p2.getX();
+        playFrames(20);
+        assertEquals(p1XAfter, p1.getX(), DELTA);
+        assertEquals(p2XAfter, p2.getX(), DELTA);
+    }
+
+    @Test
+    void pvmModeBlocksManualControlOfMachineAndResolvesDefaultCpuName() {
+        game.startGame("PVM", "Por goles", 5, 2,
+                "Ana", "Cameroon", "", "Nigeria");
+        p1 = game.getPlayer1();
+        p2 = game.getPlayer2();
+
+        assertTrue(game.getTypeMatch() instanceof PVM);
+        assertEquals("CPU", p2.getName());
+        assertTrue(game.getTypeMatch().canControlManually(1));
+        assertFalse(game.getTypeMatch().canControlManually(2));
+
+        float p1X = p1.getX();
+        float p2X = p2.getX();
+        game.movePlayer1('r');
+        game.movePlayer2('l');
+
+        assertTrue(p1.getX() > p1X);
+        assertEquals(p2X, p2.getX(), DELTA);
+
+        boolean p2Acted = false;
+        for (int i = 0; i < 30; i++) {
+            game.update();
+            if (p2.getX() != p2X || p2.isJumping() || p2.isKicking()) {
+                p2Acted = true;
+            }
+        }
+        assertTrue(p2Acted);
+    }
+
+    @Test
+    void mvmModeRunsBothPlayersAsMachinesAndBlocksManualInput() {
+        game.startGame(GameMode.MVM, MatchType.PER_GOALS, 5, 2,
+                "", "Cameroon", "", "Nigeria");
+        p1 = game.getPlayer1();
+        p2 = game.getPlayer2();
+
+        assertTrue(game.getTypeMatch() instanceof MVM);
+        assertEquals("CPU 1", p1.getName());
+        assertEquals("CPU 2", p2.getName());
+        assertFalse(game.getTypeMatch().canControlManually(1));
+        assertFalse(game.getTypeMatch().canControlManually(2));
+
+        float p1X = p1.getX();
+        float p2X = p2.getX();
+        game.movePlayer1('r');
+        game.movePlayer2('l');
+        assertEquals(p1X, p1.getX(), DELTA);
+        assertEquals(p2X, p2.getX(), DELTA);
+
+        boolean p1Acted = false;
+        boolean p2Acted = false;
+        for (int i = 0; i < 45; i++) {
+            game.update();
+            if (p1.getX() != p1X || p1.isJumping() || p1.isKicking()) {
+                p1Acted = true;
+            }
+            if (p2.getX() != p2X || p2.isJumping() || p2.isKicking()) {
+                p2Acted = true;
+            }
+        }
+        assertTrue(p1Acted);
+        assertTrue(p2Acted);
+    }
+
+    @Test
+    void customTypeMatchExtendsModesWithoutModifyingPOOPSoccer() {
+        TypeMatch customMode = new MachineVsHumanMode();
+        game.startGame(customMode, MatchType.PER_GOALS, 3, 2,
+                "Bot", "Cameroon", "Human", "Nigeria");
+        p1 = game.getPlayer1();
+        p2 = game.getPlayer2();
+
+        assertTrue(game.getTypeMatch() == customMode);
+        float p1X = p1.getX();
+        float p2X = p2.getX();
+
+        game.movePlayer1('r');
+        game.movePlayer2('l');
+
+        assertEquals(p1X, p1.getX(), DELTA);
+        assertTrue(p2.getX() < p2X);
+    }
+
+    @Test
+    void saveAndOpenPreservesActiveTypeMatch() throws Exception {
+        game.startGame(GameMode.PVM, MatchType.PER_GOALS, 5, 2,
+                "Ana", "Cameroon", "CPU", "Nigeria");
+        java.io.File tempFile = java.io.File.createTempFile("poopsoccer_typematch_test", ".dat");
+        tempFile.deleteOnExit();
+
+        game.save(tempFile);
+        POOPSoccer.resetMatch();
+        POOPSoccer.getGame().open(tempFile);
+
+        POOPSoccer reopened = POOPSoccer.getGame();
+        assertTrue(reopened.getTypeMatch() instanceof PVM);
+        float p2X = reopened.getPlayer2().getX();
+        reopened.movePlayer2('l');
+        assertEquals(p2X, reopened.getPlayer2().getX(), DELTA);
+    }
+
+    private static final class MachineVsHumanMode extends TypeMatch {
+        @Override
+        protected Type createPlayer1Type() {
+            return new Machine();
+        }
+
+        @Override
+        protected Type createPlayer2Type() {
+            return new Normal();
+        }
+
+        @Override
+        public boolean isPlayer1Human() {
+            return false;
+        }
+
+        @Override
+        public boolean isPlayer2Human() {
+            return true;
+        }
+    }
+
+    @Test
+    void goalMatchFinishesOnlyWhenTargetGoalLimitIsReached() {
+        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 2, 1,
+                "Ana", "Cameroon", "Luis", "Nigeria");
+        p1 = game.getPlayer1();
+
+        assertTrue(game.getMatchRule() instanceof GoalMatch);
+        assertEquals(0f, game.getRemainingTime(), DELTA);
+        assertFalse(game.isSuddenDeath());
+        assertFalse(game.isGameFinished());
+
+        p1.doGoal();
+        assertFalse(game.isGameFinished());
+
+        p1.doGoal();
+        assertTrue(game.isGameFinished());
+    }
+
+    @Test
+    void timedMatchCountsDownAndFinishesWhenTimeExpiresWithWinner() {
+        game.startGame(GameMode.PVP, MatchType.PER_TIME, 5, 1,
+                "Ana", "Cameroon", "Luis", "Nigeria");
+        assertTrue(game.getMatchRule() instanceof TimedMatch);
+        assertEquals(60f, game.getRemainingTime(), DELTA);
+
+        game.startGame(new PVP(), new TimedMatch(0.5f),
+                "Ana", "Cameroon", "Luis", "Nigeria");
+        p1 = game.getPlayer1();
+        p1.doGoal();
+        playFrames(35);
+
+        assertEquals(0f, game.getRemainingTime(), DELTA);
+        assertFalse(game.isSuddenDeath());
+        assertTrue(game.isGameFinished());
+    }
+
+    @Test
+    void timedMatchEntersSuddenDeathOnTieAndEndsOnGoldenGoal() {
+        game.startGame(new PVP(), new TimedMatch(0.25f),
+                "Ana", "Cameroon", "Luis", "Nigeria");
+        p1 = game.getPlayer1();
+
+        playFrames(20);
+        assertEquals(0f, game.getRemainingTime(), DELTA);
+        assertTrue(game.isSuddenDeath());
+        assertFalse(game.isGameFinished());
+
+        p1.doGoal();
+        assertTrue(game.isGameFinished());
+    }
+
+    @Test
+    void customMatchRuleExtendsVictoryConditionsWithoutModifyingPOOPSoccer() {
+        MatchRule customRule = new CombinedGoalsRule();
+        game.startGame(new PVP(), customRule,
+                "Ana", "Cameroon", "Luis", "Nigeria");
+        p1 = game.getPlayer1();
+        p2 = game.getPlayer2();
+
+        assertTrue(game.getMatchRule() == customRule);
+        p1.doGoal();
+        assertFalse(game.isGameFinished());
+
+        p2.doGoal();
+        assertTrue(game.isGameFinished());
+    }
+
+    @Test
+    void saveAndOpenPreservesActiveMatchRuleState() throws Exception {
+        game.startGame(new PVP(), new TimedMatch(1.0f),
+                "Ana", "Cameroon", "Luis", "Nigeria");
+        playFrames(15);
+        float expectedRemaining = game.getRemainingTime();
+        assertTrue(expectedRemaining > 0.0f && expectedRemaining < 1.0f);
+
+        java.io.File tempFile = java.io.File.createTempFile("poopsoccer_matchrule_test", ".dat");
+        tempFile.deleteOnExit();
+
+        game.save(tempFile);
+        POOPSoccer.resetMatch();
+        POOPSoccer.getGame().open(tempFile);
+
+        POOPSoccer reopened = POOPSoccer.getGame();
+        assertTrue(reopened.getMatchRule() instanceof TimedMatch);
+        assertEquals(expectedRemaining, reopened.getRemainingTime(), DELTA);
+    }
+
+    private static final class CombinedGoalsRule implements MatchRule {
+        @Override
+        public boolean isFinished(Player player1, Player player2) {
+            if (player1 == null || player2 == null) {
+                return false;
+            }
+            return player1.getGoals() + player2.getGoals() >= 2;
+        }
+    }
+
     private static void deleteRecursively(java.io.File dir) {
         if (dir == null || !dir.exists()) return;
         java.io.File[] children = dir.listFiles();
