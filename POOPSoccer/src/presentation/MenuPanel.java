@@ -9,6 +9,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
@@ -17,17 +18,13 @@ import javax.swing.JPanel;
 /**
  * Main menu screen where the user selects the game mode.
  */
-public class MenuPanel extends JPanel {
+public class MenuPanel extends JPanel { /*Perfeccionado con Antigravity.*/
 
-    private JButton btnPvP;
-    private JButton btnPvM;
-    private JButton btnMvM;
     private BufferedImage background; // Ilustración principal de fondo cargada desde /menu/main.jpg
 
-    public MenuPanel(MenuPanelListener listener) {
+    public MenuPanel(MenuPanelListener listener, List<GameModeOption> modeOptions) {
         loadBackground();
-        prepareElements();
-        prepareActions(listener);
+        prepareElements(listener, modeOptions);
     }
 
     private void loadBackground() {
@@ -48,7 +45,7 @@ public class MenuPanel extends JPanel {
         }
     }
 
-    private void prepareElements() {
+    private void prepareElements(MenuPanelListener listener, List<GameModeOption> modeOptions) {
         setOpaque(false);
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -56,22 +53,16 @@ public class MenuPanel extends JPanel {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(14, 60, 14, 60);
 
-        btnPvP = createButton("Jugador vs Jugador (PvP)");
-        btnPvM = createButton("Jugador vs Máquina (PvM)");
-        btnMvM = createButton("Máquina vs Máquina (MvM)");
-
-        gbc.gridy = 0;
-        add(btnPvP, gbc);
-        gbc.gridy = 1;
-        add(btnPvM, gbc);
-        gbc.gridy = 2;
-        add(btnMvM, gbc);
-    }
-
-    private void prepareActions(MenuPanelListener listener) {
-        btnPvP.addActionListener(e -> listener.onModeSelected("PVP")); // Envía la modalidad sin acoplarse a enums del dominio
-        btnPvM.addActionListener(e -> listener.onModeSelected("PVM"));
-        btnMvM.addActionListener(e -> listener.onModeSelected("MVM"));
+        List<GameModeOption> safeModes = modeOptions != null ? List.copyOf(modeOptions) : List.of();
+        for (int i = 0; i < safeModes.size(); i++) {
+            GameModeOption option = safeModes.get(i);
+            JButton modeButton = createButton(option.displayName());
+            if (listener != null) {
+                modeButton.addActionListener(e -> listener.onModeSelected(option));
+            }
+            gbc.gridy = i;
+            add(modeButton, gbc);
+        }
     }
 
     private JButton createButton(String text) {

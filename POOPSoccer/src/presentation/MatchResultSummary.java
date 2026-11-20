@@ -13,5 +13,5 @@ public record MatchResultSummary(
         String loserName,
         int loserPointsAwarded,
         int loserTotalPoints
-) {
+) { /*Perfeccionado con Antigravity.*/
 }

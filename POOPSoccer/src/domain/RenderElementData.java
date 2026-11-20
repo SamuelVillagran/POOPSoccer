@@ -14,7 +14,7 @@ public record RenderElementData(
         boolean stunned,
         String statusText,
         boolean shotAura,
-        String shotEffectSprite) {
+        String shotEffectSprite) { /*Perfeccionado con Antigravity.*/
     public RenderElementData(
             String category,
             String variant,

@@ -1,6 +1,6 @@
 package domain;
 
-public enum Team {
+public enum Team { /*Perfeccionado con Antigravity.*/
     COREA_DEL_SUR("Corea del Sur", new BlueAura()), // País con tiro veloz y recto que empuja al rival
     CAMEROON("Camerún", new Lightning()), // País con rayo eléctrico que ralentiza y bloquea saltos
     NIGERIA("Nigeria", new Tornado()), // País con remolino rasante que lanza al rival por los aires
@@ -39,7 +39,7 @@ public enum Team {
     public String getDisplayName() { return displayName; }
     public String getSpriteKey() { return spriteKey; }
     public Power getPower() { return power; }
-    public String getPowerName() { return power != null ? power.getName() : "Ninguno"; }
+    public String getPowerName() { return power != null ? power.getName() : ""; }
     public void launchPowerShot(Player owner, Ball ball) {
         if (power != null && ball != null) {
             ball.activatePowerShot(owner, power);

@@ -30,6 +30,7 @@ import javax.swing.SwingUtilities;
  * Arcade-styled modal dialog shown when a match ends, displaying the final score and points summary.
  */
 public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hydrogen 4
+    /*Perfeccionado con Antigravity.*/
 
     private static final Color ROW_BG = new Color(26, 38, 62); // Fondo azul pizarra oscuro de las tarjetas de resumen
     private static final Color LOSER_BORDER = new Color(95, 130, 175); // Borde azul acero suave para el segundo puesto o empate

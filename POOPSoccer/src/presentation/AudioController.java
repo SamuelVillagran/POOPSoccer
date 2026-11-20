@@ -3,7 +3,7 @@ package presentation;
 /**
  * Abstraction for controlling background music and sound effect playback in the presentation layer.
  */
-public interface AudioController {
+public interface AudioController { /*Perfeccionado con Antigravity.*/
 
     /**
      * Plays the specified track in a continuous loop until stopped or replaced.

@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * Base class that defines whether a player is controlled by a person or by the machine.
  */
-public abstract class Type implements Serializable {
+public abstract class Type implements Serializable { /*Perfeccionado con Antigravity.*/
     protected Player player; // Referencia al jugador controlado por esta estrategia
 
     public Type() {

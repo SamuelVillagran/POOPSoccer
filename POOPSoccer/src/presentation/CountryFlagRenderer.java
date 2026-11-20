@@ -8,16 +8,49 @@ import java.awt.geom.Arc2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.text.Normalizer;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Renders crisp vectorized country flags for the HUD without relying on external image assets.
  */
-public final class CountryFlagRenderer {
+public final class CountryFlagRenderer { /*Perfeccionado con Antigravity.*/
+
+    /**
+     * Strategy for painting a country flag inside the given bounds.
+     */
+    @FunctionalInterface
+    public interface FlagPainter {
+        void draw(Graphics2D g2, int x, int y, int width, int height);
+    }
 
     private static final Color FLAG_BORDER = new Color(255, 255, 255, 165); // Contorno blanco sutil alrededor de cada bandera
+    private static final Map<String, FlagPainter> PAINTERS = new HashMap<>(); // Estrategias de dibujo indexadas por nombre normalizado
+
+    static {
+        registerFlag("Corea del Sur", CountryFlagRenderer::drawSouthKorea);
+        registerFlag("Camerún", CountryFlagRenderer::drawCameroon);
+        registerFlag("Nigeria", CountryFlagRenderer::drawNigeria);
+        registerFlag("Estados Unidos", CountryFlagRenderer::drawUsa);
+        registerFlag("Colombia", CountryFlagRenderer::drawColombia);
+    }
 
     private CountryFlagRenderer() {
+    }
+
+    /**
+     * Registers or replaces a flag drawing strategy without modifying the renderer.
+     */
+    public static void registerFlag(String teamName, FlagPainter painter) {
+        String key = normalize(teamName);
+        if (key.isEmpty()) {
+            throw new IllegalArgumentException("El nombre del equipo no puede estar vacío.");
+        }
+        if (painter == null) {
+            throw new IllegalArgumentException("La estrategia de dibujo no puede ser nula.");
+        }
+        PAINTERS.put(key, painter);
     }
 
     /**
@@ -30,14 +63,8 @@ public final class CountryFlagRenderer {
         RoundRectangle2D bounds = new RoundRectangle2D.Float(x, y, width, height, 4, 4); // Recorta la bandera con esquinas suavizadas
         fg.clip(bounds);
 
-        switch (key) {
-            case "coreadelsur" -> drawSouthKorea(fg, x, y, width, height);
-            case "camerun" -> drawCameroon(fg, x, y, width, height);
-            case "nigeria" -> drawNigeria(fg, x, y, width, height);
-            case "estadosunidos" -> drawUsa(fg, x, y, width, height);
-            case "colombia" -> drawColombia(fg, x, y, width, height);
-            default -> drawFallbackFlag(fg, x, y, width, height);
-        }
+        PAINTERS.getOrDefault(key, CountryFlagRenderer::drawFallbackFlag)
+                .draw(fg, x, y, width, height);
 
         fg.setClip(previousClip); // Restaura el área de recorte para dibujar el borde exterior completo
         fg.setColor(FLAG_BORDER);

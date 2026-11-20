@@ -3,7 +3,7 @@ package presentation;
 /**
  * Listener contract for mode selection actions triggered from MenuPanel.
  */
-public interface MenuPanelListener {
+public interface MenuPanelListener { /*Perfeccionado con Antigravity.*/
 
-    void onModeSelected(String mode);
+    void onModeSelected(GameModeOption mode);
 }

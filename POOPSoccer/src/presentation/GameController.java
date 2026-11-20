@@ -6,15 +6,19 @@ import java.util.List;
 /**
  * Presentation controller contract that routes view actions and queries through POOPSoccerGUI.
  */
-public interface GameController {
+public interface GameController { /*Perfeccionado con Antigravity.*/
+
+    List<GameModeOption> getAvailableGameModes();
 
     String[] getAvailableTeams();
 
     String[] getAvailableMachineProfiles();
 
-    String[] getAvailableMatchTypes();
+    List<MatchTypeOption> getAvailableMatchTypes();
 
     String[] getAvailableStats();
+
+    int getMaxStatLevel();
 
     boolean isMachineProfileAvailable(String profileName);
 
@@ -34,7 +38,7 @@ public interface GameController {
 
     boolean upgradePlayerStat(int playerNum, String statName);
 
-    void startGame(String gameMode, String matchType, int goalLimit, int timeLimitMinutes,
+    void startGame(String gameMode, String matchType, int matchLimit,
                    String nameP1, String teamP1, String nameP2, String teamP2);
 
     void saveGame(File file) throws Exception;
@@ -49,9 +53,7 @@ public interface GameController {
 
     void updateGame();
 
-    boolean consumeKickSound();
-
-    boolean consumeKickBallSound();
+    List<String> consumeSoundEvents();
 
     void pauseGame();
 

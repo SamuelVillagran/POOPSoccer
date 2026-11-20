@@ -1,63 +1,128 @@
 package presentation;
 
+import java.awt.Component;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.BitSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.Consumer;
 
 /**
- * Keyboard input handler for both players using a BitSet to track active keys.
+ * Keyboard input handler for both players with extensible key-to-action bindings.
  */
-public class KeyHandler extends KeyAdapter {
+public class KeyHandler extends KeyAdapter implements GameInputSource { /*Perfeccionado con Antigravity.*/
 
     private static KeyHandler instance; // Instancia única compartida para leer el estado simultáneo del teclado
     private final BitSet keys = new BitSet(); // Registra un bit activo por cada código de tecla presionado
-    private boolean escToggle = false; // Recuerda una pulsación única de Escape para abrir el menú de pausa
+    private final Map<Integer, Consumer<GameController>> keyBindings = new LinkedHashMap<>();
+    private int pauseKeyCode = KeyEvent.VK_ESCAPE;
+    private boolean escToggle = false; // Recuerda una pulsación única de pausa para abrir el menú
 
-    private KeyHandler() {}
+    public KeyHandler() {
+        registerDefaultBindings();
+    }
 
-    public static KeyHandler getInstance() {
+    public static synchronized KeyHandler getInstance() {
         if (instance == null) {
             instance = new KeyHandler();
         }
         return instance;
     }
 
+    private void registerDefaultBindings() {
+        bindKey(KeyEvent.VK_W, controller -> controller.movePlayer1('j'));
+        bindKey(KeyEvent.VK_S, controller -> controller.movePlayer1('k'));
+        bindKey(KeyEvent.VK_A, controller -> controller.movePlayer1('l'));
+        bindKey(KeyEvent.VK_D, controller -> controller.movePlayer1('r'));
+        bindKey(KeyEvent.VK_Q, controller -> controller.movePlayer1('p'));
+
+        bindKey(KeyEvent.VK_UP, controller -> controller.movePlayer2('j'));
+        bindKey(KeyEvent.VK_DOWN, controller -> controller.movePlayer2('k'));
+        bindKey(KeyEvent.VK_LEFT, controller -> controller.movePlayer2('l'));
+        bindKey(KeyEvent.VK_RIGHT, controller -> controller.movePlayer2('r'));
+        bindKey(KeyEvent.VK_CONTROL, controller -> controller.movePlayer2('p'));
+    }
+
+    /**
+     * Registers or replaces the action bound to the given key code.
+     */
+    public synchronized KeyHandler bindKey(int keyCode, Consumer<GameController> action) {
+        if (action == null) {
+            throw new IllegalArgumentException("Key action cannot be null.");
+        }
+        keyBindings.put(keyCode, action);
+        return this;
+    }
+
+    public synchronized KeyHandler unbindKey(int keyCode) {
+        keyBindings.remove(keyCode);
+        return this;
+    }
+
+    public synchronized KeyHandler setPauseKey(int keyCode) {
+        this.pauseKeyCode = keyCode;
+        return this;
+    }
+
+    public synchronized boolean isKeyPressed(int keyCode) {
+        return keys.get(keyCode);
+    }
+
     @Override
-    public void keyPressed(KeyEvent e) {
+    public synchronized void keyPressed(KeyEvent e) {
         keys.set(e.getKeyCode()); // Marca la tecla como activa mientras permanezca presionada
     }
 
     @Override
-    public void keyReleased(KeyEvent e) {
+    public synchronized void keyReleased(KeyEvent e) {
         int code = e.getKeyCode();
         keys.clear(code); // Libera la tecla al soltarla
 
-        if (code == KeyEvent.VK_ESCAPE) {
-            escToggle = true; // Dispara la solicitud de pausa al soltar Escape para evitar rebotes repetidos
+        if (code == pauseKeyCode) {
+            escToggle = true; // Dispara la solicitud de pausa al soltar la tecla para evitar rebotes repetidos
         }
     }
 
-    public boolean consumeEscToggle() {
+    @Override
+    public synchronized void dispatchInputs(GameController controller) {
+        if (controller == null) {
+            return;
+        }
+        for (Map.Entry<Integer, Consumer<GameController>> binding : keyBindings.entrySet()) {
+            if (keys.get(binding.getKey())) {
+                binding.getValue().accept(controller);
+            }
+        }
+    }
+
+    @Override
+    public synchronized boolean consumePauseTrigger() {
         boolean fired = escToggle;
         escToggle = false; // Limpia la bandera al instante para procesar cada pausa una sola vez
         return fired;
     }
 
     /** Clears all pressed keys to prevent stuck inputs when focus is lost or paused. */
-    public void clearAllKeys() {
+    @Override
+    public synchronized void clearInputs() {
         keys.clear();
         escToggle = false;
     }
 
-    public boolean getW() { return keys.get(KeyEvent.VK_W); } // Tecla W para el salto del Jugador 1
-    public boolean getS() { return keys.get(KeyEvent.VK_S); } // Tecla S para la patada del Jugador 1
-    public boolean getA() { return keys.get(KeyEvent.VK_A); } // Tecla A para mover al Jugador 1 a la izquierda
-    public boolean getD() { return keys.get(KeyEvent.VK_D); } // Tecla D para mover al Jugador 1 a la derecha
-    public boolean getQ() { return keys.get(KeyEvent.VK_Q); } // Tecla Q para activar el poder del Jugador 1
+    @Override
+    public void attachTo(Component component) {
+        if (component != null) {
+            component.removeKeyListener(this);
+            component.addKeyListener(this);
+        }
+    }
 
-    public boolean getUp() { return keys.get(KeyEvent.VK_UP); } // Flecha Arriba para el salto del Jugador 2
-    public boolean getDown() { return keys.get(KeyEvent.VK_DOWN); } // Flecha Abajo para la patada del Jugador 2
-    public boolean getLeft() { return keys.get(KeyEvent.VK_LEFT); } // Flecha Izquierda para mover al Jugador 2
-    public boolean getRight() { return keys.get(KeyEvent.VK_RIGHT); } // Flecha Derecha para mover al Jugador 2
-    public boolean getCtrlRight() { return keys.get(KeyEvent.VK_CONTROL); } // Tecla Ctrl para activar el poder del Jugador 2
+    public boolean consumeEscToggle() {
+        return consumePauseTrigger();
+    }
+
+    public void clearAllKeys() {
+        clearInputs();
+    }
 }

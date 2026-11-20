@@ -1,6 +1,6 @@
 package domain;
 
-public class Unconscious extends Timed {
+public class Unconscious extends Timed { /*Perfeccionado con Antigravity.*/
     public Unconscious() { super(3f); } // Deja inconsciente al rival durante 3 segundos (Nigeria)
     @Override public boolean canJump() { return false; } // Bloquea el salto durante la inconsciencia
     @Override public boolean canKick() { return false; } // Impide patear mientras dura el efecto

@@ -10,6 +10,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.KeyEvent;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -25,37 +26,65 @@ import javax.swing.SwingUtilities;
  * Arcade-styled modal pause dialog shown over the pitch when pressing Escape.
  */
 public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
+    /*Perfeccionado con Antigravity.*/
 
-    public enum Choice {
-        RESUME, // Reanuda el partido desde el punto exacto donde se pausó
-        RESTART, // Reinicia el marcador y vuelve a lanzar el partido actual
-        MENU // Abandona la cancha actual y regresa al menú principal
+    /**
+     * Declarative option entry rendered as a button inside the pause menu.
+     */
+    public record PauseOption(String label, Color color, Runnable action) {
+        public PauseOption {
+            if (label == null || label.isBlank()) {
+                throw new IllegalArgumentException("Pause option label cannot be blank.");
+            }
+            if (color == null) {
+                throw new IllegalArgumentException("Pause option color cannot be null.");
+            }
+            if (action == null) {
+                throw new IllegalArgumentException("Pause option action cannot be null.");
+            }
+        }
     }
 
-    private static final Color BTN_RESTART = new Color(225, 110, 12); // Naranja vibrante para la opción de reinicio
-    private static final Color BTN_MENU = new Color(205, 42, 48); // Rojo intenso para salir al menú principal
+    static final Color BTN_RESTART = new Color(225, 110, 12); // Naranja vibrante para la opción de reinicio
+    static final Color BTN_MENU = new Color(205, 42, 48); // Rojo intenso para salir al menú principal
 
-    private Choice selectedChoice = Choice.RESUME; // Valor seguro por defecto si el diálogo se cierra con Escape
+    private Runnable selectedAction;
 
-    private PauseDialog(Component owner, String scoreText) {
-        super(SwingUtilities.getWindowAncestor(owner), ModalityType.APPLICATION_MODAL);
+    private PauseDialog(Component owner, String scoreText, List<PauseOption> options, Runnable onCancel) {
+        super(owner != null ? SwingUtilities.getWindowAncestor(owner) : null, ModalityType.APPLICATION_MODAL);
+        this.selectedAction = onCancel;
         ArcadeUIStyle.configureModalDialog(this);
-        setContentPane(buildCardPanel(scoreText));
+        setContentPane(buildCardPanel(scoreText, options));
         pack();
         setLocationRelativeTo(owner);
-        registerEscapeKey();
+        registerEscapeKey(onCancel);
     }
 
     /**
-     * Opens the modal pause menu centered on the owner component and returns the user's choice.
+     * Builds the pause dialog without displaying it yet so callers or tests can configure or inspect it.
      */
-    public static Choice showDialog(Component owner, String scoreText) {
-        PauseDialog dialog = new PauseDialog(owner, scoreText);
-        dialog.setVisible(true);
-        return dialog.selectedChoice;
+    public static PauseDialog createDialog(Component owner, String scoreText,
+                                           List<PauseOption> options, Runnable onCancel) {
+        return new PauseDialog(owner, scoreText, options, onCancel);
     }
 
-    private JPanel buildCardPanel(String scoreText) {
+    /**
+     * Opens the modal pause menu centered on the owner component and executes the chosen action.
+     */
+    public static void showDialog(Component owner, String scoreText,
+                                  List<PauseOption> options, Runnable onCancel) {
+        PauseDialog dialog = createDialog(owner, scoreText, options, onCancel);
+        dialog.setVisible(true);
+        dialog.executeSelectedAction();
+    }
+
+    public void executeSelectedAction() {
+        if (selectedAction != null) {
+            selectedAction.run();
+        }
+    }
+
+    private JPanel buildCardPanel(String scoreText, List<PauseOption> options) {
         JPanel card = new JPanel(new GridBagLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -81,12 +110,11 @@ public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
         card.add(buildScoreBadge(scoreText), gbc);
 
         gbc.insets = new Insets(5, 0, 5, 0);
-        gbc.gridy = 2;
-        card.add(createActionButton("Continuar", ArcadeUIStyle.BTN_GREEN, Choice.RESUME), gbc);
-        gbc.gridy = 3;
-        card.add(createActionButton("Reiniciar", BTN_RESTART, Choice.RESTART), gbc);
-        gbc.gridy = 4;
-        card.add(createActionButton("Volver al menú", BTN_MENU, Choice.MENU), gbc);
+        List<PauseOption> safeOptions = options != null ? List.copyOf(options) : List.of();
+        for (int i = 0; i < safeOptions.size(); i++) {
+            gbc.gridy = 2 + i;
+            card.add(createActionButton(safeOptions.get(i)), gbc);
+        }
         return card;
     }
 
@@ -108,26 +136,26 @@ public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
         return holder;
     }
 
-    private JButton createActionButton(String text, Color baseColor, Choice choice) {
-        JButton btn = new JButton(text) {
+    private JButton createActionButton(PauseOption option) {
+        JButton btn = new JButton(option.label()) {
             @Override
             protected void paintComponent(Graphics g) {
-                ArcadeUIStyle.paintArcadeButton(g, this, baseColor, 16);
+                ArcadeUIStyle.paintArcadeButton(g, this, option.color(), 16);
                 super.paintComponent(g);
             }
         };
         ArcadeUIStyle.configureCleanButton(btn, new Font("Arial", Font.BOLD, 15), new Dimension(228, 40));
         btn.addActionListener(e -> {
-            selectedChoice = choice; // Registra la elección pulsada y cierra el diálogo modal
+            selectedAction = option.action();
             dispose();
         });
         return btn;
     }
 
-    private void registerEscapeKey() {
+    private void registerEscapeKey(Runnable onCancel) {
         getRootPane().registerKeyboardAction(
                 e -> {
-                    selectedChoice = Choice.RESUME; // Reanuda al instante si se presiona Escape por segunda vez
+                    selectedAction = onCancel;
                     dispose();
                 },
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),

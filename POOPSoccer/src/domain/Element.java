@@ -2,7 +2,7 @@ package domain;
 
 import java.io.Serializable;
 
-public interface Element extends Serializable {
+public interface Element extends Serializable { /*Perfeccionado con Antigravity.*/
     float getWidth();
     float getHeight();
     Vector2D getPosition();

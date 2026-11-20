@@ -1,6 +1,9 @@
 package domain;
 
-public class Player extends ItemSoccer {
+import java.util.List;
+import java.util.Map;
+
+public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     private static final int KICK_ACTIVE_FRAMES = 10; // Duración en frames de la animación y alcance de patada
     private static final int JUMP_HALF_FRAMES = 18; // Frames de subida del salto; el ciclo total dura el doble
     private static final int STUN_FRAMES = 180; // Duración del aturdimiento: 3 segundos exactos a 60 FPS
@@ -17,8 +20,8 @@ public class Player extends ItemSoccer {
 
     private int kickCooldown = 0; // Frames restantes antes de poder patear nuevamente
     private boolean kickAlreadyHit = false; // Evita que una misma patada golpee en varios frames consecutivos
-    private transient boolean pendingKickStarted = false; // Señal temporal para reproducir sonido de patada al aire
-    private transient boolean pendingKickBallImpact = false; // Señal temporal para reproducir sonido de golpe al balón
+    private transient boolean kickPerformed = false; // Señal temporal de patada ejecutada en el último paso
+    private transient boolean kickBallContact = false; // Señal temporal de impacto del pie contra el balón
 
     private final PlayerProfile profile = new PlayerProfile(); // Perfil persistente con puntos, estadísticas e historial
     private String name; // Nombre visible del jugador en la interfaz
@@ -60,21 +63,33 @@ public class Player extends ItemSoccer {
         profile.addPoints(amount);
     }
 
+    /**
+     * Executes a registered command matching the given legacy input character.
+     */
     public void move(char direction) {
-        if (isStuned) return; // Bloquea toda acción mientras el jugador está aturdido
-        if (effect != null && effect.getSpeedFactor() <= 0.0f && (direction == 'r' || direction == 'l')) {
-            return; // Impide caminar si el efecto actual inmoviliza al jugador
-        }
-        int moveSpeed = Math.round(getSpeed());
-        switch (direction) {
-            case 'r' -> move(moveSpeed, 0);
-            case 'l' -> move(-moveSpeed, 0);
-            case 'j' -> jump();
-            case 'k' -> kick();
-            case 'p' -> activatePower();
-            default -> {}
-        }
+        execute(DEFAULT_ACTIONS.get(direction));
     }
+
+    /**
+     * Executes an action command on this player unless stunned.
+     */
+    public void execute(PlayerAction action) {
+        if (isStuned || action == null) return; // Bloquea toda acción mientras el jugador está aturdido
+        action.execute(this);
+    }
+
+    private void moveHorizontal(int directionSign) {
+        if (effect != null && effect.getSpeedFactor() <= 0.0f) return; // Impide caminar si el efecto actual inmoviliza al jugador
+        move(directionSign * Math.round(getSpeed()), 0);
+    }
+
+    private static final Map<Character, PlayerAction> DEFAULT_ACTIONS = Map.of(
+            'r', p -> p.moveHorizontal(1), // Desplaza a la derecha
+            'l', p -> p.moveHorizontal(-1), // Desplaza a la izquierda
+            'j', Player::jump, // Salta
+            'k', Player::kick, // Patea
+            'p', Player::activatePower // Activa el poder
+    );
 
     private void kick() {
         if (effect != null && !effect.canKick()) return;
@@ -82,7 +97,7 @@ public class Player extends ItemSoccer {
             kickFrames = KICK_ACTIVE_FRAMES;
             kickCooldown = KICK_COOLDOWN_FRAMES;
             kickAlreadyHit = false; // Reinicia el permiso de impacto para la nueva patada
-            pendingKickStarted = true;
+            kickPerformed = true;
         }
     }
 
@@ -208,7 +223,7 @@ public class Player extends ItemSoccer {
     }
 
     public String getActivePowerName() {
-        if (team == null || !powerActive) return "Ninguno";
+        if (team == null || !powerActive) return "";
         return team.getPowerName();
     }
 
@@ -283,7 +298,6 @@ public class Player extends ItemSoccer {
 
     @Override
     public String getStatusText() {
-        if (isStuned) return "¡ATURDIDO!";
         return (effect != null && !effect.isFinished()) ? effect.getClass().getSimpleName() : ""; // Muestra el nombre del efecto activo
     }
 
@@ -330,21 +344,25 @@ public class Player extends ItemSoccer {
     public void markKickUsed() {
         if (!kickAlreadyHit) {
             kickAlreadyHit = true;
-            pendingKickBallImpact = true;
-            pendingKickStarted = false;
+            kickBallContact = true;
+            kickPerformed = false;
         }
     }
 
-    public boolean consumePendingKickStarted() {
-        boolean pending = pendingKickStarted;
-        pendingKickStarted = false;
-        return pending;
-    }
-
-    public boolean consumePendingKickBallImpact() {
-        boolean pending = pendingKickBallImpact;
-        pendingKickBallImpact = false;
-        return pending;
+    /**
+     * Appends pending gameplay interaction events produced by this player and clears internal flags.
+     */
+    public void drainMatchEvents(List<MatchEvent> out) {
+        if (out == null) {
+            return;
+        }
+        if (kickBallContact) {
+            out.add(MatchEvent.BALL_KICKED);
+        } else if (kickPerformed) {
+            out.add(MatchEvent.KICK_SWING);
+        }
+        kickBallContact = false;
+        kickPerformed = false;
     }
 
     public void applyEffect(Effect newEffect) {

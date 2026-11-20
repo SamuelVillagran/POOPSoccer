@@ -19,6 +19,8 @@ import java.awt.Toolkit;
 import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractButton;
@@ -44,6 +46,7 @@ import javax.swing.plaf.basic.ComboPopup;
  * Configuration screen for players, stats upgrades, match type, and pitch resolution.
  */
 public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hydrogen 4
+    /*Perfeccionado con Antigravity.*/
 
     private static final Color CARD_BG = new Color(18, 28, 48, 232); // Fondo azul marino traslúcido de la tarjeta principal
     private static final Color CARD_BORDER = ArcadeUIStyle.CARD_BORDER; // Borde dorado compartido con los diálogos arcade
@@ -63,9 +66,16 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     private static final Font FONT_LABEL = new Font("Arial", Font.BOLD, 12);
     private static final Font FONT_INPUT = new Font("Arial", Font.PLAIN, 13);
 
-    private final String mode;
+    private static final List<ResolutionOption> DEFAULT_RESOLUTIONS = List.of(
+            new ResolutionOption("Pequeña (1/4 de pantalla)", 0.25, 0.35),
+            new ResolutionOption("Mediana (1/2 de pantalla)", 0.50, 0.60),
+            new ResolutionOption("Grande (3/4 de pantalla)", 0.75, 0.78)
+    );
+
+    private final GameModeOption mode;
     private final PlayerConfigListener listener;
     private final GameController controller;
+    private final List<ResolutionOption> resolutionOptions;
 
     private JTextField nameFieldP1;
     private JComboBox<String> countryComboP1;
@@ -74,22 +84,28 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     private JComboBox<String> countryComboP2;
     private JComboBox<String> machineProfileComboP2;
 
-    private JComboBox<String> matchTypeCombo; // Selector entre partido por goles o por tiempo
+    private JComboBox<MatchTypeOption> matchTypeCombo;
     private JLabel limitLabel;
-    private JComboBox<Integer> goalLimitCombo;
-    private JComboBox<Integer> timeLimitCombo;
+    private JComboBox<Integer> limitCombo;
     private JPanel limitComboHolder;
-    private JComboBox<String> resolutionCombo;
-    private Dimension[] screenResolutions;
+    private JComboBox<ResolutionOption> resolutionCombo;
 
     private JButton backBtn;
     private JButton startBtn;
     private static BufferedImage background; // Imagen de fondo compartida y cacheada en memoria
 
-    public PlayerConfig(PlayerConfigListener listener, GameController controller, String mode) {
-        this.mode = mode;
+    public PlayerConfig(PlayerConfigListener listener, GameController controller, GameModeOption mode) {
+        this(listener, controller, mode, DEFAULT_RESOLUTIONS);
+    }
+
+    public PlayerConfig(PlayerConfigListener listener, GameController controller, GameModeOption mode,
+                        List<ResolutionOption> resolutions) {
+        this.mode = mode != null ? mode : new GameModeOption("PVM", "Jugador vs Máquina (PvM)", false, true);
         this.listener = listener;
         this.controller = controller;
+        this.resolutionOptions = (resolutions != null && !resolutions.isEmpty())
+                ? List.copyOf(resolutions)
+                : DEFAULT_RESOLUTIONS;
         preloadBackground();
         prepareView();
         prepareController();
@@ -179,10 +195,8 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     }
 
     private void prepareViewPlayers(JPanel formCard, GridBagConstraints gbc) {
-        boolean isP1Machine = "MVM".equals(mode);
-        boolean isP2Machine = "PVM".equals(mode) || "MVM".equals(mode);
-        addPlayerSection(formCard, gbc, 1, isP1Machine, P1_TITLE_COLOR, P1_BTN_BG, 0);
-        addPlayerSection(formCard, gbc, 2, isP2Machine, P2_TITLE_COLOR, P2_BTN_BG, 4);
+        addPlayerSection(formCard, gbc, 1, mode.isMachine(1), P1_TITLE_COLOR, P1_BTN_BG, 0);
+        addPlayerSection(formCard, gbc, 2, mode.isMachine(2), P2_TITLE_COLOR, P2_BTN_BG, 4);
     }
 
     private void addPlayerSection(JPanel formCard, GridBagConstraints gbc, int playerNum,
@@ -396,7 +410,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     }
 
     private boolean isStatUpgradeAffordable(int playerNum, String statName) {
-        return controller.getPlayerStatLevel(playerNum, statName) < 10
+        return controller.getPlayerStatLevel(playerNum, statName) < controller.getMaxStatLevel()
                 && controller.getPlayerPoints(playerNum) >= controller.getPlayerUpgradeCost(playerNum, statName);
     }
 
@@ -404,7 +418,9 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
                                         JButton[] allButtons, String[] stats) {
         if (!controller.upgradePlayerStat(playerNum, statName)) {
             int cost = controller.getPlayerUpgradeCost(playerNum, statName);
-            JOptionPane.showMessageDialog(this, "Necesitás " + cost + " puntos (o ya está al máximo nivel 10).");
+            int maxLevel = controller.getMaxStatLevel();
+            JOptionPane.showMessageDialog(this,
+                    "Necesitas " + cost + " puntos (o ya está al máximo nivel " + maxLevel + ").");
         }
         pointsLbl.setText(formatProfileSummary(playerNum));
         refreshStatButtons(allButtons, playerNum, stats);
@@ -413,8 +429,9 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     private void updateStatButtonText(JButton btn, int playerNum, String statName) {
         int lvl = controller.getPlayerStatLevel(playerNum, statName);
         int cost = controller.getPlayerUpgradeCost(playerNum, statName);
+        int maxLevel = controller.getMaxStatLevel();
         btn.setText(statName + " Nv." + lvl + " (+)");
-        btn.setToolTipText(lvl < 10 ? "Mejorar por " + cost + " pts" : "Nivel máximo (10)");
+        btn.setToolTipText(lvl < maxLevel ? "Mejorar por " + cost + " pts" : "Nivel máximo (" + maxLevel + ")");
         btn.repaint();
     }
 
@@ -431,21 +448,24 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     }
 
     private void initMatchCombos() {
-        matchTypeCombo = createStyledComboBox(controller.getAvailableMatchTypes());
-        goalLimitCombo = createStyledComboBox(new Integer[] { 3, 5, 7 });
-        timeLimitCombo = createStyledComboBox(new Integer[] { 1, 2, 3, 5 });
-        limitLabel = createDarkLabel("Goles para ganar:");
+        List<MatchTypeOption> matchTypes = controller.getAvailableMatchTypes();
+        MatchTypeOption[] typeArray = matchTypes != null
+                ? matchTypes.toArray(MatchTypeOption[]::new)
+                : new MatchTypeOption[0];
+        matchTypeCombo = createStyledComboBox(typeArray);
+        limitLabel = createDarkLabel("");
+        limitCombo = createStyledComboBox(new Integer[0]);
         limitComboHolder = new JPanel(new BorderLayout());
         limitComboHolder.setOpaque(false);
-        limitComboHolder.add(goalLimitCombo, BorderLayout.CENTER);
+        limitComboHolder.add(limitCombo, BorderLayout.CENTER);
+        onMatchTypeChanged();
 
-        screenResolutions = buildScreenResolutions();
-        resolutionCombo = createStyledComboBox(new String[] {
-                "Pequeña (1/4 de pantalla)",
-                "Mediana (1/2 de pantalla)",
-                "Grande (3/4 de pantalla)"
-        });
-        resolutionCombo.setSelectedIndex(1);
+        resolutionCombo = createStyledComboBox(resolutionOptions.toArray(ResolutionOption[]::new));
+        if (resolutionOptions.size() > 1) {
+            resolutionCombo.setSelectedIndex(1);
+        } else if (!resolutionOptions.isEmpty()) {
+            resolutionCombo.setSelectedIndex(0);
+        }
     }
 
     private void addMatchSettingsGrid(JPanel formCard, GridBagConstraints gbc) {
@@ -564,19 +584,6 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         return isSelected ? COMBO_HOVER_BG : FIELD_BG;
     }
 
-    private Dimension[] buildScreenResolutions() {
-        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize(); // Lee la resolución física real del monitor
-        double[] widthScales = { 0.25, 0.50, 0.75 }; // Proporciones de ancho respecto a la pantalla (1/4, 1/2, 3/4)
-        double[] heightScales = { 0.35, 0.60, 0.78 }; // Proporciones de alto adaptadas para encajar con el HUD
-        Dimension[] dims = new Dimension[widthScales.length];
-        for (int i = 0; i < widthScales.length; i++) {
-            int w = (int) Math.round(screen.width * widthScales[i]);
-            int h = (int) Math.round(screen.height * heightScales[i]);
-            dims[i] = new Dimension(w, h);
-        }
-        return dims;
-    }
-
     private void prepareViewTopBar() {
         backBtn = createBackArrowButton();
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -650,10 +657,19 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     }
 
     private void onMatchTypeChanged() {
-        boolean isPerGoals = matchTypeCombo.getSelectedIndex() == 0;
-        limitLabel.setText(isPerGoals ? "Goles para ganar:" : "Minutos del partido:");
-        limitComboHolder.removeAll();
-        limitComboHolder.add(isPerGoals ? goalLimitCombo : timeLimitCombo, BorderLayout.CENTER);
+        MatchTypeOption selected = (MatchTypeOption) matchTypeCombo.getSelectedItem();
+        limitCombo.removeAllItems();
+        boolean hasParameter = selected != null && selected.hasParameter();
+        if (hasParameter) {
+            limitLabel.setText(selected.parameterLabel());
+            for (Integer option : selected.parameterOptions()) {
+                limitCombo.addItem(option);
+            }
+        } else {
+            limitLabel.setText("");
+        }
+        limitLabel.setVisible(hasParameter);
+        limitCombo.setVisible(hasParameter);
         limitComboHolder.revalidate();
         limitComboHolder.repaint();
     }
@@ -674,11 +690,13 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     private void launchConfiguredMatch(String p1Name, String p2Name) {
         String p1Country = (String) countryComboP1.getSelectedItem();
         String p2Country = (String) countryComboP2.getSelectedItem();
-        String selectedMatchType = (String) matchTypeCombo.getSelectedItem();
-        int goalLimit = (Integer) goalLimitCombo.getSelectedItem();
-        int timeLimit = (Integer) timeLimitCombo.getSelectedItem();
+        MatchTypeOption selectedOption = (MatchTypeOption) matchTypeCombo.getSelectedItem();
+        String selectedMatchType = selectedOption != null ? selectedOption.displayName() : "";
+        int matchLimit = (selectedOption != null && selectedOption.hasParameter() && limitCombo.getSelectedItem() != null)
+                ? (Integer) limitCombo.getSelectedItem()
+                : 0;
         listener.setResolution(resolveSelectedDimension());
-        listener.onPlayerConfigConfirmed(p1Name, p1Country, p2Name, p2Country, selectedMatchType, goalLimit, timeLimit);
+        listener.onPlayerConfigConfirmed(p1Name, p1Country, p2Name, p2Country, selectedMatchType, matchLimit);
     }
 
     private boolean validateMachineProfiles() {
@@ -688,19 +706,30 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
 
     private boolean isMachineProfileChoiceValid(JComboBox<String> profileCombo) {
         if (profileCombo != null && !controller.isMachineProfileAvailable((String) profileCombo.getSelectedItem())) { // Verifica disponibilidad antes de iniciar
-            JOptionPane.showMessageDialog(this, "Tipo de máquina en construcción, elija máquina torpe");
+            List<String> available = new ArrayList<>();
+            String[] profiles = controller.getAvailableMachineProfiles();
+            if (profiles != null) {
+                for (String profile : profiles) {
+                    if (controller.isMachineProfileAvailable(profile)) {
+                        available.add(profile);
+                    }
+                }
+            }
+            String message = available.isEmpty()
+                    ? "Tipo de máquina en construcción."
+                    : "Tipo de máquina en construcción. Opciones disponibles: " + String.join(", ", available);
+            JOptionPane.showMessageDialog(this, message);
             return false;
         }
         return true;
     }
 
     private Dimension resolveSelectedDimension() {
-        int index = resolutionCombo.getSelectedIndex();
-        if (screenResolutions != null && index >= 0 && index < screenResolutions.length) {
-            return screenResolutions[index];
+        ResolutionOption selected = (ResolutionOption) resolutionCombo.getSelectedItem();
+        if (selected == null) {
+            selected = DEFAULT_RESOLUTIONS.get(1);
         }
-        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-        return new Dimension((int) Math.round(screen.width * 0.50), (int) Math.round(screen.height * 0.60));
+        return selected.toDimension(Toolkit.getDefaultToolkit().getScreenSize());
     }
 
     private final class DarkComboBoxUI extends BasicComboBoxUI {

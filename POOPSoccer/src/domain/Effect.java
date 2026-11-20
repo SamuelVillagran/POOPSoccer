@@ -2,7 +2,7 @@ package domain;
 
 import java.io.Serializable;
 
-public interface Effect extends Serializable {
+public interface Effect extends Serializable { /*Perfeccionado con Antigravity.*/
     default boolean canJump() { return true; } // Indica si el jugador afectado conserva la capacidad de saltar
     default boolean canKick() { return true; } // Indica si el jugador afectado conserva la capacidad de patear
     default void update(float deltaTime) {} // Descuenta el tiempo restante del efecto en cada frame

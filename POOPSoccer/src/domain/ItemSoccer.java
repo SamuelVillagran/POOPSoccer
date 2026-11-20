@@ -1,6 +1,6 @@
 package domain;
 
-public abstract class ItemSoccer implements Element {
+public abstract class ItemSoccer implements Element { /*Perfeccionado con Antigravity.*/
     protected Vector2D position = new Vector2D(); // Posición actual en la cancha compartida por todos los elementos
 
     @Override

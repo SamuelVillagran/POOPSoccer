@@ -8,8 +8,11 @@ import java.awt.Image;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
+import java.awt.image.ImageObserver;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -19,10 +22,10 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 /**
- * Interactive game canvas that runs the 60 FPS game loop, captures keyboard input,
- * and renders the pitch and its elements.
+ * Interactive game canvas that runs the 60 FPS game loop, delegates input polling,
+ * dispatches sound events, and renders elements through extensible effect renderers.
  */
-public class GamePanel extends JPanel implements Runnable {
+public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*Perfeccionado con Antigravity.*/
 
     private static final int FPS = 60; // Frecuencia objetivo de actualización lógica y visual por segundo
     private static final int SCREEN_WIDTH = 800; // Ancho lógico base sobre el que opera la física de la cancha
@@ -34,6 +37,7 @@ public class GamePanel extends JPanel implements Runnable {
     private static final Color EFFECT_FILL = new Color(255, 230, 0, 110); // Tinte amarillo para efectos rivales activos
     private static final Color SHOT_AURA_FILL = new Color(255, 180, 0, 140); // Halo naranja alrededor del balón en tiro de poder
     private static final int SHOT_GIF_PADDING = 18;
+    private static final String STUNNED_LABEL = "¡ATURDIDO!"; // Etiqueta visual mostrada cuando un jugador cae aturdido
 
     private static final HashMap<String, BufferedImage> CACHED_IMAGES = new HashMap<>(); // Caché en memoria para no leer sprites del disco cada frame
     private static final HashMap<String, Image> CACHED_GIFS = new HashMap<>(); // Memory cache for animated shot effect GIFs
@@ -43,26 +47,104 @@ public class GamePanel extends JPanel implements Runnable {
     private final GamePanelListener listener; // Contrato de navegación y música desacoplado de GameContainer
     private final GameController controller; // Puente único hacia la lógica del juego
     private final SoundEffectPlayer soundEffectPlayer; // Reproductor no bloqueante de efectos de patada
+    private final GameInputSource inputSource;
+    private final List<ElementEffectRenderer> underlayRenderers = new ArrayList<>();
+    private final List<ElementEffectRenderer> overlayRenderers = new ArrayList<>();
+    private final List<PauseDialog.PauseOption> pauseOptions = new ArrayList<>();
 
     public GamePanel(GamePanelListener listener, GameController controller,
                      Dimension resolution, SoundEffectPlayer soundEffectPlayer) {
+        this(listener, controller, resolution, soundEffectPlayer, KeyHandler.getInstance());
+    }
+
+    public GamePanel(GamePanelListener listener, GameController controller,
+                     Dimension resolution, SoundEffectPlayer soundEffectPlayer,
+                     GameInputSource inputSource) {
         this.listener = listener;
         this.controller = controller;
         this.soundEffectPlayer = soundEffectPlayer;
+        this.inputSource = inputSource != null ? inputSource : KeyHandler.getInstance();
 
         setPreferredSize(resolution != null ? resolution : new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
         setBackground(Color.BLACK);
         setDoubleBuffered(true); // Evita parpadeos dibujando primero en un búfer fuera de pantalla
-        KeyHandler.getInstance().clearAllKeys();
-        this.addKeyListener(KeyHandler.getInstance());
+        this.inputSource.clearInputs();
+        this.inputSource.attachTo(this);
         this.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                KeyHandler.getInstance().clearAllKeys(); // Libera teclas retenidas si el usuario cambia de ventana
+                GamePanel.this.inputSource.clearInputs(); // Libera teclas retenidas si el usuario cambia de ventana
             }
         });
         setFocusable(true);
         loadBackgroundIfNeeded();
+        registerDefaultEffectRenderers();
+        registerDefaultPauseOptions();
+    }
+
+    private void registerDefaultEffectRenderers() {
+        registerEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderPowerAura);
+        registerEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderStatusEffect);
+        registerEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderFallbackShotAura);
+        registerEffectRenderer(ElementEffectRenderer.Layer.OVERLAY, this::renderShotGifOverlay);
+    }
+
+    private void registerDefaultPauseOptions() {
+        addPauseOption(new PauseDialog.PauseOption("Continuar", ArcadeUIStyle.BTN_GREEN, this::resumeFromPause));
+        addPauseOption(new PauseDialog.PauseOption("Reiniciar", PauseDialog.BTN_RESTART, () -> {
+            if (listener != null) {
+                listener.restartFromLevel1();
+            }
+        }));
+        addPauseOption(new PauseDialog.PauseOption("Volver al menú", PauseDialog.BTN_MENU, () -> {
+            if (listener != null) {
+                listener.goToMenu();
+            }
+        }));
+    }
+
+    /**
+     * Registers a custom visual effect renderer on the chosen layer without editing draw().
+     */
+    public GamePanel registerEffectRenderer(ElementEffectRenderer.Layer layer, ElementEffectRenderer renderer) {
+        if (layer == null) {
+            throw new IllegalArgumentException("Effect layer cannot be null.");
+        }
+        if (renderer == null) {
+            throw new IllegalArgumentException("Effect renderer cannot be null.");
+        }
+        if (layer == ElementEffectRenderer.Layer.UNDERLAY) {
+            underlayRenderers.add(renderer);
+        } else {
+            overlayRenderers.add(renderer);
+        }
+        return this;
+    }
+
+    /**
+     * Appends an action entry to the pause menu without editing PauseDialog or GamePanel switch logic.
+     */
+    public GamePanel addPauseOption(PauseDialog.PauseOption option) {
+        if (option == null) {
+            throw new IllegalArgumentException("Pause option cannot be null.");
+        }
+        pauseOptions.add(option);
+        return this;
+    }
+
+    public List<PauseDialog.PauseOption> getPauseOptions() {
+        return Collections.unmodifiableList(pauseOptions);
+    }
+
+    @Override
+    public void onScreenShown() {
+        startGameThread();
+        requestFocusInWindow();
+    }
+
+    @Override
+    public void onScreenHidden() {
+        stopThread();
     }
 
     private static void loadBackgroundIfNeeded() {
@@ -126,56 +208,42 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void update() {
-        if (KeyHandler.getInstance().consumeEscToggle()) {
+        if (inputSource.consumePauseTrigger()) {
             controller.pauseGame();
-            KeyHandler.getInstance().clearAllKeys();
+            inputSource.clearInputs();
             SwingUtilities.invokeLater(this::showEscapeMenu);//Ayudado con Gemini Flash 3.8 IA
             return;
         }
-        handlePlayerInputs();
+        inputSource.dispatchInputs(controller);
         controller.updateGame();
-        playKickSoundEffects();
+        processPendingSoundEvents();
     }
 
-    private void playKickSoundEffects() {
+    /**
+     * Dispatches all pending sound event keys produced by the controller during the last step.
+     */
+    public void processPendingSoundEvents() {
         if (soundEffectPlayer == null) {
             return;
         }
-        if (controller.consumeKickBallSound()) {
-            soundEffectPlayer.play(SoundEffect.KICK_BALL); // Prioriza el sonido de impacto con el balón
+        List<String> soundEvents = controller.consumeSoundEvents();
+        if (soundEvents == null) {
+            return;
         }
-        if (controller.consumeKickSound()) {
-            soundEffectPlayer.play(SoundEffect.KICK); // Reproduce el sonido de patada al aire si no tocó el balón
+        for (String soundKey : soundEvents) {
+            soundEffectPlayer.play(soundKey);
         }
-    }
-
-    private void handlePlayerInputs() {
-        KeyHandler keys = KeyHandler.getInstance(); // Traduce teclas activas a comandos de ambos jugadores
-        if (keys.getW()) controller.movePlayer1('j'); // Jugador 1 salta con W
-        if (keys.getS()) controller.movePlayer1('k'); // Jugador 1 patea con S
-        if (keys.getA()) controller.movePlayer1('l'); // Jugador 1 retrocede a la izquierda con A
-        if (keys.getD()) controller.movePlayer1('r'); // Jugador 1 avanza a la derecha con D
-        if (keys.getQ()) controller.movePlayer1('p'); // Jugador 1 activa su poder con Q
-        if (keys.getUp()) controller.movePlayer2('j'); // Jugador 2 salta con Flecha Arriba
-        if (keys.getDown()) controller.movePlayer2('k'); // Jugador 2 patea con Flecha Abajo
-        if (keys.getLeft()) controller.movePlayer2('l'); // Jugador 2 avanza a la izquierda con Flecha Izquierda
-        if (keys.getRight()) controller.movePlayer2('r'); // Jugador 2 retrocede a la derecha con Flecha Derecha
-        if (keys.getCtrlRight()) controller.movePlayer2('p'); // Jugador 2 activa su poder con Ctrl
     }
 
     private void showEscapeMenu() {
         String score = controller.getGoalsP1() + " - " + controller.getGoalsP2();
-        PauseDialog.Choice choice = PauseDialog.showDialog(this, score);
+        PauseDialog.showDialog(this, score, pauseOptions, this::resumeFromPause);
+    }
 
-        switch (choice) {
-            case MENU -> listener.goToMenu();
-            case RESTART -> listener.restartFromLevel1();
-            case RESUME -> {
-                KeyHandler.getInstance().clearAllKeys(); // Limpia teclas retenidas al cerrar el diálogo de pausa
-                controller.resumeGame();
-                requestFocusInWindow(); // Devuelve el foco del teclado a la cancha para seguir jugando
-            }
-        }
+    private void resumeFromPause() {
+        inputSource.clearInputs(); // Limpia teclas retenidas al cerrar el diálogo de pausa
+        controller.resumeGame();
+        requestFocusInWindow(); // Devuelve el foco del teclado a la cancha para seguir jugando
     }
 
     @Override
@@ -227,11 +295,18 @@ public class GamePanel extends JPanel implements Runnable {
         return CACHED_IMAGES.get(path);
     }
 
-    private Image getAnimatedGif(String effectName) {
+    private Image getAnimatedGif(String category, String effectName) {
         if (effectName == null || effectName.isBlank()) {
             return null;
         }
-        String path = "/ball/" + effectName + ".gif";
+        String trimmed = effectName.trim();
+        String path;
+        if (trimmed.startsWith("/")) {
+            path = trimmed.endsWith(".gif") ? trimmed : trimmed + ".gif";
+        } else {
+            String dir = (category != null && !category.isBlank()) ? category.trim() : "ball";
+            path = "/" + dir + "/" + (trimmed.endsWith(".gif") ? trimmed : trimmed + ".gif");
+        }
         if (!CACHED_GIFS.containsKey(path)) {
             URL url = getClass().getResource(path);
             Image gif = null;
@@ -258,45 +333,62 @@ public class GamePanel extends JPanel implements Runnable {
             for (RenderElement elem : elements) {
                 BufferedImage sprite = getSprite(resolveImagePath(elem)); // Obtiene el sprite pre-cargado de caché
                 if (sprite != null) {
-                    drawElementAuraOrEffects(g2, elem);
+                    runEffectRenderers(underlayRenderers, g2, elem);
                     g2.drawImage(sprite, elem.x(), elem.y(), elem.width(), elem.height(), null);
-                    drawShotEffectOverlay(g2, elem);
+                    runEffectRenderers(overlayRenderers, g2, elem);
                 }
             }
         }
     }
 
-    private void drawElementAuraOrEffects(Graphics2D g2, RenderElement elem) {
+    private void runEffectRenderers(List<ElementEffectRenderer> renderers, Graphics2D g2, RenderElement elem) {
+        for (ElementEffectRenderer renderer : renderers) {
+            renderer.render(g2, elem, this);
+        }
+    }
+
+    private void renderPowerAura(Graphics2D g2, RenderElement elem, ImageObserver observer) {
+        if (!elem.powerAura()) {
+            return;
+        }
         int x = elem.x();
         int y = elem.y();
         int width = elem.width();
         int height = elem.height();
+        g2.setColor(AURA_FILL);
+        g2.fillOval(x - 10, y - 10, width + 20, height + 20);
+        g2.setColor(AURA_BORDER);
+        g2.drawOval(x - 10, y - 10, width + 20, height + 20);
+    }
 
-        if (elem.powerAura()) {
-            g2.setColor(AURA_FILL);
-            g2.fillOval(x - 10, y - 10, width + 20, height + 20);
-            g2.setColor(AURA_BORDER);
-            g2.drawOval(x - 10, y - 10, width + 20, height + 20);
+    private void renderStatusEffect(Graphics2D g2, RenderElement elem, ImageObserver observer) {
+        boolean stunned = elem.stunned();
+        String statusLabel = stunned ? STUNNED_LABEL : elem.statusText();
+        if (statusLabel == null || statusLabel.isEmpty()) {
+            return;
         }
-        String statusText = elem.statusText();
-        if (statusText != null && !statusText.isEmpty()) {
-            boolean stunned = elem.stunned();
-            g2.setColor(stunned ? STUN_FILL : EFFECT_FILL);
-            g2.fillOval(x - 6, y - 6, width + 12, height + 12);
-            g2.setColor(stunned ? Color.RED : Color.YELLOW);
-            g2.drawString(statusText, x - 2, y - 8); // Dibuja la etiqueta de estado flotando sobre el jugador
-        }
-        if (elem.shotAura() && getAnimatedGif(elem.shotEffectSprite()) == null) {
+        int x = elem.x();
+        int y = elem.y();
+        int width = elem.width();
+        int height = elem.height();
+        g2.setColor(stunned ? STUN_FILL : EFFECT_FILL);
+        g2.fillOval(x - 6, y - 6, width + 12, height + 12);
+        g2.setColor(stunned ? Color.RED : Color.YELLOW);
+        g2.drawString(statusLabel, x - 2, y - 8); // Dibuja la etiqueta de estado flotando sobre el jugador
+    }
+
+    private void renderFallbackShotAura(Graphics2D g2, RenderElement elem, ImageObserver observer) {
+        if (elem.shotAura() && getAnimatedGif(elem.category(), elem.shotEffectSprite()) == null) {
             g2.setColor(SHOT_AURA_FILL);
-            g2.fillOval(x - 6, y - 6, width + 12, height + 12);
+            g2.fillOval(elem.x() - 6, elem.y() - 6, elem.width() + 12, elem.height() + 12);
         }
     }
 
-    private void drawShotEffectOverlay(Graphics2D g2, RenderElement elem) {
+    private void renderShotGifOverlay(Graphics2D g2, RenderElement elem, ImageObserver observer) {
         if (!elem.shotAura()) {
             return;
         }
-        Image shotGif = getAnimatedGif(elem.shotEffectSprite());
+        Image shotGif = getAnimatedGif(elem.category(), elem.shotEffectSprite());
         if (shotGif != null) {
             int pad = SHOT_GIF_PADDING;
             g2.drawImage(
@@ -305,7 +397,7 @@ public class GamePanel extends JPanel implements Runnable {
                     elem.y() - pad,
                     elem.width() + pad * 2,
                     elem.height() + pad * 2,
-                    this
+                    observer
             );
         }
     }

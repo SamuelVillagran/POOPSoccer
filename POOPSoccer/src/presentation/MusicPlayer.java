@@ -18,7 +18,7 @@ import javax.sound.sampled.LineListener;
 /**
  * Java Sound (Clip) implementation of AudioController managing lifecycle, caching, async loading, and transitions.
  */
-public class MusicPlayer implements AudioController {
+public class MusicPlayer implements AudioController { /*Perfeccionado con Antigravity.*/
 
     private static final float TARGET_GAIN_DB = 1.0f; // Ganancia fija en decibelios para la música de fondo
 

@@ -1,11 +1,60 @@
 package test;
 
 import domain.*;
+import presentation.AudioController;
+import presentation.CountryFlagRenderer;
+import presentation.EffectPlayer;
+import presentation.ElementEffectRenderer;
+import presentation.GameContainer;
+import presentation.GameController;
+import presentation.GameModeOption;
+import presentation.GamePanel;
+import presentation.GamePanelListener;
+import presentation.KeyHandler;
+import presentation.MatchHudSnapshot;
+import presentation.MatchResultSummary;
+import presentation.MatchTypeOption;
+import presentation.MenuPanel;
+import presentation.POOPSoccerGUI;
+import presentation.PauseDialog;
+import presentation.PlayerConfig;
+import presentation.PlayerConfigListener;
+import presentation.PlayerHudInfo;
+import presentation.RenderElement;
+import presentation.ResolutionOption;
+import presentation.ScreenDefinition;
+import presentation.ScreenLifecycle;
+import presentation.SoundEffect;
+import presentation.SoundEffectPlayer;
+import presentation.SoundTrack;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -14,6 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * One update() = one frame (the game runs at 60 FPS).
  */
 class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
+    /*Perfeccionado con Antigravity.*/
 
     private static final float DELTA = 0.001f;
     private static final float BASE_KICK_DAMAGE = 10f;
@@ -228,7 +278,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         assertEquals(0f, p2.getPowerPercent(), DELTA);
         assertFalse(p1.isPowerFull());
         assertFalse(p1.isPowerActive());
-        assertEquals("Ninguno", p1.getActivePowerName());
+        assertEquals("", p1.getActivePowerName());
     }
 
     @Test
@@ -248,7 +298,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         game.movePlayer1('p');
 
         assertFalse(p1.isPowerActive());
-        assertEquals("Ninguno", p1.getActivePowerName());
+        assertEquals("", p1.getActivePowerName());
     }
 
     @Test
@@ -395,7 +445,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         java.io.File tempDb = java.io.File.createTempFile("players_db_test", ".csv");
         tempDb.deleteOnExit();
 
-        PlayerDataGateway gateway = new PlayerDatabase(tempDb);
+        PlayerDataGateway gateway = new persistence.PlayerDatabase(tempDb);
         game.setDataGateway(gateway);
 
         p1.addPoints(700);
@@ -570,12 +620,12 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
             assertTrue(libDir.mkdirs());
 
             java.io.File expectedShared = new java.io.File(repoRoot, "data").getCanonicalFile();
-            assertEquals(expectedShared, Log.getDataDirectory(repoRoot));
-            assertEquals(expectedShared, Log.getDataDirectory(moduleDir));
-            assertEquals(expectedShared, Log.getDataDirectory(libDir));
+            assertEquals(expectedShared, persistence.Log.getDataDirectory(repoRoot));
+            assertEquals(expectedShared, persistence.Log.getDataDirectory(moduleDir));
+            assertEquals(expectedShared, persistence.Log.getDataDirectory(libDir));
 
             java.io.File expectedLocal = new java.io.File(standalone, "data").getCanonicalFile();
-            assertEquals(expectedLocal, Log.getDataDirectory(standalone));
+            assertEquals(expectedLocal, persistence.Log.getDataDirectory(standalone));
         } finally {
             deleteRecursively(repoRoot);
             deleteRecursively(standalone);
@@ -871,6 +921,475 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
             }
             return player1.getGoals() + player2.getGoals() >= 2;
         }
+    }
+
+    @Test
+    void mapLoaderAllowsRegisteringCustomTokenWithoutModifyingLoader() {
+        AtomicInteger customPlacements = new AtomicInteger(0);
+        MapLoader loader = new MapLoader().registerPlacer(".", (map, x, y, tile, id, pl1, pl2) -> {
+            customPlacements.incrementAndGet();
+            return id;
+        });
+
+        MapLoader.MapData data = loader.load(p1, p2);
+
+        assertTrue(customPlacements.get() > 0);
+        assertNotNull(data.getBall());
+        assertEquals(2, data.getGoals().size());
+    }
+
+    @Test
+    void playerExecutesCustomActionAndBlocksItWhenStunned() {
+        AtomicBoolean executed = new AtomicBoolean(false);
+        PlayerAction customAction = player -> executed.set(true);
+
+        p1.execute(customAction);
+        assertTrue(executed.get());
+
+        Player nigeriaPlayer = new Player(new Normal(), "Obi", Team.NIGERIA, NumberPlayer.PLAYER1);
+        nigeriaPlayer.getTeam().getPower().use(nigeriaPlayer, p2);
+        float xBeforeMove = p2.getX();
+        p2.move('r');
+        assertEquals(xBeforeMove, p2.getX(), DELTA);
+
+        p1.takeDamage(p1.getMaxLife());
+        executed.set(false);
+        p1.execute(customAction);
+        assertFalse(executed.get());
+    }
+
+    @Test
+    void playerProfileEnumMapCopiesAndResetsAllStats() {
+        PlayerProfile source = new PlayerProfile();
+        source.addPoints(2000);
+        assertTrue(source.upgradeStat("speed"));
+        assertTrue(source.upgradeStat("kick"));
+        source.recordMatchResult(true, 3, 1);
+
+        PlayerProfile copy = new PlayerProfile();
+        copy.copyFrom(source);
+
+        assertEquals(source.getPoints(), copy.getPoints());
+        assertEquals(2, copy.getStatLevel(PlayerStat.SPEED));
+        assertEquals(2, copy.getStatLevel(PlayerStat.KICK));
+        assertEquals(1, copy.getMatchesPlayed());
+        assertEquals(1, copy.getWins());
+
+        copy.reset();
+        assertEquals(0, copy.getPoints());
+        assertEquals(0, copy.getMatchesPlayed());
+        for (PlayerStat stat : PlayerStat.values()) {
+            assertEquals(1, copy.getStatLevel(stat));
+        }
+    }
+
+    @Test
+    void machineDelegatesToCustomStrategyAndRejectsUnavailableProfile() {
+        MachineStrategy moveRight = player -> player.move('r');
+        Player bot = new Player(new Machine(moveRight), "CustomBot", Team.COLOMBIA, NumberPlayer.PLAYER1);
+        bot.setPositions(100f, 400f);
+        float startX = bot.getX();
+
+        bot.update();
+
+        assertTrue(bot.getX() > startX);
+        assertThrows(POOPSoccerException.class, MachineProfile.OFFENSIVE::createStrategy);
+
+        PVM pvm = new PVM(MachineProfile.CLUMSY);
+        assertFalse(pvm.canControlManually(2));
+
+        MVM mvm = new MVM(MachineProfile.CLUMSY, MachineProfile.CLUMSY);
+        assertTrue(mvm.isMachinePlayer(1) && mvm.isMachinePlayer(2));
+    }
+
+    @Test
+    void countryFlagRendererAllowsRegisteringCustomFlagPainter() {
+        AtomicBoolean painted = new AtomicBoolean(false);
+        CountryFlagRenderer.registerFlag("Testlandia", (g2, x, y, w, h) -> {
+            painted.set(true);
+            g2.setColor(Color.MAGENTA);
+            g2.fillRect(x, y, w, h);
+        });
+
+        BufferedImage canvas = new BufferedImage(22, 14, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = canvas.createGraphics();
+        CountryFlagRenderer.drawFlag(g2, "Testlandia", 0, 0, 22, 14);
+        g2.dispose();
+
+        assertTrue(painted.get());
+        assertEquals(Color.MAGENTA.getRGB(), canvas.getRGB(11, 7));
+    }
+
+    @Test
+    void menuPanelBuildsButtonsDynamicallyFromCustomGameModeOptions() {
+        List<GameModeOption> modes = List.of(
+                new GameModeOption("PVP", "Jugador vs Jugador (PvP)", false, false),
+                new GameModeOption("PVM", "Jugador vs Máquina (PvM)", false, true),
+                new GameModeOption("MVM", "Máquina vs Máquina (MvM)", true, true),
+                new GameModeOption("CUSTOM_2V2", "2 vs 2 Custom", false, false)
+        );
+        AtomicReference<GameModeOption> selected = new AtomicReference<>();
+        MenuPanel menuPanel = new MenuPanel(selected::set, modes);
+
+        List<JButton> buttons = findComponents(menuPanel, JButton.class);
+        assertEquals(4, buttons.size());
+        assertEquals("2 vs 2 Custom", buttons.get(3).getText());
+
+        buttons.get(3).doClick();
+        assertNotNull(selected.get());
+        assertEquals("CUSTOM_2V2", selected.get().id());
+    }
+
+    @Test
+    void playerConfigSupportsCustomMachineSlotsAndCustomMatchTypes() {
+        StubGameController controller = new StubGameController();
+        controller.matchTypes = List.of(
+                new MatchTypeOption("Por goles", "Goles para ganar:", List.of(3, 5, 7)),
+                new MatchTypeOption("Por tiempo", "Minutos del partido:", List.of(1, 2, 3, 5)),
+                new MatchTypeOption("Supervivencia", "Vidas:", List.of(1, 2)),
+                new MatchTypeOption("Muerte Súbita", "", List.of())
+        );
+        controller.maxStatLevel = 15;
+        controller.statLevel = 10;
+
+        GameModeOption mvpMode = new GameModeOption("MVP", "Máquina vs Jugador", true, false);
+        PlayerConfigListener noopListener = new PlayerConfigListener() {
+            @Override public void goToMenu() {}
+            @Override public void setResolution(Dimension resolution) {}
+            @Override public void onPlayerConfigConfirmed(String n1, String t1, String n2, String t2, String mt, int limit) {}
+        };
+        PlayerConfig config = new PlayerConfig(
+                noopListener,
+                controller,
+                mvpMode,
+                List.of(new ResolutionOption("HD", 0.5, 0.5))
+        );
+
+        List<JTextField> textFields = findComponents(config, JTextField.class);
+        assertEquals(2, textFields.size());
+        assertFalse(textFields.get(0).isEditable(), "Slot 1 is machine-locked according to custom GameModeOption");
+        assertTrue(textFields.get(0).getText().startsWith("CPU "));
+        assertTrue(textFields.get(1).isEditable(), "Slot 2 stays human-editable");
+
+        List<JButton> buttons = findComponents(config, JButton.class);
+        JButton statBtn = buttons.stream()
+                .filter(b -> b.getText().contains("Vel Nv.10"))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(statBtn.getToolTipText().contains("Mejorar por"),
+                "Max stat limit should come from controller.getMaxStatLevel() instead of hardcoded 10");
+
+        @SuppressWarnings("unchecked")
+        JComboBox<MatchTypeOption> matchTypeCombo = findComponents(config, JComboBox.class).stream()
+                .filter(cb -> cb.getItemCount() == 4 && cb.getItemAt(0) instanceof MatchTypeOption)
+                .findFirst()
+                .orElseThrow();
+
+        @SuppressWarnings("unchecked")
+        JComboBox<Integer> limitCombo = findComponents(config, JComboBox.class).stream()
+                .filter(cb -> cb.getItemCount() > 0 && cb.getItemAt(0) instanceof Integer)
+                .findFirst()
+                .orElseThrow();
+
+        matchTypeCombo.setSelectedIndex(2); // "Supervivencia" -> [1, 2]
+        assertTrue(limitCombo.isVisible());
+        assertEquals(2, limitCombo.getItemCount());
+        assertEquals(1, limitCombo.getItemAt(0));
+
+        matchTypeCombo.setSelectedIndex(3); // "Muerte Súbita" -> parameterless
+        assertFalse(limitCombo.isVisible());
+    }
+
+    @Test
+    void gameContainerAllowsRegisteringAndSwitchingToCustomScreen() {
+        StubGameController controller = new StubGameController();
+        AtomicReference<SoundTrack> lastMusic = new AtomicReference<>();
+        AudioController audio = new AudioController() {
+            @Override public void playLoop(SoundTrack track) { lastMusic.set(track); }
+            @Override public void playOnceThenLoop(SoundTrack onceTrack, SoundTrack followUpLoopTrack) {}
+        };
+        GameContainer container = new GameContainer(controller, audio, effect -> {});
+
+        AtomicBoolean shown = new AtomicBoolean(false);
+        AtomicBoolean hidden = new AtomicBoolean(false);
+        class LifecyclePanel extends JPanel implements ScreenLifecycle {
+            @Override public void onScreenShown() { shown.set(true); }
+            @Override public void onScreenHidden() { hidden.set(true); }
+        }
+
+        container.registerScreen(new ScreenDefinition(
+                "TOURNAMENT",
+                SoundTrack.WIN,
+                false,
+                () -> new Dimension(640, 480),
+                LifecyclePanel::new,
+                false
+        ));
+
+        container.showScreen("TOURNAMENT");
+        assertEquals("TOURNAMENT", container.getActiveScreenId());
+        assertEquals(SoundTrack.WIN, lastMusic.get());
+        assertTrue(shown.get());
+        assertFalse(hidden.get());
+
+        container.goToMenu();
+        assertEquals("MENU", container.getActiveScreenId());
+        assertEquals(SoundTrack.MAIN_MENU, lastMusic.get());
+        assertTrue(hidden.get());
+    }
+
+    @Test
+    void gamePanelSupportsCustomEffectRenderersAndGenericSoundEvents() {
+        StubGameController controller = new StubGameController();
+        controller.renderElements = List.of(
+                new RenderElement("ball", "normal", 100, 100, 30, 30,
+                        false, false, "", false, "", Map.of("shield", "blue"))
+        );
+        controller.soundEvents = List.of("CUSTOM_CHEER");
+
+        List<String> playedKeys = new ArrayList<>();
+        SoundEffectPlayer soundPlayer = new SoundEffectPlayer() {
+            @Override public void play(SoundEffect effect) { if (effect != null) playedKeys.add(effect.name()); }
+            @Override public void play(String soundKey) { playedKeys.add(soundKey); }
+        };
+
+        GamePanelListener noopListener = new GamePanelListener() {
+            @Override public void goToMenu() {}
+            @Override public void restartFromLevel1() {}
+            @Override public void onMatchInfoChanged(MatchHudSnapshot hud) {}
+            @Override public void onMatchFinished(MatchResultSummary summary) {}
+        };
+
+        GamePanel panel = new GamePanel(noopListener, controller, new Dimension(800, 600), soundPlayer);
+        panel.registerEffectRenderer(ElementEffectRenderer.Layer.OVERLAY, (g2, elem, observer) -> {
+            if (elem.hasEffect("shield")) {
+                g2.setColor(Color.CYAN);
+                g2.fillRect(elem.x() + 2, elem.y() + 2, 4, 4);
+            }
+        });
+
+        BufferedImage canvas = new BufferedImage(800, 600, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = canvas.createGraphics();
+        panel.draw(g2);
+        g2.dispose();
+        assertEquals(Color.CYAN.getRGB(), canvas.getRGB(103, 103));
+
+        panel.processPendingSoundEvents();
+        assertEquals(List.of("CUSTOM_CHEER"), playedKeys);
+
+        EffectPlayer effectPlayer = new EffectPlayer();
+        assertTrue(effectPlayer.registerSound("CUSTOM_KICK", "/sounds/kick.wav"));
+        assertTrue(effectPlayer.hasSound("custom_kick"));
+    }
+
+    @Test
+    void keyHandlerAllowsBindingCustomKeysAndCustomPauseTrigger() {
+        StubGameController controller = new StubGameController();
+        KeyHandler keyHandler = new KeyHandler();
+        List<Character> p1Moves = new ArrayList<>();
+        controller.onMoveP1 = p1Moves::add;
+
+        keyHandler.bindKey(KeyEvent.VK_F, c -> c.movePlayer1('x'));
+        keyHandler.setPauseKey(KeyEvent.VK_P);
+
+        Component source = new JPanel();
+        keyHandler.keyPressed(new KeyEvent(source, KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, KeyEvent.VK_F, 'f'));
+        keyHandler.dispatchInputs(controller);
+        assertEquals(List.of('x'), p1Moves);
+
+        keyHandler.keyReleased(new KeyEvent(source, KeyEvent.KEY_RELEASED, System.currentTimeMillis(), 0, KeyEvent.VK_P, 'p'));
+        assertTrue(keyHandler.consumePauseTrigger());
+        assertFalse(keyHandler.consumePauseTrigger());
+    }
+
+    @Test
+    void pauseDialogBuildsButtonsFromDeclarativePauseOptions() {
+        AtomicBoolean saved = new AtomicBoolean(false);
+        List<PauseDialog.PauseOption> options = List.of(
+                new PauseDialog.PauseOption("Continuar", Color.GREEN, () -> {}),
+                new PauseDialog.PauseOption("Reiniciar", Color.ORANGE, () -> {}),
+                new PauseDialog.PauseOption("Guardar", Color.BLUE, () -> saved.set(true)),
+                new PauseDialog.PauseOption("Volver al menú", Color.RED, () -> {})
+        );
+
+        PauseDialog dialog = PauseDialog.createDialog(null, "2 - 1", options, () -> {});
+        try {
+            List<JButton> buttons = findComponents(dialog.getContentPane(), JButton.class);
+            assertEquals(4, buttons.size());
+
+            JButton saveBtn = buttons.stream()
+                    .filter(b -> "Guardar".equals(b.getText()))
+                    .findFirst()
+                    .orElseThrow();
+            saveBtn.doClick();
+            dialog.executeSelectedAction();
+            assertTrue(saved.get());
+        } finally {
+            dialog.dispose();
+        }
+
+        StubGameController controller = new StubGameController();
+        GamePanel panel = new GamePanel(new GamePanelListener() {
+            @Override public void goToMenu() {}
+            @Override public void restartFromLevel1() {}
+            @Override public void onMatchInfoChanged(MatchHudSnapshot hud) {}
+            @Override public void onMatchFinished(MatchResultSummary summary) {}
+        }, controller, new Dimension(800, 600), null);
+        assertEquals(3, panel.getPauseOptions().size());
+        panel.addPauseOption(new PauseDialog.PauseOption("Guardar", Color.BLUE, () -> {}));
+        assertEquals(4, panel.getPauseOptions().size());
+    }
+
+    @Test
+    void hudStatsSummaryFormatsAllAvailableStatsDynamically() {
+        String summary = new POOPSoccerGUI().getMatchHudSnapshot().player1().statsSummary();
+        assertEquals("Vel:1 Sal:1 Pat:1 Vid:1", summary);
+    }
+
+    @Test
+    void collisionCheckerCanBeInstantiatedDirectlyWithoutSingleton() {
+        CollisionChecker first = new CollisionChecker();
+        CollisionChecker second = new CollisionChecker();
+        assertNotSame(first, second);
+
+        Ball ball = new Ball();
+        Goal goal = new Goal();
+        goal.setPositions(10f, 358f);
+        ball.setPositions(15f, 400f);
+
+        assertTrue(first.isGoal(ball, goal));
+        assertTrue(second.isGoal(ball, goal));
+
+        p1.setPositions(-25f, 100f);
+        first.resolvePlayerEnvironmentCollisions(p1);
+        assertEquals(0f, p1.getX(), DELTA);
+        assertEquals(CollisionChecker.DEFAULT_FLOOR_Y - p1.getHeight(), p1.getY(), DELTA);
+    }
+
+    @Test
+    void playerStunnedAndInactivePowerEmitPureDomainStateWithoutUiLabels() {
+        assertEquals("", p1.getActivePowerName());
+        p1.takeDamage(p1.getMaxLife());
+        assertTrue(p1.isStuned());
+        assertEquals("", p1.getStatusText());
+
+        StubGameController controller = new StubGameController();
+        controller.renderElements = List.of(
+                new RenderElement("ball", "normal", 100, 100, 30, 30,
+                        false, true, "", false, "", Map.of())
+        );
+        GamePanelListener noopListener = new GamePanelListener() {
+            @Override public void goToMenu() {}
+            @Override public void restartFromLevel1() {}
+            @Override public void onMatchInfoChanged(MatchHudSnapshot hud) {}
+            @Override public void onMatchFinished(MatchResultSummary summary) {}
+        };
+        GamePanel panel = new GamePanel(noopListener, controller, new Dimension(800, 600), null);
+        BufferedImage canvas = new BufferedImage(800, 600, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = canvas.createGraphics();
+        panel.draw(g2);
+        g2.dispose();
+        assertTrue(canvas.getRGB(96, 115) != 0, "Presentation should render stun feedback when stunned=true even if statusText is empty");
+    }
+
+    @Test
+    void domainEmitsMatchEventsTranslatedToSoundKeysByPresentation() {
+        game.consumeMatchEvents();
+        game.movePlayer1('k');
+        assertEquals(List.of(MatchEvent.KICK_SWING), game.consumeMatchEvents());
+
+        playFrames(35);
+        game.movePlayer1('k');
+        assertEquals(List.of("KICK"), new POOPSoccerGUI().consumeSoundEvents());
+    }
+
+    @Test
+    void poopSoccerDelegatesSaveAndOpenThroughMatchStorageGateway() {
+        File expectedDir = new File("custom_saves");
+        File dummyFile = new File("dummy_match.dat");
+        AtomicReference<POOPSoccer> savedMatch = new AtomicReference<>();
+        AtomicReference<File> savedFile = new AtomicReference<>();
+
+        game.setMatchStorageGateway(new MatchStorageGateway() {
+            @Override public File getSavesDirectory() { return expectedDir; }
+            @Override public void saveMatch(POOPSoccer match, File file) {
+                savedMatch.set(match);
+                savedFile.set(file);
+            }
+            @Override public POOPSoccer loadMatch(File file) { return game; }
+        });
+
+        assertEquals(expectedDir, game.getSavesDirectory());
+        game.save(dummyFile);
+        assertEquals(game, savedMatch.get());
+        assertEquals(dummyFile, savedFile.get());
+    }
+
+    private static <T extends Component> List<T> findComponents(Container root, Class<T> type) {
+        List<T> found = new ArrayList<>();
+        for (Component child : root.getComponents()) {
+            if (type.isInstance(child)) {
+                found.add(type.cast(child));
+            }
+            if (child instanceof Container nested) {
+                found.addAll(findComponents(nested, type));
+            }
+        }
+        return found;
+    }
+
+    private static final class StubGameController implements GameController {
+        List<GameModeOption> modes = List.of(
+                new GameModeOption("PVP", "Jugador vs Jugador (PvP)", false, false),
+                new GameModeOption("PVM", "Jugador vs Máquina (PvM)", false, true)
+        );
+        List<MatchTypeOption> matchTypes = List.of(
+                new MatchTypeOption("Por goles", "Goles para ganar:", List.of(3, 5))
+        );
+        List<RenderElement> renderElements = List.of();
+        List<String> soundEvents = List.of();
+        java.util.function.Consumer<Character> onMoveP1 = c -> {};
+        int maxStatLevel = 10;
+        int statLevel = 1;
+
+        @Override public List<GameModeOption> getAvailableGameModes() { return modes; }
+        @Override public String[] getAvailableTeams() { return new String[] { "Colombia", "Nigeria" }; }
+        @Override public String[] getAvailableMachineProfiles() { return new String[] { "Torpe" }; }
+        @Override public List<MatchTypeOption> getAvailableMatchTypes() { return matchTypes; }
+        @Override public String[] getAvailableStats() { return new String[] { "Vel", "Salto" }; }
+        @Override public int getMaxStatLevel() { return maxStatLevel; }
+        @Override public boolean isMachineProfileAvailable(String profileName) { return true; }
+        @Override public void selectPlayerProfile(int playerNum, String playerName) {}
+        @Override public String getPlayerName(int playerNum) { return "Jugador " + playerNum; }
+        @Override public int getPlayerPoints(int playerNum) { return 1000; }
+        @Override public int getPlayerMatchesPlayed(int playerNum) { return 0; }
+        @Override public int getPlayerWins(int playerNum) { return 0; }
+        @Override public int getPlayerStatLevel(int playerNum, String statName) { return statLevel; }
+        @Override public int getPlayerUpgradeCost(int playerNum, String statName) { return 500; }
+        @Override public boolean upgradePlayerStat(int playerNum, String statName) { return true; }
+        @Override public void startGame(String gameMode, String matchType, int matchLimit,
+                                        String nameP1, String teamP1, String nameP2, String teamP2) {}
+        @Override public void saveGame(File file) {}
+        @Override public void openGame(File file) {}
+        @Override public File getSavesDirectory() { return new File("."); }
+        @Override public void movePlayer1(char direction) { onMoveP1.accept(direction); }
+        @Override public void movePlayer2(char direction) {}
+        @Override public void updateGame() {}
+        @Override public List<String> consumeSoundEvents() { return soundEvents; }
+        @Override public void pauseGame() {}
+        @Override public void resumeGame() {}
+        @Override public boolean isPaused() { return false; }
+        @Override public boolean isGameFinished() { return false; }
+        @Override public MatchResultSummary getMatchResultSummary() {
+            return new MatchResultSummary(true, 0, 0, "", 0, 0, "", 0, 0);
+        }
+        @Override public int getGoalsP1() { return 0; }
+        @Override public int getGoalsP2() { return 0; }
+        @Override public MatchHudSnapshot getMatchHudSnapshot() {
+            PlayerHudInfo info = new PlayerHudInfo("P1", "Colombia", 1f, 0f, "Ninguno", "");
+            return new MatchHudSnapshot(info, info, "0 - 0", 0f, false);
+        }
+        @Override public List<RenderElement> getRenderElements() { return renderElements; }
     }
 
     private static void deleteRecursively(java.io.File dir) {

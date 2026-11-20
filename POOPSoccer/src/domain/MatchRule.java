@@ -6,6 +6,7 @@ import java.io.Serializable;
  * Strategy contract defining match duration updates and finish conditions.
  */
 public interface MatchRule extends Serializable { //Ayudado a desacoplar de POOPScoccer con Antigravity
+    /*Perfeccionado con Antigravity.*/
 
     /**
      * Advances time-dependent rule state by one frame.

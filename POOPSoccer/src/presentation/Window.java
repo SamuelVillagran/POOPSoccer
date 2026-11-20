@@ -13,7 +13,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 /**
  * Main application window (JFrame) that manages the file menu and hosts the GameContainer.
  */
-public class Window extends JFrame {
+public class Window extends JFrame { /*Perfeccionado con Antigravity.*/
 
     private JMenuBar menuBar;
     private JMenu menu;

@@ -10,5 +10,5 @@ public record PlayerHudInfo(
         float powerPercent,
         String activePower,
         String statsSummary
-) {
+) { /*Perfeccionado con Antigravity.*/
 }

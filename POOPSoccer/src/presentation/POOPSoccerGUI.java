@@ -6,13 +6,19 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.SwingUtilities;
 
 /**
  * Main entry point and presentation controller acting as the single gateway to POOPSoccer.
  */
-public class POOPSoccerGUI implements GameController {
+public class POOPSoccerGUI implements GameController { /*Perfeccionado con Antigravity.*/
+
+    private static final Map<String, String> MATCH_EVENT_SOUNDS = Map.of(
+            "KICK_SWING", SoundEffect.KICK.name(),
+            "BALL_KICKED", SoundEffect.KICK_BALL.name()
+    ); // Traduce eventos puros de interacción del dominio a claves de audio de presentación
 
     private Window window; // Ventana principal de la aplicación Swing
 
@@ -54,6 +60,22 @@ public class POOPSoccerGUI implements GameController {
     }
 
     @Override
+    public List<GameModeOption> getAvailableGameModes() {
+        var game = POOPSoccer.getGame();
+        String[] modes = game.getAvailableGameModes();
+        List<GameModeOption> options = new ArrayList<>(modes.length);
+        for (String modeId : modes) {
+            options.add(new GameModeOption(
+                    modeId,
+                    game.getGameModeDisplayName(modeId),
+                    game.isMachineSlotInMode(modeId, 1),
+                    game.isMachineSlotInMode(modeId, 2)
+            ));
+        }
+        return Collections.unmodifiableList(options);
+    }
+
+    @Override
     public String[] getAvailableTeams() {
         return POOPSoccer.getGame().getAvailableTeams();
     }
@@ -64,13 +86,33 @@ public class POOPSoccerGUI implements GameController {
     }
 
     @Override
-    public String[] getAvailableMatchTypes() {
-        return POOPSoccer.getGame().getAvailableMatchTypes();
+    public List<MatchTypeOption> getAvailableMatchTypes() {
+        var game = POOPSoccer.getGame();
+        String[] types = game.getAvailableMatchTypes();
+        List<MatchTypeOption> options = new ArrayList<>(types.length);
+        for (String displayName : types) {
+            int[] rawOptions = game.getMatchTypeParameterOptions(displayName);
+            List<Integer> boxed = new ArrayList<>(rawOptions.length);
+            for (int value : rawOptions) {
+                boxed.add(value);
+            }
+            options.add(new MatchTypeOption(
+                    displayName,
+                    game.getMatchTypeParameterLabel(displayName),
+                    boxed
+            ));
+        }
+        return Collections.unmodifiableList(options);
     }
 
     @Override
     public String[] getAvailableStats() {
         return POOPSoccer.getGame().getAvailableStats();
+    }
+
+    @Override
+    public int getMaxStatLevel() {
+        return POOPSoccer.getGame().getMaxStatLevel();
     }
 
     @Override
@@ -119,9 +161,9 @@ public class POOPSoccerGUI implements GameController {
     }
 
     @Override
-    public void startGame(String gameMode, String matchType, int goalLimit, int timeLimitMinutes,
+    public void startGame(String gameMode, String matchType, int matchLimit,
                           String nameP1, String teamP1, String nameP2, String teamP2) {
-        POOPSoccer.getGame().startGame(gameMode, matchType, goalLimit, timeLimitMinutes,
+        POOPSoccer.getGame().startGame(gameMode, matchType, matchLimit,
                 nameP1, teamP1, nameP2, teamP2);
     }
 
@@ -156,13 +198,16 @@ public class POOPSoccerGUI implements GameController {
     }
 
     @Override
-    public boolean consumeKickSound() {
-        return POOPSoccer.getGame().consumeKickSound();
-    }
-
-    @Override
-    public boolean consumeKickBallSound() {
-        return POOPSoccer.getGame().consumeKickBallSound();
+    public List<String> consumeSoundEvents() {
+        var domainEvents = POOPSoccer.getGame().consumeMatchEvents();
+        List<String> soundKeys = new ArrayList<>(domainEvents.size());
+        for (var event : domainEvents) {
+            String soundKey = MATCH_EVENT_SOUNDS.get(event.name());
+            if (soundKey != null) {
+                soundKeys.add(soundKey);
+            }
+        }
+        return soundKeys;
     }
 
     @Override
@@ -222,18 +267,34 @@ public class POOPSoccerGUI implements GameController {
 
     private PlayerHudInfo buildPlayerHudInfo(int playerNum) {
         var game = POOPSoccer.getGame();
-        String statsSummary = "Vel:" + game.getStatLevel(playerNum, "speed")
-                + " Sal:" + game.getStatLevel(playerNum, "jump")
-                + " Pat:" + game.getStatLevel(playerNum, "kick")
-                + " Vid:" + game.getStatLevel(playerNum, "life"); // Resume niveles actuales para mostrarlos en la barra superior
         return new PlayerHudInfo(
                 game.getDisplayInfo(playerNum),
                 game.getPlayerTeamName(playerNum),
                 game.getHealthPercent(playerNum),
                 game.getPowerPercent(playerNum),
                 game.getActivePowerName(playerNum),
-                statsSummary
+                formatStatsSummary(game, playerNum)
         );
+    }
+
+    private String formatStatsSummary(POOPSoccer game, int playerNum) {
+        String[] stats = game.getAvailableStats();
+        if (stats == null || stats.length == 0) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String stat : stats) {
+            if (stat == null || stat.isBlank()) {
+                continue;
+            }
+            String trimmed = stat.trim();
+            String label = trimmed.length() > 3 ? trimmed.substring(0, 3) : trimmed;
+            if (sb.length() > 0) {
+                sb.append(' ');
+            }
+            sb.append(label).append(':').append(game.getStatLevel(playerNum, stat));
+        }
+        return sb.toString();
     }
 
     @Override

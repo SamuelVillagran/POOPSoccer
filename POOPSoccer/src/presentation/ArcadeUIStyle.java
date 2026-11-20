@@ -16,7 +16,7 @@ import javax.swing.JDialog;
 /**
  * Shared arcade graphics and button styling helpers used across presentation dialogs and menus.
  */
-final class ArcadeUIStyle {
+final class ArcadeUIStyle { /*Perfeccionado con Antigravity.*/
 
     static final Color CARD_BG = new Color(18, 28, 48, 242); // Azul marino oscuro traslúcido del fondo de tarjeta
     static final Color CARD_BORDER = new Color(245, 198, 45); // Borde dorado característico estilo Head Soccer

@@ -1,10 +1,6 @@
 package domain;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class POOPSoccer implements Serializable {
+public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravity.*/
 
     private static final float DELTA_TIME = 1.0f / 60.0f; // Paso temporal fijo por frame (60 FPS)
 
@@ -29,14 +25,20 @@ public class POOPSoccer implements Serializable {
     private TreeMap<Integer, Goal> goalPlayers; // Asocia cada arco (1 izquierdo, 2 derecho) con su dueño
     private final DecoyBallManager decoyBalls = new DecoyBallManager(); // Gestor de ciclo de vida y física de balones señuelo
     private boolean pointsAwarded = false; // Evita premiar puntos dos veces al finalizar el mismo partido
+    private transient MatchStorageGateway matchStorage; // Puerto de persistencia para guardar y cargar partidas
+    private transient List<MatchEvent> pendingMatchEvents = new ArrayList<>(); // Eventos puros de interacción del partido
 
     private POOPSoccer() {
         this(ProfileManager.withDefaultGateway());
     }
 
     private POOPSoccer(ProfileManager profileManager) {
+        this(profileManager, new CollisionChecker());
+    }
+
+    private POOPSoccer(ProfileManager profileManager, CollisionChecker collisionChecker) {
         elements = new TreeMap<>();
-        cChecker = CollisionChecker.getInstance();
+        cChecker = (collisionChecker != null) ? collisionChecker : new CollisionChecker();
         this.profileManager = profileManager;
         goalPlayers = new TreeMap<>();
         this.typeMatch = new PVP();
@@ -53,6 +55,13 @@ public class POOPSoccer implements Serializable {
             game = new POOPSoccer();
         }
         return game;
+    }
+
+    public void startGame(String gameMode, String matchType, int matchLimit,
+                          String nameP1, String teamP1,
+                          String nameP2, String teamP2) {
+        MatchRule resolvedRule = MatchType.fromDisplayName(matchType).createMatchRule(matchLimit);
+        startGame(TypeMatch.fromName(gameMode), resolvedRule, nameP1, teamP1, nameP2, teamP2);
     }
 
     public void startGame(String gameMode, String matchType, int goalLimit, int timeLimitMinutes,
@@ -92,6 +101,7 @@ public class POOPSoccer implements Serializable {
         this.isPaused = false;
         this.decoyBalls.clear();
         this.pointsAwarded = false;
+        ensureMatchEventQueue().clear();
     }
 
     private void initPlayers(TypeMatch typeMatch, String nameP1, String teamP1, String nameP2, String teamP2) {
@@ -175,14 +185,16 @@ public class POOPSoccer implements Serializable {
     public void checkGoal() {
         if (ball == null) return;
         if (cChecker.isGoal(ball, goalPlayers.get(1))) {
-            player2.doGoal(); // Suma gol al Jugador 2 cuando el balón entra en el arco izquierdo
-            player1.onGoalConceded(); // Otorga 25% de barra de poder al jugador que recibe el gol
-            resetRound();
+            registerGoal(player2, player1);
         } else if (cChecker.isGoal(ball, goalPlayers.get(2))) {
-            player1.doGoal(); // Suma gol al Jugador 1 cuando el balón entra en el arco derecho
-            player2.onGoalConceded(); // Otorga 25% de barra de poder al jugador que recibe el gol
-            resetRound();
+            registerGoal(player1, player2);
         }
+    }
+
+    private void registerGoal(Player scorer, Player conceded) {
+        scorer.doGoal(); // Suma gol al Jugador 2 cuando el balón entra en el arco ganador
+        conceded.onGoalConceded(); // Otorga 25% de barra de poder al jugador que recibe el gol
+        resetRound();
     }
 
     public Player getWinner() {
@@ -259,7 +271,7 @@ public class POOPSoccer implements Serializable {
 
     public String getActivePowerName(int playerNum) {
         Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getActivePowerName() : "Ninguno";
+        return p != null ? p.getActivePowerName() : "";
     }
 
     public String[] getAvailableTeams() {
@@ -278,16 +290,42 @@ public class POOPSoccer implements Serializable {
         return MachineProfile.fromDisplayName(profileName).isAvailable();
     }
 
+    public String[] getAvailableGameModes() {
+        return Arrays.stream(GameMode.values())
+                .map(GameMode::name)
+                .toArray(String[]::new);
+    }
+
+    public String getGameModeDisplayName(String mode) {
+        return GameMode.fromName(mode).getDisplayName();
+    }
+
+    public boolean isMachineSlotInMode(String mode, int playerNum) {
+        return TypeMatch.fromName(mode).isMachinePlayer(playerNum);
+    }
+
     public String[] getAvailableMatchTypes() {
         return Arrays.stream(MatchType.values())
                 .map(MatchType::getDisplayName)
                 .toArray(String[]::new);
     }
 
+    public String getMatchTypeParameterLabel(String matchType) {
+        return MatchType.fromDisplayName(matchType).getParameterLabel();
+    }
+
+    public int[] getMatchTypeParameterOptions(String matchType) {
+        return MatchType.fromDisplayName(matchType).getParameterOptions();
+    }
+
     public String[] getAvailableStats() {
         return Arrays.stream(PlayerStat.values())
                 .map(PlayerStat::getDisplayName)
                 .toArray(String[]::new);
+    }
+
+    public int getMaxStatLevel() {
+        return PlayerProfile.getMaxStatLevel();
     }
 
     public void awardMatchPoints() {
@@ -410,61 +448,95 @@ public class POOPSoccer implements Serializable {
     }
 
     /**
+     * Injects a custom MatchStorageGateway implementation for saving and loading matches.
+     */
+    public void setMatchStorageGateway(MatchStorageGateway matchStorage) {
+        this.matchStorage = matchStorage;
+    }
+
+    private MatchStorageGateway getMatchStorage() {
+        if (matchStorage == null) {
+            matchStorage = MatchStorageGateway.resolveDefault();
+        }
+        return matchStorage;
+    }
+
+    /**
      * Returns the shared directory where saved match files (.dat) are stored.
      */
     public File getSavesDirectory() {
-        return Log.getDataSubdirectory("saves");
+        return getMatchStorage().getSavesDirectory();
     }
 
     /**
-     * Saves the current match state to a .dat file.
+     * Saves the current match state through the configured MatchStorageGateway.
      */
     public void save(File file) throws POOPSoccerException {
-        if (file == null) throw new POOPSoccerException(POOPSoccerException.INVALID_FILE);
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) { // Serializa la instancia completa del juego
-            out.writeObject(this);
-        } catch (Exception e) {
-            Log.record(e);
-            throw new POOPSoccerException(POOPSoccerException.SAVE_ERROR);
+        getMatchStorage().saveMatch(this, file);
+    }
+
+    /**
+     * Loads a saved match through the configured MatchStorageGateway and restores runtime ports.
+     */
+    public void open(File file) throws POOPSoccerException {
+        POOPSoccer loadedGame = getMatchStorage().loadMatch(file);
+        if (loadedGame == null) {
+            throw new POOPSoccerException(POOPSoccerException.OPEN_ERROR);
+        }
+        loadedGame.isPaused = false;
+        if (loadedGame.profileManager == null) {
+            loadedGame.profileManager = ProfileManager.withDefaultGateway(); // Reconecta el gestor si faltaba en el binario guardado
+        } else {
+            loadedGame.profileManager.ensureGatewayConnected(); // Reconecta el gateway si faltaba en el binario guardado
+        }
+        if (loadedGame.typeMatch == null) {
+            loadedGame.typeMatch = new PVP();
+        }
+        if (loadedGame.matchRule == null) {
+            loadedGame.matchRule = new GoalMatch(3);
+        }
+        if (loadedGame.cChecker == null) {
+            loadedGame.cChecker = new CollisionChecker();
+        }
+        if (this.matchStorage != null) {
+            loadedGame.matchStorage = this.matchStorage;
+        }
+        game = loadedGame;
+    }
+
+    /**
+     * Queues a pure domain interaction event for presentation to consume after each step.
+     */
+    public synchronized void emitMatchEvent(MatchEvent event) {
+        if (event != null) {
+            ensureMatchEventQueue().add(event);
         }
     }
 
     /**
-     * Loads a saved match from a .dat file and sets it as the active game.
+     * Returns and clears all pending gameplay events emitted during the latest frames.
      */
-    public void open(File file) throws POOPSoccerException {
-        if (file == null || !file.exists()) throw new POOPSoccerException(POOPSoccerException.INVALID_FILE);
-        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) { // Deserializa el partido guardado
-            POOPSoccer loadedGame = (POOPSoccer) in.readObject();
-            loadedGame.isPaused = false;
-            if (loadedGame.profileManager == null) {
-                loadedGame.profileManager = ProfileManager.withDefaultGateway(); // Reconecta el gestor si faltaba en el binario guardado
-            } else {
-                loadedGame.profileManager.ensureGatewayConnected(); // Reconecta el gateway si faltaba en el binario guardado
-            }
-            if (loadedGame.typeMatch == null) {
-                loadedGame.typeMatch = new PVP();
-            }
-            if (loadedGame.matchRule == null) {
-                loadedGame.matchRule = new GoalMatch(3);
-            }
-            game = loadedGame;
-        } catch (Exception e) {
-            Log.record(e);
-            throw new POOPSoccerException(POOPSoccerException.OPEN_ERROR);
+    public synchronized List<MatchEvent> consumeMatchEvents() {
+        List<MatchEvent> events = new ArrayList<>();
+        if (player1 != null) {
+            player1.drainMatchEvents(events);
         }
+        if (player2 != null) {
+            player2.drainMatchEvents(events);
+        }
+        List<MatchEvent> queue = ensureMatchEventQueue();
+        if (!queue.isEmpty()) {
+            events.addAll(queue);
+            queue.clear();
+        }
+        return events;
     }
 
-    public boolean consumeKickSound() {
-        boolean p1 = player1 != null && player1.consumePendingKickStarted();
-        boolean p2 = player2 != null && player2.consumePendingKickStarted();
-        return p1 || p2;
-    }
-
-    public boolean consumeKickBallSound() {
-        boolean p1 = player1 != null && player1.consumePendingKickBallImpact();
-        boolean p2 = player2 != null && player2.consumePendingKickBallImpact();
-        return p1 || p2;
+    private List<MatchEvent> ensureMatchEventQueue() {
+        if (pendingMatchEvents == null) {
+            pendingMatchEvents = new ArrayList<>();
+        }
+        return pendingMatchEvents;
     }
 
     public Player getPlayer1() { return player1; }

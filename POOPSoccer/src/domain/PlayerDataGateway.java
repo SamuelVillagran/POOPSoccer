@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * Boundary interface (Data Gateway) that decouples domain logic from the database implementation.
  */
-public interface PlayerDataGateway extends Serializable {
+public interface PlayerDataGateway extends Serializable { /*Perfeccionado con Antigravity.*/
 
     /**
      * Saves the player points and stat levels into the persistence store.

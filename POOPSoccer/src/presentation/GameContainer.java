@@ -5,22 +5,29 @@ import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.Window;
 import java.io.File;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 /**
- * Central view container that switches between menu, configuration, and game screens using CardLayout.
+ * Central view container that switches between registered screens using CardLayout.
  */
-public class GameContainer extends JPanel implements GamePanelListener, MenuPanelListener, PlayerConfigListener {
+public class GameContainer extends JPanel implements GamePanelListener, MenuPanelListener, PlayerConfigListener { /*Perfeccionado con Antigravity.*/
 
-    private CardLayout cardLayout; // Administrador de tarjetas para alternar entre menú, configuración y cancha
+    private static final Dimension MENU_SIZE = new Dimension(800, 650);
+
+    private CardLayout cardLayout; // Administrador de tarjetas para alternar entre pantallas registradas
     private JPanel cardPanel;
     private GameSetup setup; // Almacena temporalmente las opciones elegidas antes de iniciar partido
     private InfoPanel infoPanel; // Barra superior del marcador visible únicamente durante el partido
-    private PlayerConfig activeConfigPanel;
-    private GamePanel activeGamePanel;
+    private final Map<String, ScreenDefinition> screens = new LinkedHashMap<>();
+    private final Map<String, JPanel> mountedPanels = new HashMap<>();
+    private ScreenDefinition activeScreen;
+    private JPanel activePanel;
     private final GameController controller;
     private final AudioController audioController;
     private final SoundEffectPlayer soundEffectPlayer; // Reproductor compartido para no recargar efectos WAV en cada partido
@@ -40,21 +47,64 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
     private void prepareView() {
         setup = new GameSetup();
         setLayout(new BorderLayout());
-        setPreferredSize(new Dimension(800, 650));
+        setPreferredSize(MENU_SIZE);
 
         cardLayout = new CardLayout();
         cardPanel = new JPanel(cardLayout);
         cardPanel.setOpaque(false);
 
-        cardPanel.add(new MenuPanel(this), ScreenView.MENU.name()); // Monta la pantalla de menú inicial
-
         infoPanel = new InfoPanel();
         infoPanel.setVisible(false); // Oculta el HUD mientras el usuario navega por los menús
         add(infoPanel, BorderLayout.NORTH);
-
-        cardLayout.show(cardPanel, ScreenView.MENU.name());
         add(cardPanel, BorderLayout.CENTER);
-        updateMusicForView(ScreenView.MENU);
+
+        registerDefaultScreens();
+        showScreen(ScreenView.MENU.name());
+    }
+
+    private void registerDefaultScreens() {
+        registerScreen(new ScreenDefinition(
+                ScreenView.MENU.name(),
+                SoundTrack.MAIN_MENU,
+                false,
+                () -> MENU_SIZE,
+                () -> new MenuPanel(this, controller.getAvailableGameModes()),
+                false
+        ));
+        registerScreen(new ScreenDefinition(
+                ScreenView.PLAYER_CONFIG.name(),
+                SoundTrack.PLAYER_CONFIG,
+                false,
+                () -> MENU_SIZE,
+                () -> new PlayerConfig(this, controller, setup.getModeOption()),
+                true
+        ));
+        registerScreen(new ScreenDefinition(
+                ScreenView.GAME.name(),
+                SoundTrack.IN_GAME,
+                true,
+                setup::getResolution,
+                () -> new GamePanel(this, controller, setup.getResolution(), soundEffectPlayer),
+                true
+        ));
+    }
+
+    /**
+     * Registers or replaces a screen definition without modifying GameContainer navigation logic.
+     */
+    public void registerScreen(ScreenDefinition definition) {
+        if (definition == null) {
+            throw new IllegalArgumentException("Screen definition cannot be null.");
+        }
+        screens.put(definition.id(), definition);
+        JPanel existing = mountedPanels.remove(definition.id());
+        if (existing != null && existing != activePanel) {
+            cardPanel.remove(existing);
+        }
+    }
+
+    public String getActiveScreenId() {
+        return activeScreen != null ? activeScreen.id() : null;
     }
 
     @Override
@@ -63,16 +113,55 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
     }
 
     public void showView(ScreenView view) {
-        infoPanel.setVisible(view == ScreenView.GAME);
-        if (view == ScreenView.GAME) {
-            applyWindowDimension(setup.getResolution(), true);
-        } else {
-            applyWindowDimension(new Dimension(800, 650), false); // Restaura el tamaño fijo del menú al salir del partido
+        if (view != null) {
+            showScreen(view.name());
         }
-        cardLayout.show(cardPanel, view.name());
-        updateMusicForView(view);
+    }
+
+    /**
+     * Transitions to any registered screen, invoking optional lifecycle hooks and updating music/layout.
+     */
+    public void showScreen(String screenId) {
+        ScreenDefinition next = screens.get(screenId);
+        if (next == null) {
+            throw new IllegalArgumentException("Unregistered screen: " + screenId);
+        }
+        if (activePanel instanceof ScreenLifecycle lifecycle) {
+            lifecycle.onScreenHidden();
+        }
+        if (activePanel != null && (activeScreen.recreateOnShow() || !mountedPanels.containsValue(activePanel))) {
+            cardPanel.remove(activePanel);
+            mountedPanels.remove(activeScreen.id());
+        }
+        JPanel nextPanel = resolvePanelForScreen(next);
+        activeScreen = next;
+        activePanel = nextPanel;
+
+        infoPanel.setVisible(next.showHud());
+        Dimension screenSize = next.sizeProvider().get();
+        applyWindowDimension(screenSize != null ? screenSize : MENU_SIZE, next.showHud());
+        cardLayout.show(cardPanel, next.id());
+        if (audioController != null && next.musicTrack() != null) {
+            audioController.playLoop(next.musicTrack());
+        }
         revalidate();
         repaint();
+        if (activePanel instanceof ScreenLifecycle lifecycle) {
+            lifecycle.onScreenShown();
+        }
+    }
+
+    private JPanel resolvePanelForScreen(ScreenDefinition next) {
+        JPanel mounted = mountedPanels.get(next.id());
+        if (mounted == null || next.recreateOnShow()) {
+            if (mounted != null) {
+                cardPanel.remove(mounted);
+            }
+            mounted = next.panelFactory().get();
+            mountedPanels.put(next.id(), mounted);
+            cardPanel.add(mounted, next.id());
+        }
+        return mounted;
     }
 
     @Override
@@ -82,36 +171,19 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
         }
     }
 
-    private void updateMusicForView(ScreenView view) {
-        if (audioController == null || view == null) {
-            return;
-        }
-        switch (view) {
-            case MENU -> audioController.playLoop(SoundTrack.MAIN_MENU);
-            case PLAYER_CONFIG -> audioController.playLoop(SoundTrack.PLAYER_CONFIG);
-            case GAME -> audioController.playLoop(SoundTrack.IN_GAME);
-        }
-    }
-
     @Override
-    public void onModeSelected(String mode) {
+    public void onModeSelected(GameModeOption mode) {
         setup.setMode(mode);
-        if (activeConfigPanel != null) {
-            cardPanel.remove(activeConfigPanel);
-        }
-        activeConfigPanel = new PlayerConfig(this, controller, mode); // Reconstruye la pantalla con nombres y puntos frescos
-        cardPanel.add(activeConfigPanel, ScreenView.PLAYER_CONFIG.name());
-        showView(ScreenView.PLAYER_CONFIG);
+        showScreen(ScreenView.PLAYER_CONFIG.name());
     }
 
     @Override
     public void onPlayerConfigConfirmed(String nameP1, String teamP1, String nameP2, String teamP2,
-                                        String matchType, int goalLimit, int timeLimit) {
+                                        String matchType, int matchLimit) {
         setup.setPlayer1(nameP1, teamP1);
         setup.setPlayer2(nameP2, teamP2);
         setup.setMatchType(matchType);
-        setup.setGoalLimit(goalLimit);
-        setup.setTimeLimit(timeLimit);
+        setup.setMatchLimit(matchLimit);
         startGame();
     }
 
@@ -135,53 +207,30 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
 
     public void startGame() {
         try {
+            String teamP1 = setup.getTeamP1() != null ? setup.getTeamP1().toLowerCase() : "";
+            String teamP2 = setup.getTeamP2() != null ? setup.getTeamP2().toLowerCase() : "";
             controller.startGame( // Delega el inicio del partido al controlador de presentación POOPSoccerGUI
                     setup.getGameMode(),
                     setup.getMatchType(),
-                    setup.getGoalLimit(),
-                    setup.getTimeLimit(),
+                    setup.getMatchLimit(),
                     setup.getNameP1(),
-                    setup.getTeamP1().toLowerCase(),
+                    teamP1,
                     setup.getNameP2(),
-                    setup.getTeamP2().toLowerCase()
+                    teamP2
             );
-            launchGameView();
+            showScreen(ScreenView.GAME.name());
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error al iniciar el juego: " + e.getMessage());
         }
     }
 
-    /**
-     * Mounts the game panel and starts the game loop for the active match.
-     */
-    private void launchGameView() {
-        if (activeGamePanel != null) {
-            activeGamePanel.stopThread(); // Detiene el hilo del partido anterior antes de desmontarlo
-            cardPanel.remove(activeGamePanel);
-        }
-        activeGamePanel = new GamePanel(this, controller, setup.getResolution(), soundEffectPlayer);
-        cardPanel.add(activeGamePanel, ScreenView.GAME.name());
-        showView(ScreenView.GAME);
-        activeGamePanel.startGameThread();
-        activeGamePanel.requestFocusInWindow(); // Entrega el foco de teclado al lienzo de juego al instante
-    }
-
     @Override
     public void goToMenu() {
-        if (activeGamePanel != null) {
-            activeGamePanel.stopThread();
-            cardPanel.remove(activeGamePanel); // Libera el panel de juego anterior al volver al menú
-            activeGamePanel = null;
-        }
-        infoPanel.setVisible(false);
-        showView(ScreenView.MENU);
+        showScreen(ScreenView.MENU.name());
     }
 
     public void restartFromLevel1() {
-        if (activeGamePanel != null) {
-            activeGamePanel.stopThread();
-        }
         startGame();
     }
 
@@ -197,6 +246,6 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
      */
     public void loadSavedGame(File selectedFile) throws Exception {
         controller.openGame(selectedFile); // Carga el estado binario y reabre la cancha en ese instante
-        launchGameView();
+        showScreen(ScreenView.GAME.name());
     }
 }

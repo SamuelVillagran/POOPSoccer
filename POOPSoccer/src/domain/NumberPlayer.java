@@ -1,6 +1,6 @@
 package domain;
 
-public enum NumberPlayer {
+public enum NumberPlayer { /*Perfeccionado con Antigravity.*/
     PLAYER1(1), // Identifica al jugador ubicado a la izquierda que ataca hacia la derecha
     PLAYER2(2); // Identifica al jugador ubicado a la derecha que ataca hacia la izquierda
 

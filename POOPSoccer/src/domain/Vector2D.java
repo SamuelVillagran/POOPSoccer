@@ -2,7 +2,7 @@ package domain;
 
 import java.io.Serializable;
 
-public class Vector2D implements Serializable {
+public class Vector2D implements Serializable { /*Perfeccionado con Antigravity.*/
     private float x; // Componente horizontal del vector en píxeles
     private float y; // Componente vertical del vector (positivo hacia abajo)
 

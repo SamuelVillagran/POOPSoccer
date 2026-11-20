@@ -3,7 +3,7 @@ package presentation;
 /**
  * Enumeration of game audio tracks and their corresponding classpath resource locations.
  */
-public enum SoundTrack {
+public enum SoundTrack { /*Perfeccionado con Antigravity.*/
     MAIN_MENU("/sounds/inMainMenu.wav"), // Música ambiental reproducida en bucle en la pantalla principal
     PLAYER_CONFIG("/sounds/inPlayerConfig.wav"), // Música reproducida mientras se configuran los jugadores
     IN_GAME("/sounds/inGame.wav"), // Pista principal de estadio durante el desarrollo del partido

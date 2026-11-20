@@ -1,26 +1,39 @@
 package domain;
 
 import java.io.Serializable;
+import java.util.EnumMap;
 
 /**
  * Persistent player progression profile holding points, stat levels, and career match history.
  */
 public class PlayerProfile implements Serializable { // Responsabilidad de progreso y estadísticas extraída de Player para perfeccionar el principio S
+    /*Perfeccionado con Antigravity.*/
 
     private static final int MAX_STAT = 10; // Nivel máximo alcanzable por cada estadística
     private static final int BASE_UPGRADE_COST = 500; // Costo en puntos de la primera mejora (nivel 1 a 2)
     private static final float BASE_LIFE = 100.0f; // Vida máxima base en el nivel inicial de resistencia
     private static final float STAT_GROWTH_PER_LEVEL = 0.10f; // Incremento del 10% por cada nivel sobre el inicial
 
-    private int speedStat = 1; // Nivel actual de velocidad (1 a 10)
-    private int jumpStat = 1; // Nivel actual de salto (1 a 10)
-    private int kickStat = 1; // Nivel actual de fuerza/daño de patada (1 a 10)
-    private int lifeStat = 1; // Nivel actual de vida máxima (1 a 10)
+    private final EnumMap<PlayerStat, Integer> statLevels = new EnumMap<>(PlayerStat.class); // Nivel actual de cada estadística (1 a 10)
     private int points = 0; // Puntos acumulados del perfil para comprar mejoras
     private int matchesPlayed = 0; // Total histórico de partidos jugados
     private int wins = 0; // Total histórico de partidos ganados
     private int goalsFor = 0; // Goles a favor acumulados en el perfil
     private int goalsAgainst = 0; // Goles en contra acumulados en el perfil
+
+    public PlayerProfile() {
+        for (PlayerStat stat : PlayerStat.values()) {
+            statLevels.put(stat, 1); // Todas las estadísticas inician en nivel 1
+        }
+    }
+
+    private static int clampLevel(int level) {
+        return Math.max(1, Math.min(MAX_STAT, level));
+    }
+
+    public static int getMaxStatLevel() {
+        return MAX_STAT;
+    }
 
     public float getStatBonusMultiplier(PlayerStat stat) {
         return 1.0f + STAT_GROWTH_PER_LEVEL * (getStatLevel(stat) - 1); // Suma 10% sobre el valor base por cada nivel extra
@@ -32,12 +45,7 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
 
     public int getStatLevel(PlayerStat stat) {
         if (stat == null) return 1;
-        return switch (stat) {
-            case SPEED -> speedStat;
-            case JUMP -> jumpStat;
-            case KICK -> kickStat;
-            case LIFE -> lifeStat;
-        };
+        return statLevels.getOrDefault(stat, 1);
     }
 
     public int getStatLevel(String stat) {
@@ -61,18 +69,19 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
     }
 
     private void incrementStat(PlayerStat stat) {
-        switch (stat) {
-            case SPEED -> speedStat++;
-            case JUMP -> jumpStat++;
-            case KICK -> kickStat++;
-            case LIFE -> lifeStat++;
-        }
+        statLevels.merge(stat, 1, Integer::sum);
     }
 
     public void copyFrom(PlayerProfile previous) {
         if (previous == null) return;
-        loadProgress(previous.points, previous.speedStat, previous.jumpStat, previous.kickStat,
-                previous.lifeStat, previous.matchesPlayed, previous.wins, previous.goalsFor, previous.goalsAgainst);
+        this.points = Math.max(0, previous.points);
+        for (PlayerStat stat : PlayerStat.values()) {
+            statLevels.put(stat, clampLevel(previous.getStatLevel(stat)));
+        }
+        this.matchesPlayed = Math.max(0, previous.matchesPlayed);
+        this.wins = Math.max(0, previous.wins);
+        this.goalsFor = Math.max(0, previous.goalsFor);
+        this.goalsAgainst = Math.max(0, previous.goalsAgainst);
     }
 
     /**
@@ -88,10 +97,10 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
     public void loadProgress(int points, int speed, int jump, int kick, int life,
                              int matchesPlayed, int wins, int goalsFor, int goalsAgainst) {
         this.points = Math.max(0, points); // Garantiza valores no negativos y niveles acotados entre 1 y 10
-        this.speedStat = Math.max(1, Math.min(MAX_STAT, speed));
-        this.jumpStat = Math.max(1, Math.min(MAX_STAT, jump));
-        this.kickStat = Math.max(1, Math.min(MAX_STAT, kick));
-        this.lifeStat = Math.max(1, Math.min(MAX_STAT, life));
+        statLevels.put(PlayerStat.SPEED, clampLevel(speed));
+        statLevels.put(PlayerStat.JUMP, clampLevel(jump));
+        statLevels.put(PlayerStat.KICK, clampLevel(kick));
+        statLevels.put(PlayerStat.LIFE, clampLevel(life));
         this.matchesPlayed = Math.max(0, matchesPlayed);
         this.wins = Math.max(0, wins);
         this.goalsFor = Math.max(0, goalsFor);
@@ -102,7 +111,14 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
      * Resets this profile to initial level 1 values and zero points.
      */
     public void reset() {
-        loadProgress(0, 1, 1, 1, 1, 0, 0, 0, 0);
+        this.points = 0;
+        for (PlayerStat stat : PlayerStat.values()) {
+            statLevels.put(stat, 1);
+        }
+        this.matchesPlayed = 0;
+        this.wins = 0;
+        this.goalsFor = 0;
+        this.goalsAgainst = 0;
     }
 
     /**

@@ -10,6 +10,7 @@ import java.util.List;
  * Manages the lifecycle, physics updates, and environment collisions of illusion decoy balls.
  */
 public class DecoyBallManager implements Serializable { // Responsabilidad de balones señuelo extraída de la fachada POOPSoccer para perfeccionar el principio S con ayuda de Gemini Argon 4
+    /*Perfeccionado con Antigravity.*/
 
     private static final float BASE_HORIZONTAL_SPEED = 7.5f; // Velocidad horizontal mínima de dispersión de los señuelos
     private static final float HORIZONTAL_SPEED_STEP = 1.2f; // Incremento progresivo de rapidez horizontal por cada señuelo

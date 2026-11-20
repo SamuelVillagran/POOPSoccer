@@ -6,6 +6,7 @@ import java.io.Serializable;
  * Defines a match mode strategy responsible for player control types, default names, and manual input permissions.
  */
 public abstract class TypeMatch implements Serializable { //Ayudado a desacoplar de POOPScoccer con Antigravity
+    /*Perfeccionado con Antigravity.*/
 
     /**
      * Resolves a TypeMatch instance from a game mode name.

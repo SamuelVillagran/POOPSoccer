@@ -1,6 +1,6 @@
 package domain;
 
-public class Ball extends ItemSoccer {
+public class Ball extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     public static final float GRAVITY = 0.65f; // Incrementa la velocidad vertical hacia abajo en cada frame
     public static final float AIR_DRAG = 0.995f; // Conserva el 99.5% de la velocidad horizontal mientras vuela
     public static final float GROUND_FRICTION = 0.988f; // Frena progresivamente el balón cuando rueda sobre el césped

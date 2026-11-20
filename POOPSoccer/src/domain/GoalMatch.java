@@ -4,6 +4,7 @@ package domain;
  * MatchRule strategy that ends the match when either player reaches the goal limit.
  */
 public class GoalMatch implements MatchRule { //Ayudado a desacoplar de POOPScoccer con Antigravity
+    /*Perfeccionado con Antigravity.*/
 
     private final int goalLimit;
 

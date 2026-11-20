@@ -6,8 +6,7 @@ import java.util.Collection;
 /**
  * Handles all physical collisions between players, the ball, goals, and field boundaries.
  */
-public class CollisionChecker implements Serializable {
-    private static CollisionChecker instance = null; // Instancia única compartida en todo el dominio (Singleton)
+public class CollisionChecker implements Serializable { /*Perfeccionado con Antigravity.*/
 
     public static final int FIELD_WIDTH = 800; // Ancho lógico total de la cancha en píxeles
     public static final float DEFAULT_FLOOR_Y = 515.0f; // Coordenada Y donde comienza la superficie del césped
@@ -19,14 +18,7 @@ public class CollisionChecker implements Serializable {
     private static final float KICK_BASE_VY = 8.5f; // Elevación vertical base al patear el balón
     private static final float KICK_LIFT_MULTIPLIER = 1.4f; // Factor de elevación vertical según fuerza del jugador
 
-    private CollisionChecker() {
-    }
-
-    public static CollisionChecker getInstance() {
-        if (instance == null) {
-            instance = new CollisionChecker();
-        }
-        return instance;
+    public CollisionChecker() {
     }
 
     /**

@@ -1,6 +1,6 @@
 package domain;
 
-public class BlueAura extends Power {
+public class BlueAura extends Power { /*Perfeccionado con Antigravity.*/
     @Override
     public Effect createEffect() {
         return new Push();

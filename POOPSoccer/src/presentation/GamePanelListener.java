@@ -1,6 +1,6 @@
 package presentation;
 
-public interface GamePanelListener {
+public interface GamePanelListener { /*Perfeccionado con Antigravity.*/
     void goToMenu();
     void restartFromLevel1();
     void onMatchInfoChanged(MatchHudSnapshot hud);

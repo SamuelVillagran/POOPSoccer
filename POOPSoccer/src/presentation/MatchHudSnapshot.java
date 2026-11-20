@@ -9,5 +9,5 @@ public record MatchHudSnapshot(
         String score,
         float timeRemaining,
         boolean suddenDeath
-) {
+) { /*Perfeccionado con Antigravity.*/
 }

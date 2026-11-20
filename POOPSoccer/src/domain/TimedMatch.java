@@ -4,6 +4,7 @@ package domain;
  * MatchRule strategy that runs a countdown timer and activates sudden death on a tie at zero.
  */
 public class TimedMatch implements MatchRule { //Ayudado a desacoplar de POOPScoccer con Antigravity
+    /*Perfeccionado con Antigravity.*/
 
     private float remainingTimeSeconds;
     private boolean suddenDeath;

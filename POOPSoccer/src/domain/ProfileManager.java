@@ -8,6 +8,7 @@ import java.util.ServiceLoader;
  * Manages player progression, stat upgrades, match rewards, and profile persistence through PlayerDataGateway.
  */
 public class ProfileManager implements Serializable { // Responsabilidad de progreso y persistencia de perfiles extraída de la fachada POOPSoccer para perfeccionar el principio S con ayuda de Gemini Neon 4
+    /*Perfeccionado con Antigravity.*/
 
     public static final int WINNER_POINTS_REWARD = 100; // Puntos otorgados al ganador de cada partido
     public static final int LOSER_POINTS_REWARD = 25; // Puntos otorgados al perdedor por participar
@@ -27,13 +28,18 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
 
     private static PlayerDataGateway resolveDefaultDataGateway() {
         try {
-            return ServiceLoader.load(PlayerDataGateway.class) // Descubre el adaptador SQLite registrado vía SPI sin acoplarse a él
-                    .findFirst()
-                    .orElseGet(PlayerDatabase::new);
-        } catch (Throwable e) {
-            Log.record(e instanceof Exception ex ? ex : new RuntimeException(e));
-            return new PlayerDatabase();
+            for (ServiceLoader.Provider<PlayerDataGateway> provider
+                    : ServiceLoader.load(PlayerDataGateway.class).stream().toList()) {
+                try {
+                    return provider.get(); // Descubre el primer adaptador compatible registrado vía SPI sin acoplarse a él
+                } catch (Exception | LinkageError err) {
+                    ErrorLogger.report(err instanceof Exception ex ? ex : new RuntimeException(err));
+                }
+            }
+        } catch (Exception | LinkageError err) {
+            ErrorLogger.report(err instanceof Exception ex ? ex : new RuntimeException(err));
         }
+        return null;
     }
 
     /**

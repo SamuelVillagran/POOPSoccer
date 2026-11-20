@@ -5,12 +5,11 @@ import java.awt.Dimension;
 /**
  * Stores the configuration parameters selected in the menus before starting a match.
  */
-public class GameSetup {
+public class GameSetup { /*Perfeccionado con Antigravity.*/
 
-    private String gameMode; // Modalidad elegida: PVP, PVM o MVM
+    private GameModeOption mode;
     private String matchType; // Regla de victoria elegida ("Por goles" o "Por tiempo")
-    private int goalLimit; // Cantidad de goles meta cuando se juega por goles
-    private int timeLimit; // Duración en minutos cuando se juega por tiempo
+    private int matchLimit;
     private Dimension resolution; // Dimensiones visuales seleccionadas para el panel de juego
 
     private String nameP1; // Nombre confirmado del primer participante
@@ -20,10 +19,9 @@ public class GameSetup {
     private String teamP2; // País elegido para el segundo participante o CPU
 
     public GameSetup() {
-        this.gameMode = "PVM"; // Valores iniciales predeterminados al arrancar la aplicación
+        this.mode = new GameModeOption("PVM", "Jugador vs Máquina (PvM)", false, true);
         this.matchType = "Por goles";
-        this.goalLimit = 3;
-        this.timeLimit = 2;
+        this.matchLimit = 3;
         this.resolution = new Dimension(800, 600);
         this.nameP1 = "Jugador 1";
         this.teamP1 = "Corea del Sur";
@@ -41,8 +39,14 @@ public class GameSetup {
         return resolution;
     }
 
-    public void setMode(String mode) {
-        this.gameMode = mode;
+    public void setMode(GameModeOption mode) {
+        if (mode != null) {
+            this.mode = mode;
+        }
+    }
+
+    public GameModeOption getModeOption() {
+        return mode;
     }
 
     public void setMatchType(String matchType) {
@@ -53,20 +57,12 @@ public class GameSetup {
         return matchType;
     }
 
-    public void setGoalLimit(int goalLimit) {
-        this.goalLimit = goalLimit;
+    public void setMatchLimit(int matchLimit) {
+        this.matchLimit = matchLimit;
     }
 
-    public int getGoalLimit() {
-        return goalLimit;
-    }
-
-    public void setTimeLimit(int timeLimit) {
-        this.timeLimit = timeLimit;
-    }
-
-    public int getTimeLimit() {
-        return timeLimit;
+    public int getMatchLimit() {
+        return matchLimit;
     }
 
     public void setPlayer1(String name, String team) {
@@ -83,5 +79,5 @@ public class GameSetup {
     public String getTeamP1() { return teamP1; }
     public String getNameP2() { return nameP2; }
     public String getTeamP2() { return teamP2; }
-    public String getGameMode() { return gameMode; }
+    public String getGameMode() { return mode.id(); }
 }

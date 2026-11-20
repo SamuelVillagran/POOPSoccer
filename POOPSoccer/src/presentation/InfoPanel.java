@@ -12,7 +12,7 @@ import javax.swing.JPanel;
 /**
  * Top HUD bar: player flags, names, stats, health bars, power recharge bars, active power, score, and timer.
  */
-public class InfoPanel extends JPanel {
+public class InfoPanel extends JPanel { /*Perfeccionado con Antigravity.*/
 
     private static final int BASE_WIDTH = 800; // Ancho lógico de referencia usado para escalar proporcionalmente
     private static final int BASE_HEIGHT = 80; // Alto lógico suficiente para bandera, barras, poder y estadísticas
@@ -32,10 +32,11 @@ public class InfoPanel extends JPanel {
     private static final Color POWER_CHARGING = new Color(0, 170, 255); // Azul celeste mientras se recarga el poder
     private static final Color POWER_READY = new Color(255, 215, 0); // Dorado brillante cuando la barra está al 100%
     private static final Color STATS_COLOR = new Color(178, 202, 232); // Tono claro para la línea compacta de estadísticas
+    private static final String NO_ACTIVE_POWER_LABEL = "Ninguno"; // Texto de presentación cuando no hay poder activo
 
     private MatchHudSnapshot snapshot = new MatchHudSnapshot( // Estado inicial neutro mientras comienza el primer frame
-            new PlayerHudInfo("P1", "", 1.0f, 0.0f, "Ninguno", ""),
-            new PlayerHudInfo("P2", "", 1.0f, 0.0f, "Ninguno", ""),
+            new PlayerHudInfo("P1", "", 1.0f, 0.0f, "", ""),
+            new PlayerHudInfo("P2", "", 1.0f, 0.0f, "", ""),
             "0 - 0",
             0f,
             false
@@ -107,7 +108,7 @@ public class InfoPanel extends JPanel {
     private void drawPowerStatusText(Graphics2D g2, PlayerHudInfo info, int barX, int barW, boolean rightAligned) {
         g2.setFont(FONT_POWER);
         float pow = clamp01(info.powerPercent());
-        String active = info.activePower() != null ? info.activePower() : "Ninguno";
+        String active = info.activePower() != null ? info.activePower() : "";
         g2.setColor(resolvePowerTextColor(active, pow));
         String label = formatPowerLabel(active, pow);
         int x = rightAligned ? barX + barW - g2.getFontMetrics().stringWidth(label) : barX;
@@ -162,21 +163,25 @@ public class InfoPanel extends JPanel {
         return pct >= 0.999f ? POWER_READY : POWER_CHARGING;
     }
 
+    private boolean hasActivePower(String activePower) {
+        return activePower != null && !activePower.isBlank() && !NO_ACTIVE_POWER_LABEL.equals(activePower);
+    }
+
     private Color resolvePowerTextColor(String activePower, float powerPct) {
-        if (!"Ninguno".equals(activePower) || powerPct >= 0.999f) {
+        if (hasActivePower(activePower) || powerPct >= 0.999f) {
             return POWER_READY;
         }
         return Color.LIGHT_GRAY;
     }
 
     private String formatPowerLabel(String activePower, float powerPct) {
-        if (!"Ninguno".equals(activePower)) {
+        if (hasActivePower(activePower)) {
             return "Poder activo: " + activePower;
         }
         if (powerPct >= 0.999f) {
-            return "Poder activo: Ninguno (¡Barra llena!)";
+            return "Poder activo: " + NO_ACTIVE_POWER_LABEL + " (¡Barra llena!)";
         }
-        return "Poder activo: Ninguno";
+        return "Poder activo: " + NO_ACTIVE_POWER_LABEL;
     }
 
     private void drawBar(Graphics2D g2, int x, int y, int w, int h,

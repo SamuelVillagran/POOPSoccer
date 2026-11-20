@@ -1,6 +1,5 @@
 package persistence;
 
-import domain.Log;
 import domain.POOPSoccerException;
 import domain.Player;
 import domain.PlayerDataGateway;
@@ -19,6 +18,7 @@ import java.util.List;
  * SQLite database and data mapper implementation for the PlayerDataGateway boundary.
  */
 public class SQLitePlayerDatabase implements PlayerDataGateway {// Ayudado a implementar con Gemini Argon 4
+    /*Perfeccionado con Antigravity.*/
 
     private static final String DEFAULT_DB_NAME = "poopsoccer.db";
     private static final String CREATE_PLAYERS_TABLE_SQL = """

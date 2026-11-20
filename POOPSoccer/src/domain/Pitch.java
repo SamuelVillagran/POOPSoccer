@@ -1,6 +1,6 @@
 package domain;
 
-public class Pitch extends ItemSoccer {
+public class Pitch extends ItemSoccer { /*Perfeccionado con Antigravity.*/
 
     public Pitch() {
     }

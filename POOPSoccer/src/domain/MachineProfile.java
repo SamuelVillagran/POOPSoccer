@@ -1,20 +1,22 @@
 package domain;
 
+import java.util.function.Supplier;
+
 /**
- * Available behavior profiles for machine players.
+ * Available behavior profiles for machine players. A profile is available when it has a strategy factory.
  */
-public enum MachineProfile {
-    CLUMSY("Torpe", true), // Perfil disponible actualmente con movimientos aleatorios
-    OFFENSIVE("Ofensiva", false), // Perfil reservado para futura IA enfocada en atacar
-    DEFENSIVE("Defensiva", false), // Perfil reservado para futura IA enfocada en proteger el arco
-    EXPERT("Experta", false); // Perfil reservado para futura IA táctica adaptativa
+public enum MachineProfile { /*Perfeccionado con Antigravity.*/
+    CLUMSY("Torpe", ClumsyStrategy::new), // Perfil disponible actualmente con movimientos aleatorios
+    OFFENSIVE("Ofensiva", null), // Perfil reservado para futura IA enfocada en atacar
+    DEFENSIVE("Defensiva", null), // Perfil reservado para futura IA enfocada en proteger el arco
+    EXPERT("Experta", null); // Perfil reservado para futura IA táctica adaptativa
 
     private final String displayName; // Nombre legible mostrado en el selector de perfil CPU
-    private final boolean available; // Indica si el comportamiento ya se encuentra implementado
+    private final Supplier<MachineStrategy> strategyFactory; // Fábrica del comportamiento; null mientras no esté implementado
 
-    MachineProfile(String displayName, boolean available) {
+    MachineProfile(String displayName, Supplier<MachineStrategy> strategyFactory) {
         this.displayName = displayName;
-        this.available = available;
+        this.strategyFactory = strategyFactory;
     }
 
     public String getDisplayName() {
@@ -22,17 +24,17 @@ public enum MachineProfile {
     }
 
     public boolean isAvailable() {
-        return available;
+        return strategyFactory != null;
+    }
+
+    public MachineStrategy createStrategy() {
+        if (!isAvailable()) {
+            throw new POOPSoccerException(POOPSoccerException.UNAVAILABLE_MACHINE_PROFILE + displayName);
+        }
+        return strategyFactory.get();
     }
 
     public static MachineProfile fromDisplayName(String name) {
-        if (name == null) return CLUMSY;
-        for (MachineProfile profile : values()) { // Traduce texto visible o nombre de enum al perfil correspondiente
-            if (profile.displayName.equalsIgnoreCase(name.trim())
-                    || profile.name().equalsIgnoreCase(name.trim())) {
-                return profile;
-            }
-        }
-        return CLUMSY;
+        return EnumResolver.resolve(values(), name, CLUMSY, MachineProfile::getDisplayName);
     }
 }

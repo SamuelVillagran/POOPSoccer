@@ -2,7 +2,7 @@ package domain;
 
 import java.io.Serializable;
 
-public abstract class Power implements Serializable {
+public abstract class Power implements Serializable { /*Perfeccionado con Antigravity.*/
     public abstract Effect createEffect();
     public abstract int getDamage(); // Daño base del tiro especial definido en el Anexo 1
 

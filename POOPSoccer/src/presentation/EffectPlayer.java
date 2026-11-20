@@ -2,8 +2,9 @@ package presentation;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.util.EnumMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -16,25 +17,54 @@ import javax.sound.sampled.LineEvent;
  * Java Sound implementation of SoundEffectPlayer that preloads PCM buffers in memory
  * so sound effects play immediately at full volume without blocking the game loop.
  */
-public class EffectPlayer implements SoundEffectPlayer {
+public class EffectPlayer implements SoundEffectPlayer { /*Perfeccionado con Antigravity.*/
 
     private static final float TARGET_GAIN_DB = 6.0f; // Ganancia máxima en decibelios para destacar los efectos sobre la música
 
     private record CachedAudio(AudioFormat format, byte[] pcmData) { // Almacena el formato y los bytes PCM decodificados en RAM
     }
 
-    private final Map<SoundEffect, CachedAudio> cache = new EnumMap<>(SoundEffect.class); // Caché rápida indexada por enum
+    private final Map<String, CachedAudio> cache = new ConcurrentHashMap<>();
 
     public EffectPlayer() {
         preloadAll();
     }
 
+    /**
+     * Registers and preloads a sound effect under the specified key without modifying EffectPlayer.
+     */
+    public boolean registerSound(String soundKey, String resourcePath) {
+        if (soundKey == null || soundKey.isBlank()) {
+            throw new IllegalArgumentException("Sound key cannot be blank.");
+        }
+        if (resourcePath == null || resourcePath.isBlank()) {
+            throw new IllegalArgumentException("Sound resource path cannot be blank.");
+        }
+        CachedAudio loaded = loadAudio(soundKey, resourcePath);
+        if (loaded == null) {
+            return false;
+        }
+        cache.put(normalizeKey(soundKey), loaded);
+        return true;
+    }
+
+    public boolean hasSound(String soundKey) {
+        return soundKey != null && !soundKey.isBlank() && cache.containsKey(normalizeKey(soundKey));
+    }
+
     @Override
     public void play(SoundEffect effect) {
-        if (effect == null) {
+        if (effect != null) {
+            play(effect.name());
+        }
+    }
+
+    @Override
+    public void play(String soundKey) {
+        if (soundKey == null || soundKey.isBlank()) {
             return;
         }
-        CachedAudio audio = cache.get(effect);
+        CachedAudio audio = cache.get(normalizeKey(soundKey));
         if (audio == null) {
             return;
         }
@@ -49,23 +79,20 @@ public class EffectPlayer implements SoundEffectPlayer {
             applyMaxVolume(clip);
             clip.start();
         } catch (Exception e) {
-            System.err.println("No se pudo reproducir el efecto " + effect + ": " + e.getMessage());
+            System.err.println("No se pudo reproducir el efecto " + soundKey + ": " + e.getMessage());
         }
     }
 
     private void preloadAll() {
         for (SoundEffect effect : SoundEffect.values()) {
-            CachedAudio loaded = loadAudio(effect);
-            if (loaded != null) {
-                cache.put(effect, loaded);
-            }
+            registerSound(effect.name(), effect.getResourcePath());
         }
     }
 
-    private CachedAudio loadAudio(SoundEffect effect) {
-        try (InputStream rawStream = getClass().getResourceAsStream(effect.getResourcePath())) {
+    private CachedAudio loadAudio(String soundKey, String resourcePath) {
+        try (InputStream rawStream = getClass().getResourceAsStream(resourcePath)) {
             if (rawStream == null) {
-                System.err.println("No se encontró el efecto de sonido: " + effect.getResourcePath());
+                System.err.println("No se encontró el efecto de sonido: " + resourcePath);
                 return null;
             }
             try (AudioInputStream audioStream = AudioSystem.getAudioInputStream(
@@ -80,9 +107,13 @@ public class EffectPlayer implements SoundEffectPlayer {
                 return new CachedAudio(format, buffer.toByteArray());
             }
         } catch (Exception e) {
-            System.err.println("No se pudo precargar el efecto " + effect + ": " + e.getMessage());
+            System.err.println("No se pudo precargar el efecto " + soundKey + ": " + e.getMessage());
             return null;
         }
+    }
+
+    private static String normalizeKey(String soundKey) {
+        return soundKey.trim().toUpperCase(Locale.ROOT);
     }
 
     private void applyMaxVolume(Clip clip) {

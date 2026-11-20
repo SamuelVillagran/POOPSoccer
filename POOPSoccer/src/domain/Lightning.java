@@ -1,6 +1,6 @@
 package domain;
 
-public class Lightning extends Power {
+public class Lightning extends Power { /*Perfeccionado con Antigravity.*/
     @Override
     public Effect createEffect() {
         return new Electrocuted();
