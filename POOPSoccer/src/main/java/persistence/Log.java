@@ -3,8 +3,10 @@ package persistence;
 import domain.ErrorLogger;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -69,7 +71,9 @@ public class Log implements ErrorLogger { /*Perfeccionado con Antigravity.*/
                 folder.mkdirs();
             }
             File logFile = new File(folder, LOG_FILE_NAME);
-            try (PrintWriter out = new PrintWriter(new FileWriter(logFile, true))) { // Agrega el error en texto plano legible con fecha y traza
+            try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(
+                    logFile.toPath(), StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND))) { // Agrega el error en texto plano legible con fecha y traza
                 out.println("============================================================");
                 out.println("Fecha y hora : " + LocalDateTime.now().format(DATE_FORMAT));
                 out.println("Excepción    : " + e.getClass().getName());

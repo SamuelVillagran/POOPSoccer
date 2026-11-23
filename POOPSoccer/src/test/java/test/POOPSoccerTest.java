@@ -39,7 +39,9 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.Serializable;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +56,7 @@ import javax.swing.JTextField;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -493,8 +496,8 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     void renderSnapshotsExposeElementsWithoutExposingEntities() {
         var snapshots = game.getRenderElements();
         assertTrue(snapshots.size() >= 3, "Includes players, ball, pitch, and goals");
-        assertTrue(snapshots.stream().anyMatch(s -> "player".equals(s.category()) && s.width() == 60));
-        assertTrue(snapshots.stream().anyMatch(s -> "ball".equals(s.category()) && s.width() == 30));
+        assertTrue(snapshots.stream().anyMatch(s -> "player".equals(s.getCategory()) && s.getWidth() == 60));
+        assertTrue(snapshots.stream().anyMatch(s -> "ball".equals(s.getCategory()) && s.getWidth() == 30));
     }
 
     @Test
@@ -536,18 +539,18 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
                 "Samuel", "Cameroon", "Atun", "Nigeria");
         MatchSummarySnapshot drawSummary = game.getMatchSummary();
         assertTrue(drawSummary.isDraw());
-        assertEquals(0, drawSummary.goalsP1());
-        assertEquals(0, drawSummary.goalsP2());
+        assertEquals(0, drawSummary.getGoalsP1());
+        assertEquals(0, drawSummary.getGoalsP2());
 
         game.getPlayer1().doGoal();
         MatchSummarySnapshot winSummary = game.getMatchSummary();
         assertFalse(winSummary.isDraw());
-        assertEquals("Samuel", winSummary.winnerName());
-        assertEquals(ProfileManager.WINNER_POINTS_REWARD, winSummary.winnerPointsAwarded());
-        assertEquals("Atun", winSummary.loserName());
-        assertEquals(ProfileManager.LOSER_POINTS_REWARD, winSummary.loserPointsAwarded());
-        assertEquals(1, winSummary.goalsP1());
-        assertEquals(0, winSummary.goalsP2());
+        assertEquals("Samuel", winSummary.getWinnerName());
+        assertEquals(ProfileManager.WINNER_POINTS_REWARD, winSummary.getWinnerPointsAwarded());
+        assertEquals("Atun", winSummary.getLoserName());
+        assertEquals(ProfileManager.LOSER_POINTS_REWARD, winSummary.getLoserPointsAwarded());
+        assertEquals(1, winSummary.getGoalsP1());
+        assertEquals(0, winSummary.getGoalsP2());
     }
 
     @Test
@@ -557,7 +560,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         assertEquals(2, game.getStatLevel(1, "life"));
         assertEquals(110f, p1.getMaxLife(), DELTA);
 
-        String hudStats = new presentation.POOPSoccerGUI().getMatchHudSnapshot().player1().statsSummary();
+        String hudStats = new presentation.POOPSoccerGUI().getMatchHudSnapshot().getPlayer1().getStatsSummary();
         assertTrue(hudStats.contains("Vid:2"), "HUD summary must reflect upgraded life level: " + hudStats);
 
         assertTrue(game.upgradeStat(1, "Vida"));
@@ -653,10 +656,10 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         assertTrue(ball.hasShotAura());
         assertEquals("tornado", ball.getShotEffectSprite());
         var ballSnapshot = game.getRenderElements().stream()
-                .filter(e -> "ball".equals(e.category()))
+                .filter(e -> "ball".equals(e.getCategory()))
                 .findFirst()
                 .orElseThrow();
-        assertEquals("tornado", ballSnapshot.shotEffectSprite());
+        assertEquals("tornado", ballSnapshot.getShotEffectSprite());
 
         float floorBallY = CollisionChecker.DEFAULT_FLOOR_Y - ball.getHeight();
         float minYFirstBounce = ball.getY();
@@ -1031,7 +1034,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
                 new GameModeOption("CUSTOM_2V2", "2 vs 2 Custom", false, false)
         );
         AtomicReference<GameModeOption> selected = new AtomicReference<>();
-        MenuPanel menuPanel = new MenuPanel(selected::set, modes);
+        MenuPanel menuPanel = MenuPanel.create(selected::set, modes);
 
         List<JButton> buttons = findComponents(menuPanel, JButton.class);
         assertEquals(4, buttons.size());
@@ -1039,7 +1042,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
         buttons.get(3).doClick();
         assertNotNull(selected.get());
-        assertEquals("CUSTOM_2V2", selected.get().id());
+        assertEquals("CUSTOM_2V2", selected.get().getId());
     }
 
     @Test
@@ -1060,7 +1063,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
             @Override public void setResolution(Dimension resolution) {}
             @Override public void onPlayerConfigConfirmed(String n1, String t1, String n2, String t2, String mt, int limit) {}
         };
-        PlayerConfig config = new PlayerConfig(
+        PlayerConfig config = PlayerConfig.create(
                 noopListener,
                 controller,
                 mvpMode,
@@ -1110,7 +1113,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
             @Override public void playLoop(SoundTrack track) { lastMusic.set(track); }
             @Override public void playOnceThenLoop(SoundTrack onceTrack, SoundTrack followUpLoopTrack) {}
         };
-        GameContainer container = new GameContainer(controller, audio, effect -> {});
+        GameContainer container = GameContainer.create(controller, audio, effect -> {});
 
         AtomicBoolean shown = new AtomicBoolean(false);
         AtomicBoolean hidden = new AtomicBoolean(false);
@@ -1162,11 +1165,11 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
             @Override public void onMatchFinished(MatchResultSummary summary) {}
         };
 
-        GamePanel panel = new GamePanel(noopListener, controller, new Dimension(800, 600), soundPlayer);
+        GamePanel panel = GamePanel.create(noopListener, controller, new Dimension(800, 600), soundPlayer);
         panel.registerEffectRenderer(ElementEffectRenderer.Layer.OVERLAY, (g2, elem, observer) -> {
             if (elem.hasEffect("shield")) {
                 g2.setColor(Color.CYAN);
-                g2.fillRect(elem.x() + 2, elem.y() + 2, 4, 4);
+                g2.fillRect(elem.getX() + 2, elem.getY() + 2, 4, 4);
             }
         });
 
@@ -1231,7 +1234,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         }
 
         StubGameController controller = new StubGameController();
-        GamePanel panel = new GamePanel(new GamePanelListener() {
+        GamePanel panel = GamePanel.create(new GamePanelListener() {
             @Override public void goToMenu() {}
             @Override public void restartFromLevel1() {}
             @Override public void onMatchInfoChanged(MatchHudSnapshot hud) {}
@@ -1244,7 +1247,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void hudStatsSummaryFormatsAllAvailableStatsDynamically() {
-        String summary = new POOPSoccerGUI().getMatchHudSnapshot().player1().statsSummary();
+        String summary = new POOPSoccerGUI().getMatchHudSnapshot().getPlayer1().getStatsSummary();
         assertEquals("Vel:1 Sal:1 Pat:1 Vid:1", summary);
     }
 
@@ -1286,7 +1289,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
             @Override public void onMatchInfoChanged(MatchHudSnapshot hud) {}
             @Override public void onMatchFinished(MatchResultSummary summary) {}
         };
-        GamePanel panel = new GamePanel(noopListener, controller, new Dimension(800, 600), null);
+        GamePanel panel = GamePanel.create(noopListener, controller, new Dimension(800, 600), null);
         BufferedImage canvas = new BufferedImage(800, 600, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = canvas.createGraphics();
         panel.draw(g2);
@@ -1417,12 +1420,12 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
         Optional<PlayerProfileSnapshot> loadedCsv = csvGateway.loadPlayerProfile(" ana ");
         assertTrue(loadedCsv.isPresent());
-        assertEquals("Ana", loadedCsv.get().name());
-        assertEquals(750, loadedCsv.get().points());
-        assertEquals(2, loadedCsv.get().speedLevel());
-        assertEquals(3, loadedCsv.get().jumpLevel());
-        assertEquals(4, loadedCsv.get().kickLevel());
-        assertEquals(5, loadedCsv.get().lifeLevel());
+        assertEquals("Ana", loadedCsv.get().getName());
+        assertEquals(750, loadedCsv.get().getPoints());
+        assertEquals(2, loadedCsv.get().getSpeedLevel());
+        assertEquals(3, loadedCsv.get().getJumpLevel());
+        assertEquals(4, loadedCsv.get().getKickLevel());
+        assertEquals(5, loadedCsv.get().getLifeLevel());
         assertTrue(csvGateway.loadPlayerProfile("UnknownPlayer").isEmpty());
         assertTrue(csvGateway.loadPlayerProfile("   ").isEmpty());
         assertThrows(POOPSoccerException.class, () -> csvGateway.savePlayerProfile(null));
@@ -1460,6 +1463,89 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         ArrayList<?> restored = storage.loadMatch(tempDat, ArrayList.class);
         assertEquals(payload, restored);
         assertThrows(POOPSoccerException.class, () -> storage.loadMatch(tempDat, Integer.class));
+    }
+
+    @Test
+    void immutableDataClassesAreFinalClassesWithoutRecords() {
+        List<Class<?>> convertedClasses = List.of(
+                MatchSummarySnapshot.class,
+                PlayerProfileSnapshot.class,
+                RenderElementData.class,
+                GameModeOption.class,
+                MatchHudSnapshot.class,
+                MatchResultSummary.class,
+                MatchTypeOption.class,
+                PlayerHudInfo.class,
+                RenderElement.class,
+                ResolutionOption.class,
+                ScreenDefinition.class,
+                PauseDialog.PauseOption.class
+        );
+        for (Class<?> cls : convertedClasses) {
+            assertFalse(cls.isRecord(), cls.getName() + " must not be a Java record");
+            assertTrue(Modifier.isFinal(cls.getModifiers()), cls.getName() + " must be declared final");
+        }
+
+        PlayerHudInfo hud1 = new PlayerHudInfo("P1", "Colombia", 0.75f, 0.5f, "Lightning", "Vel:2");
+        PlayerHudInfo hud1Copy = new PlayerHudInfo("P1", "Colombia", 0.75f, 0.5f, "Lightning", "Vel:2");
+        PlayerHudInfo hud2 = new PlayerHudInfo("P2", "Nigeria", 1.0f, 0.0f, "", "Vel:1");
+        assertEquals(hud1, hud1Copy);
+        assertEquals(hud1.hashCode(), hud1Copy.hashCode());
+        assertNotEquals(hud1, hud2);
+
+        MatchHudSnapshot matchHud = new MatchHudSnapshot(hud1, hud2, "1 - 0", 42.5f, false);
+        MatchHudSnapshot matchHudCopy = new MatchHudSnapshot(hud1Copy, hud2, "1 - 0", 42.5f, false);
+        assertEquals(matchHud, matchHudCopy);
+        assertEquals(matchHud.hashCode(), matchHudCopy.hashCode());
+
+        ResolutionOption resA = new ResolutionOption("HD", 0.5, 0.6);
+        ResolutionOption resB = new ResolutionOption("HD", 0.5, 0.6);
+        assertEquals(resA, resB);
+        assertEquals(resA.hashCode(), resB.hashCode());
+        assertEquals("HD", resA.toString());
+
+        List<Integer> mutableParams = new ArrayList<>(List.of(3, 5));
+        MatchTypeOption matchType = new MatchTypeOption("Por goles", "Goles:", mutableParams);
+        mutableParams.add(9);
+        assertEquals("Por goles", matchType.toString());
+        assertEquals(List.of(3, 5), matchType.getParameterOptions());
+        assertThrows(UnsupportedOperationException.class, () -> matchType.getParameterOptions().add(7));
+
+        Map<String, String> mutableAttrs = new HashMap<>();
+        mutableAttrs.put("shield", "blue");
+        RenderElement elemA = new RenderElement("ball", "normal", 10, 20, 30, 30,
+                false, false, "", false, "", mutableAttrs);
+        mutableAttrs.put("shield", "red");
+        RenderElement elemB = new RenderElement("ball", "normal", 10, 20, 30, 30,
+                false, false, "", false, "", Map.of("shield", "blue"));
+        assertEquals(elemA, elemB);
+        assertEquals(elemA.hashCode(), elemB.hashCode());
+        assertEquals("blue", elemA.getEffectAttribute("shield"));
+        assertThrows(UnsupportedOperationException.class, () -> elemA.getEffectAttributes().put("extra", "1"));
+
+        MatchSummarySnapshot summaryA = new MatchSummarySnapshot(false, 2, 1, "P1", 100, 300, "P2", 50, 150);
+        MatchSummarySnapshot summaryB = new MatchSummarySnapshot(false, 2, 1, "P1", 100, 300, "P2", 50, 150);
+        assertEquals(summaryA, summaryB);
+        assertEquals(summaryA.hashCode(), summaryB.hashCode());
+
+        MatchResultSummary resultA = new MatchResultSummary(false, 2, 1, "P1", 100, 300, "P2", 50, 150);
+        MatchResultSummary resultB = new MatchResultSummary(false, 2, 1, "P1", 100, 300, "P2", 50, 150);
+        assertEquals(resultA, resultB);
+        assertEquals(resultA.hashCode(), resultB.hashCode());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> new ScreenDefinition(" ", SoundTrack.MAIN_MENU, false, Dimension::new, JPanel::new, false));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ScreenDefinition("MENU", SoundTrack.MAIN_MENU, false, null, JPanel::new, false));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ScreenDefinition("MENU", SoundTrack.MAIN_MENU, false, Dimension::new, null, false));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> new PauseDialog.PauseOption(" ", Color.WHITE, () -> {}));
+        assertThrows(IllegalArgumentException.class,
+                () -> new PauseDialog.PauseOption("Resume", null, () -> {}));
+        assertThrows(IllegalArgumentException.class,
+                () -> new PauseDialog.PauseOption("Resume", Color.WHITE, null));
     }
 
     private static <T extends Component> List<T> findComponents(Container root, Class<T> type) {

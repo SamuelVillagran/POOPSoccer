@@ -2,7 +2,9 @@ package presentation;
 
 import java.io.BufferedInputStream;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,9 +23,6 @@ import javax.sound.sampled.LineListener;
 public class MusicPlayer implements AudioController { /*Perfeccionado con Antigravity.*/
 
     private static final float TARGET_GAIN_DB = 1.0f; // Ganancia fija en decibelios para la música de fondo
-
-    private record CachedAudio(AudioFormat format, byte[] pcmData) { // Conserva el audio PCM decodificado en memoria para cambios instantáneos
-    }
 
     private final Map<SoundTrack, CachedAudio> cache = new ConcurrentHashMap<>(); // Evita releer pistas WAV pesadas del disco al cambiar de pantalla
     private final ExecutorService audioLoader = Executors.newSingleThreadExecutor(r -> {
@@ -84,7 +83,7 @@ public class MusicPlayer implements AudioController { /*Perfeccionado con Antigr
         Clip clip = null;
         try {
             clip = AudioSystem.getClip();
-            clip.open(audio.format(), audio.pcmData(), 0, audio.pcmData().length);
+            clip.open(audio.getFormat(), audio.getPcmData(), 0, audio.getPcmData().length);
             attachAndStartClip(clip, track, generation, loopContinuously, onNaturalCompletion);
         } catch (Exception e) {
             System.err.println("No se pudo reproducir la pista " + track + ": " + e.getMessage());
@@ -201,6 +200,49 @@ public class MusicPlayer implements AudioController { /*Perfeccionado con Antigr
             }
             clip.close();
         } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Stores decoded PCM audio data in memory for instantaneous track transitions.
+     */
+    private static final class CachedAudio {
+
+        private final AudioFormat format;
+        private final byte[] pcmData;
+
+        private CachedAudio(AudioFormat format, byte[] pcmData) {
+            this.format = format;
+            this.pcmData = (pcmData == null) ? new byte[0] : pcmData.clone();
+        }
+
+        private AudioFormat getFormat() {
+            return format;
+        }
+
+        private byte[] getPcmData() {
+            return pcmData;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof CachedAudio other)) {
+                return false;
+            }
+            return Objects.equals(format, other.format) && Arrays.equals(pcmData, other.pcmData);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * Objects.hash(format) + Arrays.hashCode(pcmData);
+        }
+
+        @Override
+        public String toString() {
+            return "CachedAudio[format=" + format + ", pcmDataLength=" + pcmData.length + "]";
         }
     }
 }

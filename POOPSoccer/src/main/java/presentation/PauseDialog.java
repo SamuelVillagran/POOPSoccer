@@ -11,6 +11,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.KeyEvent;
 import java.util.List;
+import java.util.Objects;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -25,25 +26,8 @@ import javax.swing.SwingUtilities;
 /**
  * Arcade-styled modal pause dialog shown over the pitch when pressing Escape.
  */
-public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
+public final class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
     /*Perfeccionado con Antigravity.*/
-
-    /**
-     * Declarative option entry rendered as a button inside the pause menu.
-     */
-    public record PauseOption(String label, Color color, Runnable action) {
-        public PauseOption {
-            if (label == null || label.isBlank()) {
-                throw new IllegalArgumentException("Pause option label cannot be blank.");
-            }
-            if (color == null) {
-                throw new IllegalArgumentException("Pause option color cannot be null.");
-            }
-            if (action == null) {
-                throw new IllegalArgumentException("Pause option action cannot be null.");
-            }
-        }
-    }
 
     static final Color BTN_RESTART = new Color(225, 110, 12); // Naranja vibrante para la opción de reinicio
     static final Color BTN_MENU = new Color(205, 42, 48); // Rojo intenso para salir al menú principal
@@ -137,16 +121,16 @@ public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
     }
 
     private JButton createActionButton(PauseOption option) {
-        JButton btn = new JButton(option.label()) {
+        JButton btn = new JButton(option.getLabel()) {
             @Override
             protected void paintComponent(Graphics g) {
-                ArcadeUIStyle.paintArcadeButton(g, this, option.color(), 16);
+                ArcadeUIStyle.paintArcadeButton(g, this, option.getColor(), 16);
                 super.paintComponent(g);
             }
         };
         ArcadeUIStyle.configureCleanButton(btn, new Font("Arial", Font.BOLD, 15), new Dimension(228, 40));
         btn.addActionListener(e -> {
-            selectedAction = option.action();
+            selectedAction = option.getAction();
             dispose();
         });
         return btn;
@@ -161,5 +145,67 @@ public class PauseDialog extends JDialog { // Implementado con Gemini Hydrogen 4
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_IN_FOCUSED_WINDOW
         );
+    }
+
+    /**
+     * Declarative option entry rendered as a button inside the pause menu.
+     */
+    public static final class PauseOption {
+
+        private final String label;
+        private final Color color;
+        private final Runnable action;
+
+        public PauseOption(String label, Color color, Runnable action) {
+            if (label == null || label.isBlank()) {
+                throw new IllegalArgumentException("Pause option label cannot be blank.");
+            }
+            if (color == null) {
+                throw new IllegalArgumentException("Pause option color cannot be null.");
+            }
+            if (action == null) {
+                throw new IllegalArgumentException("Pause option action cannot be null.");
+            }
+            this.label = label;
+            this.color = color;
+            this.action = action;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public Color getColor() {
+            return color;
+        }
+
+        public Runnable getAction() {
+            return action;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof PauseOption other)) {
+                return false;
+            }
+            return Objects.equals(label, other.label)
+                    && Objects.equals(color, other.color)
+                    && Objects.equals(action, other.action);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(label, color, action);
+        }
+
+        @Override
+        public String toString() {
+            return "PauseOption[label=" + label
+                    + ", color=" + color
+                    + ", action=" + action + "]";
+        }
     }
 }

@@ -22,7 +22,16 @@ public class MenuPanel extends JPanel { /*Perfeccionado con Antigravity.*/
 
     private BufferedImage background; // Ilustración principal de fondo cargada desde /menu/main.jpg
 
-    public MenuPanel(MenuPanelListener listener, List<GameModeOption> modeOptions) {
+    protected MenuPanel() {
+    }
+
+    public static MenuPanel create(MenuPanelListener listener, List<GameModeOption> modeOptions) {
+        MenuPanel panel = new MenuPanel();
+        panel.initializeView(listener, modeOptions);
+        return panel;
+    }
+
+    protected void initializeView(MenuPanelListener listener, List<GameModeOption> modeOptions) {
         loadBackground();
         prepareElements(listener, modeOptions);
     }
@@ -56,7 +65,7 @@ public class MenuPanel extends JPanel { /*Perfeccionado con Antigravity.*/
         List<GameModeOption> safeModes = modeOptions != null ? List.copyOf(modeOptions) : List.of();
         for (int i = 0; i < safeModes.size(); i++) {
             GameModeOption option = safeModes.get(i);
-            JButton modeButton = createButton(option.displayName());
+            JButton modeButton = createButton(option.getDisplayName());
             if (listener != null) {
                 modeButton.addActionListener(e -> listener.onModeSelected(option));
             }

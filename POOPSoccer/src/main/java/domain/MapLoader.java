@@ -84,6 +84,11 @@ public class MapLoader { // Responsabilidad de carga del mapa extraída de la fa
      * Registers or replaces a map token placer without modifying MapLoader.
      */
     public MapLoader registerPlacer(String token, TokenPlacer placer) {
+        addPlacer(token, placer);
+        return this;
+    }
+
+    private void addPlacer(String token, TokenPlacer placer) {
         if (token == null || token.isBlank()) {
             throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "token");
         }
@@ -91,23 +96,22 @@ public class MapLoader { // Responsabilidad de carga del mapa extraída de la fa
             throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "placer");
         }
         placers.put(token, placer);
-        return this;
     }
 
     private void registerDefaultPlacers() {
-        registerPlacer("1", (map, x, y, tile, id, p1, p2)
+        addPlacer("1", (map, x, y, tile, id, p1, p2)
                 -> { placePlayer(map, 1, p1, x, y); return id; }); // Ubica al Jugador 1
-        registerPlacer("2", (map, x, y, tile, id, p1, p2)
+        addPlacer("2", (map, x, y, tile, id, p1, p2)
                 -> { placePlayer(map, 2, p2, x, y); return id; }); // Ubica al Jugador 2
-        registerPlacer("0", (map, x, y, tile, id, p1, p2)
+        addPlacer("0", (map, x, y, tile, id, p1, p2)
                 -> { placeBall(map, x + tile / 2, y); return id; }); // Centra el balón en la celda inicial
-        registerPlacer("4", (map, x, y, tile, id, p1, p2)
+        addPlacer("4", (map, x, y, tile, id, p1, p2)
                 -> { placePitch(map, x, y, id); return id + 1; }); // Tramo del poste o travesaño izquierdo
-        registerPlacer("5", (map, x, y, tile, id, p1, p2)
+        addPlacer("5", (map, x, y, tile, id, p1, p2)
                 -> { placePitch(map, x + RIGHT_SIDE_OFFSET_X, y, id); return id + 1; }); // Travesaño derecho
-        registerPlacer("6", (map, x, y, tile, id, p1, p2)
+        addPlacer("6", (map, x, y, tile, id, p1, p2)
                 -> { placeGoal(map, 1, x, GOAL_TOP_Y, id); return id + 1; }); // Arco izquierdo
-        registerPlacer("7", (map, x, y, tile, id, p1, p2)
+        addPlacer("7", (map, x, y, tile, id, p1, p2)
                 -> { placeGoal(map, 2, x + RIGHT_SIDE_OFFSET_X, GOAL_TOP_Y, id); return id + 1; }); // Arco derecho
     }
 

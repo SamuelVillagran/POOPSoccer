@@ -79,5 +79,5 @@ public class GameSetup { /*Perfeccionado con Antigravity.*/
     public String getTeamP1() { return teamP1; }
     public String getNameP2() { return nameP2; }
     public String getTeamP2() { return teamP2; }
-    public String getGameMode() { return mode.id(); }
+    public String getGameMode() { return mode.getId(); }
 }

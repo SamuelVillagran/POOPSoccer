@@ -32,15 +32,25 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
     private final AudioController audioController;
     private final SoundEffectPlayer soundEffectPlayer; // Reproductor compartido para no recargar efectos WAV en cada partido
 
-    public GameContainer(GameController controller) {
-        this(controller, new MusicPlayer(), new EffectPlayer());
-    }
-
-    public GameContainer(GameController controller, AudioController audioController,
-                         SoundEffectPlayer soundEffectPlayer) {
+    protected GameContainer(GameController controller, AudioController audioController,
+                            SoundEffectPlayer soundEffectPlayer) {
         this.controller = controller;
         this.audioController = audioController;
         this.soundEffectPlayer = soundEffectPlayer;
+    }
+
+    public static GameContainer create(GameController controller) {
+        return create(controller, new MusicPlayer(), new EffectPlayer());
+    }
+
+    public static GameContainer create(GameController controller, AudioController audioController,
+                                       SoundEffectPlayer soundEffectPlayer) {
+        GameContainer container = new GameContainer(controller, audioController, soundEffectPlayer);
+        container.initializeView();
+        return container;
+    }
+
+    protected void initializeView() {
         prepareView();
     }
 
@@ -53,7 +63,7 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
         cardPanel = new JPanel(cardLayout);
         cardPanel.setOpaque(false);
 
-        infoPanel = new InfoPanel();
+        infoPanel = InfoPanel.create();
         infoPanel.setVisible(false); // Oculta el HUD mientras el usuario navega por los menús
         add(infoPanel, BorderLayout.NORTH);
         add(cardPanel, BorderLayout.CENTER);
@@ -68,7 +78,7 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
                 SoundTrack.MAIN_MENU,
                 false,
                 () -> MENU_SIZE,
-                () -> new MenuPanel(this, controller.getAvailableGameModes()),
+                () -> MenuPanel.create(this, controller.getAvailableGameModes()),
                 false
         ));
         registerScreen(new ScreenDefinition(
@@ -76,7 +86,7 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
                 SoundTrack.PLAYER_CONFIG,
                 false,
                 () -> MENU_SIZE,
-                () -> new PlayerConfig(this, controller, setup.getModeOption()),
+                () -> PlayerConfig.create(this, controller, setup.getModeOption()),
                 true
         ));
         registerScreen(new ScreenDefinition(
@@ -84,7 +94,7 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
                 SoundTrack.IN_GAME,
                 true,
                 setup::getResolution,
-                () -> new GamePanel(this, controller, setup.getResolution(), soundEffectPlayer),
+                () -> GamePanel.create(this, controller, setup.getResolution(), soundEffectPlayer),
                 true
         ));
     }
@@ -96,15 +106,15 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
         if (definition == null) {
             throw new IllegalArgumentException("Screen definition cannot be null.");
         }
-        screens.put(definition.id(), definition);
-        JPanel existing = mountedPanels.remove(definition.id());
+        screens.put(definition.getId(), definition);
+        JPanel existing = mountedPanels.remove(definition.getId());
         if (existing != null && existing != activePanel) {
             cardPanel.remove(existing);
         }
     }
 
     public String getActiveScreenId() {
-        return activeScreen != null ? activeScreen.id() : null;
+        return activeScreen != null ? activeScreen.getId() : null;
     }
 
     @Override
@@ -129,20 +139,20 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
         if (activePanel instanceof ScreenLifecycle lifecycle) {
             lifecycle.onScreenHidden();
         }
-        if (activePanel != null && (activeScreen.recreateOnShow() || !mountedPanels.containsValue(activePanel))) {
+        if (activePanel != null && (activeScreen.isRecreateOnShow() || !mountedPanels.containsValue(activePanel))) {
             cardPanel.remove(activePanel);
-            mountedPanels.remove(activeScreen.id());
+            mountedPanels.remove(activeScreen.getId());
         }
         JPanel nextPanel = resolvePanelForScreen(next);
         activeScreen = next;
         activePanel = nextPanel;
 
-        infoPanel.setVisible(next.showHud());
-        Dimension screenSize = next.sizeProvider().get();
-        applyWindowDimension(screenSize != null ? screenSize : MENU_SIZE, next.showHud());
-        cardLayout.show(cardPanel, next.id());
-        if (audioController != null && next.musicTrack() != null) {
-            audioController.playLoop(next.musicTrack());
+        infoPanel.setVisible(next.isShowHud());
+        Dimension screenSize = next.getSizeProvider().get();
+        applyWindowDimension(screenSize != null ? screenSize : MENU_SIZE, next.isShowHud());
+        cardLayout.show(cardPanel, next.getId());
+        if (audioController != null && next.getMusicTrack() != null) {
+            audioController.playLoop(next.getMusicTrack());
         }
         revalidate();
         repaint();
@@ -152,14 +162,14 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
     }
 
     private JPanel resolvePanelForScreen(ScreenDefinition next) {
-        JPanel mounted = mountedPanels.get(next.id());
-        if (mounted == null || next.recreateOnShow()) {
+        JPanel mounted = mountedPanels.get(next.getId());
+        if (mounted == null || next.isRecreateOnShow()) {
             if (mounted != null) {
                 cardPanel.remove(mounted);
             }
-            mounted = next.panelFactory().get();
-            mountedPanels.put(next.id(), mounted);
-            cardPanel.add(mounted, next.id());
+            mounted = next.getPanelFactory().get();
+            mountedPanels.put(next.getId(), mounted);
+            cardPanel.add(mounted, next.getId());
         }
         return mounted;
     }

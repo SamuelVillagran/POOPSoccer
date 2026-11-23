@@ -94,18 +94,28 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     private JButton startBtn;
     private static BufferedImage background; // Imagen de fondo compartida y cacheada en memoria
 
-    public PlayerConfig(PlayerConfigListener listener, GameController controller, GameModeOption mode) {
-        this(listener, controller, mode, DEFAULT_RESOLUTIONS);
-    }
-
-    public PlayerConfig(PlayerConfigListener listener, GameController controller, GameModeOption mode,
-                        List<ResolutionOption> resolutions) {
+    protected PlayerConfig(PlayerConfigListener listener, GameController controller, GameModeOption mode,
+                           List<ResolutionOption> resolutions) {
         this.mode = mode != null ? mode : new GameModeOption("PVM", "Jugador vs Máquina (PvM)", false, true);
         this.listener = listener;
         this.controller = controller;
         this.resolutionOptions = (resolutions != null && !resolutions.isEmpty())
                 ? List.copyOf(resolutions)
                 : DEFAULT_RESOLUTIONS;
+    }
+
+    public static PlayerConfig create(PlayerConfigListener listener, GameController controller, GameModeOption mode) {
+        return create(listener, controller, mode, DEFAULT_RESOLUTIONS);
+    }
+
+    public static PlayerConfig create(PlayerConfigListener listener, GameController controller, GameModeOption mode,
+                                      List<ResolutionOption> resolutions) {
+        PlayerConfig panel = new PlayerConfig(listener, controller, mode, resolutions);
+        panel.initializeView();
+        return panel;
+    }
+
+    protected void initializeView() {
         preloadBackground();
         prepareView();
         prepareController();
@@ -661,8 +671,8 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         limitCombo.removeAllItems();
         boolean hasParameter = selected != null && selected.hasParameter();
         if (hasParameter) {
-            limitLabel.setText(selected.parameterLabel());
-            for (Integer option : selected.parameterOptions()) {
+            limitLabel.setText(selected.getParameterLabel());
+            for (Integer option : selected.getParameterOptions()) {
                 limitCombo.addItem(option);
             }
         } else {
@@ -691,7 +701,7 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         String p1Country = (String) countryComboP1.getSelectedItem();
         String p2Country = (String) countryComboP2.getSelectedItem();
         MatchTypeOption selectedOption = (MatchTypeOption) matchTypeCombo.getSelectedItem();
-        String selectedMatchType = selectedOption != null ? selectedOption.displayName() : "";
+        String selectedMatchType = selectedOption != null ? selectedOption.getDisplayName() : "";
         int matchLimit = (selectedOption != null && selectedOption.hasParameter() && limitCombo.getSelectedItem() != null)
                 ? (Integer) limitCombo.getSelectedItem()
                 : 0;

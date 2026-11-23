@@ -3,8 +3,9 @@ package domain;
 /**
  * Machine player whose behavior is delegated to the strategy of its profile.
  */
-public class Machine extends Type { /*Perfeccionado con Antigravity.*/
+public class Machine implements Type { /*Perfeccionado con Antigravity.*/
     private final MachineStrategy strategy; // Comportamiento concreto elegido por el perfil
+    private Player player; // Referencia al jugador controlado por esta estrategia
 
     public Machine() {
         this(MachineProfile.CLUMSY);
@@ -19,6 +20,11 @@ public class Machine extends Type { /*Perfeccionado con Antigravity.*/
             throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "strategy");
         }
         this.strategy = strategy;
+    }
+
+    @Override
+    public void setPlayer(Player player) {
+        this.player = player;
     }
 
     @Override

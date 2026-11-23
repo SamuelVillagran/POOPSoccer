@@ -6,9 +6,9 @@ import domain.PlayerProfileSnapshot;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -36,11 +36,11 @@ public class PlayerDatabase implements PlayerDataGateway { /*Perfeccionado con A
         if (profile == null) {
             throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER);
         }
-        if (profile.name() == null || profile.name().isBlank()) {
+        if (profile.getName() == null || profile.getName().isBlank()) {
             throw new POOPSoccerException(POOPSoccerException.INVALID_PLAYER_NAME);
         }
         Map<String, String> records = readAllRecords(); // Loads existing records before updating the profile
-        String key = normalizeKey(profile.name());
+        String key = normalizeKey(profile.getName());
         records.put(key, mapSnapshotToRow(profile));
         writeAllRecords(records);
     }
@@ -59,13 +59,13 @@ public class PlayerDatabase implements PlayerDataGateway { /*Perfeccionado con A
     }
 
     private String mapSnapshotToRow(PlayerProfileSnapshot profile) {
-        String cleanName = profile.name().trim().replace(";", ","); // Prevents semicolons from corrupting CSV columns
+        String cleanName = profile.getName().trim().replace(";", ","); // Prevents semicolons from corrupting CSV columns
         return cleanName + ";"
-                + profile.points() + ";"
-                + profile.speedLevel() + ";"
-                + profile.jumpLevel() + ";"
-                + profile.kickLevel() + ";"
-                + profile.lifeLevel();
+                + profile.getPoints() + ";"
+                + profile.getSpeedLevel() + ";"
+                + profile.getJumpLevel() + ";"
+                + profile.getKickLevel() + ";"
+                + profile.getLifeLevel();
     }
 
     private Optional<PlayerProfileSnapshot> mapRowToSnapshot(String row) {
@@ -91,7 +91,7 @@ public class PlayerDatabase implements PlayerDataGateway { /*Perfeccionado con A
         if (databaseFile == null || !databaseFile.exists()) {
             return records;
         }
-        try (BufferedReader reader = new BufferedReader(new FileReader(databaseFile))) { // Recorre cada línea omitiendo el encabezado
+        try (BufferedReader reader = Files.newBufferedReader(databaseFile.toPath(), StandardCharsets.UTF_8)) { // Recorre cada línea omitiendo el encabezado
             String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
@@ -118,7 +118,7 @@ public class PlayerDatabase implements PlayerDataGateway { /*Perfeccionado con A
             if (parent != null && !parent.exists()) {
                 parent.mkdirs(); // Crea la carpeta database si todavía no existe
             }
-            try (PrintWriter writer = new PrintWriter(new FileWriter(databaseFile, false))) {
+            try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(databaseFile.toPath(), StandardCharsets.UTF_8))) {
                 writer.println(HEADER);
                 for (String row : records.values()) {
                     writer.println(row);

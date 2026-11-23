@@ -1,6 +1,6 @@
 package domain;
 
-public class Illusion extends Power { /*Perfeccionado con Antigravity.*/
+public class Illusion implements Power { /*Perfeccionado con Antigravity.*/
     @Override
     public Effect createEffect() {
         return new Confusion();

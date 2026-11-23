@@ -5,26 +5,26 @@ package domain;
  */
 public class MVM extends TypeMatch { //Ayudado a desacoplar de POOPScoccer con Antigravity
     /*Perfeccionado con Antigravity.*/
-    private final MachineProfile player1Profile; // Perfil de IA elegido para el Jugador 1
-    private final MachineProfile player2Profile; // Perfil de IA elegido para el Jugador 2
+    private final MachineProfile playerLeftProfile; // Perfil de IA elegido para el jugador izquierdo
+    private final MachineProfile playerRightProfile; // Perfil de IA elegido para el jugador derecho
 
     public MVM() {
         this(MachineProfile.CLUMSY, MachineProfile.CLUMSY);
     }
 
-    public MVM(MachineProfile player1Profile, MachineProfile player2Profile) {
-        this.player1Profile = (player1Profile != null) ? player1Profile : MachineProfile.CLUMSY;
-        this.player2Profile = (player2Profile != null) ? player2Profile : MachineProfile.CLUMSY;
+    public MVM(MachineProfile playerLeftProfile, MachineProfile playerRightProfile) {
+        this.playerLeftProfile = (playerLeftProfile != null) ? playerLeftProfile : MachineProfile.CLUMSY;
+        this.playerRightProfile = (playerRightProfile != null) ? playerRightProfile : MachineProfile.CLUMSY;
     }
 
     @Override
     protected Type createPlayer1Type() {
-        return new Machine(player1Profile);
+        return new Machine(playerLeftProfile);
     }
 
     @Override
     protected Type createPlayer2Type() {
-        return new Machine(player2Profile);
+        return new Machine(playerRightProfile);
     }
 
     @Override

@@ -41,7 +41,7 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         }
         this.name = name;
         this.team = team;
-        this.health = new PlayerHealth(getMaxLife());
+        this.health = new PlayerHealth(profile.getMaxLife());
     }
 
     public PlayerProfile getProfile() {

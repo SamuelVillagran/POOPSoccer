@@ -24,7 +24,7 @@ public class POOPSoccerGUI implements GameController { /*Perfeccionado con Antig
 
     public POOPSoccerGUI() {
         try {
-            this.window = new Window(this); // Inyecta este controlador como único puente hacia el dominio
+            this.window = Window.create(this); // Inyecta este controlador como único puente hacia el dominio
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -235,14 +235,14 @@ public class POOPSoccerGUI implements GameController { /*Perfeccionado con Antig
         var snapshot = POOPSoccer.getGame().getMatchSummary();
         return new MatchResultSummary( // Mapea el snapshot de dominio al DTO propio de presentación
                 snapshot.isDraw(),
-                snapshot.goalsP1(),
-                snapshot.goalsP2(),
-                snapshot.winnerName(),
-                snapshot.winnerPointsAwarded(),
-                snapshot.winnerTotalPoints(),
-                snapshot.loserName(),
-                snapshot.loserPointsAwarded(),
-                snapshot.loserTotalPoints()
+                snapshot.getGoalsP1(),
+                snapshot.getGoalsP2(),
+                snapshot.getWinnerName(),
+                snapshot.getWinnerPointsAwarded(),
+                snapshot.getWinnerTotalPoints(),
+                snapshot.getLoserName(),
+                snapshot.getLoserPointsAwarded(),
+                snapshot.getLoserTotalPoints()
         );
     }
 
@@ -303,17 +303,17 @@ public class POOPSoccerGUI implements GameController { /*Perfeccionado con Antig
         List<RenderElement> renderList = new ArrayList<>(snapshots.size());
         for (var item : snapshots) {
             renderList.add(new RenderElement(
-                    item.category(),
-                    item.variant(),
-                    item.x(),
-                    item.y(),
-                    item.width(),
-                    item.height(),
-                    item.powerAura(),
-                    item.stunned(),
-                    item.statusText(),
-                    item.shotAura(),
-                    item.shotEffectSprite()
+                    item.getCategory(),
+                    item.getVariant(),
+                    item.getX(),
+                    item.getY(),
+                    item.getWidth(),
+                    item.getHeight(),
+                    item.isPowerAura(),
+                    item.isStunned(),
+                    item.getStatusText(),
+                    item.isShotAura(),
+                    item.getShotEffectSprite()
             ));
         }
         return Collections.unmodifiableList(renderList);

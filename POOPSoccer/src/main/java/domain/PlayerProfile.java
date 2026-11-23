@@ -131,15 +131,15 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
     public void applySnapshot(PlayerProfileSnapshot snapshot) {
         if (snapshot == null) return;
         loadProgress(
-                snapshot.points(),
-                snapshot.speedLevel(),
-                snapshot.jumpLevel(),
-                snapshot.kickLevel(),
-                snapshot.lifeLevel(),
-                snapshot.matchesPlayed(),
-                snapshot.wins(),
-                snapshot.goalsFor(),
-                snapshot.goalsAgainst()
+                snapshot.getPoints(),
+                snapshot.getSpeedLevel(),
+                snapshot.getJumpLevel(),
+                snapshot.getKickLevel(),
+                snapshot.getLifeLevel(),
+                snapshot.getMatchesPlayed(),
+                snapshot.getWins(),
+                snapshot.getGoalsFor(),
+                snapshot.getGoalsAgainst()
         );
     }
 

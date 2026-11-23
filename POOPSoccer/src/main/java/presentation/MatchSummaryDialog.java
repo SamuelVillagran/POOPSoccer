@@ -29,7 +29,7 @@ import javax.swing.SwingUtilities;
 /**
  * Arcade-styled modal dialog shown when a match ends, displaying the final score and points summary.
  */
-public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hydrogen 4
+public final class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hydrogen 4
     /*Perfeccionado con Antigravity.*/
 
     private static final Color ROW_BG = new Color(26, 38, 62); // Fondo azul pizarra oscuro de las tarjetas de resumen
@@ -67,7 +67,7 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
 
         gbc.gridy = 1;
         gbc.insets = new Insets(2, 0, 14, 0);
-        card.add(buildScoreBadge(summary.goalsP1() + " - " + summary.goalsP2()), gbc);
+        card.add(buildScoreBadge(summary.getGoalsP1() + " - " + summary.getGoalsP2()), gbc);
 
         gbc.gridy = 2;
         gbc.insets = new Insets(0, 0, 16, 0);
@@ -145,13 +145,13 @@ public class MatchSummaryDialog extends JDialog { // Implementado con Gemini Hyd
     }
 
     private String formatWinnerText(MatchResultSummary s) {
-        return "¡Ganador: " + s.winnerName() + " (+" + s.winnerPointsAwarded()
-                + " pts | Total: " + s.winnerTotalPoints() + " pts)!";
+        return "¡Ganador: " + s.getWinnerName() + " (+" + s.getWinnerPointsAwarded()
+                + " pts | Total: " + s.getWinnerTotalPoints() + " pts)!";
     }
 
     private String formatLoserText(MatchResultSummary s) {
-        return "Perdedor: " + s.loserName() + " (+" + s.loserPointsAwarded()
-                + " pts | Total: " + s.loserTotalPoints() + " pts)";
+        return "Perdedor: " + s.getLoserName() + " (+" + s.getLoserPointsAwarded()
+                + " pts | Total: " + s.getLoserTotalPoints() + " pts)";
     }
 
     private JPanel buildResultRowCard(String lineText, boolean highlightBorder, boolean showTrophy) {

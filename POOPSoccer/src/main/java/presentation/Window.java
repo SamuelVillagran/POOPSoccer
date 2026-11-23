@@ -25,8 +25,17 @@ public class Window extends JFrame { /*Perfeccionado con Antigravity.*/
     private GameContainer gameContainer; // Panel central que alterna todas las pantallas de la interfaz
     private final GameController controller;
 
-    public Window(GameController controller) throws Exception {
+    protected Window(GameController controller) {
         this.controller = controller;
+    }
+
+    public static Window create(GameController controller) throws Exception {
+        Window window = new Window(controller);
+        window.initializeView();
+        return window;
+    }
+
+    protected void initializeView() throws Exception {
         prepareView();
         prepareActions();
     }
@@ -41,7 +50,7 @@ public class Window extends JFrame { /*Perfeccionado con Antigravity.*/
         setTitle("POOPSoccer");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        gameContainer = new GameContainer(controller);
+        gameContainer = GameContainer.create(controller);
         add(gameContainer);
         pack();
         setLocationRelativeTo(null); // Centra la ventana en el monitor del usuario

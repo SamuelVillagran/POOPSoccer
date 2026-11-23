@@ -8,13 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravity.*/
+public final class POOPSoccer implements Serializable { /*Perfeccionado con Antigravity.*/
 
     private static final float DELTA_TIME = 1.0f / 60.0f; // Paso temporal fijo por frame (60 FPS)
 
     private static POOPSoccer game; // Instancia única del motor de juego (Singleton)
     private boolean isPaused; // Detiene la física y el reloj mientras el menú de pausa está abierto
-    private Player player1, player2; // Entidades activas del jugador izquierdo y derecho
+    private Player playerLeft, playerRight; // Entidades activas del jugador izquierdo y derecho
     private Ball ball; // Balón principal con física y posibles tiros de poder
     private TypeMatch typeMatch; // Estrategia de modalidad de juego activa (PVP, PVM, MVM o extensión)
     private MatchRule matchRule; // Estrategia de regla de victoria activa (por goles, por tiempo o extensión)
@@ -44,10 +44,10 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
         this.typeMatch = new PVP();
         this.matchRule = new GoalMatch(3);
         String[] defaultNames = this.profileManager.resolveDefaultNames("Jugador 1", "Jugador 2");
-        player1 = this.typeMatch.createPlayer1(defaultNames[0], Team.COREA_DEL_SUR);
-        player2 = this.typeMatch.createPlayer2(defaultNames[1], Team.CAMEROON);
-        this.profileManager.loadIfPresent(player1);
-        this.profileManager.loadIfPresent(player2);
+        playerLeft = this.typeMatch.createPlayer1(defaultNames[0], Team.COREA_DEL_SUR);
+        playerRight = this.typeMatch.createPlayer2(defaultNames[1], Team.CAMEROON);
+        this.profileManager.loadIfPresent(playerLeft);
+        this.profileManager.loadIfPresent(playerRight);
     }
 
     public static synchronized POOPSoccer getGame() {
@@ -105,22 +105,22 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
     }
 
     private void initPlayers(TypeMatch typeMatch, String nameP1, String teamP1, String nameP2, String teamP2) {
-        Player prevP1 = this.player1;
-        Player prevP2 = this.player2;
+        Player prevLeft = this.playerLeft;
+        Player prevRight = this.playerRight;
 
         this.typeMatch = (typeMatch != null) ? typeMatch : new PVM();
-        player1 = this.typeMatch.createPlayer1(nameP1, Team.fromDisplayName(teamP1));
-        player2 = this.typeMatch.createPlayer2(nameP2, Team.fromDisplayName(teamP2));
-        profileManager.restoreProgress(player1, prevP1);
-        profileManager.restoreProgress(player2, prevP2);
-        profileManager.save(player1);
-        profileManager.save(player2);
+        playerLeft = this.typeMatch.createPlayer1(nameP1, Team.fromDisplayName(teamP1));
+        playerRight = this.typeMatch.createPlayer2(nameP2, Team.fromDisplayName(teamP2));
+        profileManager.restoreProgress(playerLeft, prevLeft);
+        profileManager.restoreProgress(playerRight, prevRight);
+        profileManager.save(playerLeft);
+        profileManager.save(playerRight);
     }
 
     private void initFieldElements() {
         elements.clear();
         goalPlayers.clear();
-        MapLoader.MapData mapData = new MapLoader().load(player1, player2);
+        MapLoader.MapData mapData = new MapLoader().load(playerLeft, playerRight);
         elements.putAll(mapData.getElements());
         goalPlayers.putAll(mapData.getGoals());
         if (mapData.getBall() != null) {
@@ -130,7 +130,7 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
 
     public synchronized void update() {
         if (isPaused) return;
-        matchRule.update(DELTA_TIME, player1, player2);
+        matchRule.update(DELTA_TIME, playerLeft, playerRight);
         elementsUpdate();
         collisionsUpdate();
         checkGoal();
@@ -146,30 +146,30 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
     }
 
     private void collisionsUpdate() {
-        cChecker.resolvePlayerEnvironmentCollisions(player1); // Limita ambos jugadores dentro de la cancha
-        cChecker.resolvePlayerEnvironmentCollisions(player2);
-        boolean p1HadPower = player1 != null && player1.isPowerActive();
-        cChecker.resolvePlayerBallInteraction(player1, ball); // Resuelve patadas, tiros de poder y choques con el balón
-        boolean p2HadPower = player2 != null && player2.isPowerActive();
-        cChecker.resolvePlayerBallInteraction(player2, ball);
-        if (p1HadPower && !player1.isPowerActive()) {
-            decoyBalls.spawnFrom(ball, player1);
-        } else if (p2HadPower && !player2.isPowerActive()) {
-            decoyBalls.spawnFrom(ball, player2);
+        cChecker.resolvePlayerEnvironmentCollisions(playerLeft); // Limita ambos jugadores dentro de la cancha
+        cChecker.resolvePlayerEnvironmentCollisions(playerRight);
+        boolean leftHadPower = playerLeft != null && playerLeft.isPowerActive();
+        cChecker.resolvePlayerBallInteraction(playerLeft, ball); // Resuelve patadas, tiros de poder y choques con el balón
+        boolean rightHadPower = playerRight != null && playerRight.isPowerActive();
+        cChecker.resolvePlayerBallInteraction(playerRight, ball);
+        if (leftHadPower && !playerLeft.isPowerActive()) {
+            decoyBalls.spawnFrom(ball, playerLeft);
+        } else if (rightHadPower && !playerRight.isPowerActive()) {
+            decoyBalls.spawnFrom(ball, playerRight);
         }
         cChecker.resolveBallEnvironmentCollisions(ball, elements.values()); // Rebota el balón real contra bordes y travesaños
         decoyBalls.resolveCollisions(cChecker, elements.values());
-        cChecker.resolveKickDamage(player1, player2); // Aplica daño cuerpo a cuerpo si las patadas alcanzan al rival
-        cChecker.resolveKickDamage(player2, player1);
-        cChecker.resolvePlayersOverlap(player1, player2); // Evita que los jugadores queden superpuestos tras saltar
+        cChecker.resolveKickDamage(playerLeft, playerRight); // Aplica daño cuerpo a cuerpo si las patadas alcanzan al rival
+        cChecker.resolveKickDamage(playerRight, playerLeft);
+        cChecker.resolvePlayersOverlap(playerLeft, playerRight); // Evita que los jugadores queden superpuestos tras saltar
     }
 
     public synchronized void movePlayer1(char direction) {
-        movePlayer(1, player1, player2, direction);
+        movePlayer(1, playerLeft, playerRight, direction);
     }
 
     public synchronized void movePlayer2(char direction) {
-        movePlayer(2, player2, player1, direction);
+        movePlayer(2, playerRight, playerLeft, direction);
     }
 
     private void movePlayer(int playerNum, Player mover, Player blocker, char direction) {
@@ -185,9 +185,9 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
     public void checkGoal() {
         if (ball == null) return;
         if (cChecker.isGoal(ball, goalPlayers.get(1))) {
-            registerGoal(player2, player1);
+            registerGoal(playerRight, playerLeft);
         } else if (cChecker.isGoal(ball, goalPlayers.get(2))) {
-            registerGoal(player1, player2);
+            registerGoal(playerLeft, playerRight);
         }
     }
 
@@ -198,8 +198,8 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
     }
 
     public Player getWinner() {
-        if (player1.getGoals() > player2.getGoals()) return player1;
-        if (player2.getGoals() > player1.getGoals()) return player2;
+        if (playerLeft.getGoals() > playerRight.getGoals()) return playerLeft;
+        if (playerRight.getGoals() > playerLeft.getGoals()) return playerRight;
         return null; // Retorna null cuando ambos jugadores tienen los mismos goles (empate)
     }
 
@@ -210,11 +210,11 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
             ball.setVelocity(0.0f, 0.0f);
             ball.setPositions(400.0f, 250.0f); // Suelta el balón en el centro superior de la cancha
         }
-        if (player1 != null) {
-            player1.setPositions(200.0f, CollisionChecker.DEFAULT_FLOOR_Y - player1.getHeight());
+        if (playerLeft != null) {
+            playerLeft.setPositions(200.0f, CollisionChecker.DEFAULT_FLOOR_Y - playerLeft.getHeight());
         }
-        if (player2 != null) {
-            player2.setPositions(600.0f, CollisionChecker.DEFAULT_FLOOR_Y - player2.getHeight());
+        if (playerRight != null) {
+            playerRight.setPositions(600.0f, CollisionChecker.DEFAULT_FLOOR_Y - playerRight.getHeight());
         }
     }
 
@@ -242,11 +242,11 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
     }
 
     public int getGoalsP1() {
-        return player1.getGoals();
+        return playerLeft.getGoals();
     }
 
     public int getGoalsP2() {
-        return player2.getGoals();
+        return playerRight.getGoals();
     }
 
     public String getDisplayInfo(int playerNum) {
@@ -331,7 +331,7 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
     public void awardMatchPoints() {
         if (pointsAwarded || !isGameFinished()) return; // Impide duplicar recompensas si se consulta varias veces
         pointsAwarded = true;
-        profileManager.recordMatchRewards(player1, player2, getWinner());
+        profileManager.recordMatchRewards(playerLeft, playerRight, getWinner());
     }
 
     /**
@@ -343,11 +343,11 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
 
     public MatchSummarySnapshot getMatchSummary() {
         awardMatchPoints(); // Garantiza que los puntos queden acreditados y persistidos antes de armar el resumen
-        return profileManager.buildMatchSummary(player1, player2, getWinner());
+        return profileManager.buildMatchSummary(playerLeft, playerRight, getWinner());
     }
 
     private Player getPlayerByNumber(int playerNum) {
-        return playerNum == 1 ? player1 : player2;
+        return playerNum == 1 ? playerLeft : playerRight;
     }
 
     public String getPlayerName(int playerNum) {
@@ -385,7 +385,7 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
     }
 
     public boolean isGameFinished() {
-        return matchRule.isFinished(player1, player2);
+        return matchRule.isFinished(playerLeft, playerRight);
     }
 
     /** Returns remaining seconds (shown in HUD). */
@@ -518,11 +518,11 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
      */
     public synchronized List<MatchEvent> consumeMatchEvents() {
         List<MatchEvent> events = new ArrayList<>();
-        if (player1 != null) {
-            player1.drainMatchEvents(events);
+        if (playerLeft != null) {
+            playerLeft.drainMatchEvents(events);
         }
-        if (player2 != null) {
-            player2.drainMatchEvents(events);
+        if (playerRight != null) {
+            playerRight.drainMatchEvents(events);
         }
         List<MatchEvent> queue = ensureMatchEventQueue();
         if (!queue.isEmpty()) {
@@ -539,8 +539,8 @@ public class POOPSoccer implements Serializable { /*Perfeccionado con Antigravit
         return pendingMatchEvents;
     }
 
-    public Player getPlayer1() { return player1; }
-    public Player getPlayer2() { return player2; }
+    public Player getPlayer1() { return playerLeft; }
+    public Player getPlayer2() { return playerRight; }
     public Ball getBall() { return ball; }
     public TypeMatch getTypeMatch() { return typeMatch; }
     public MatchRule getMatchRule() { return matchRule; }

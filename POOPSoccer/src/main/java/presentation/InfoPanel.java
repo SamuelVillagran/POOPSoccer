@@ -42,7 +42,16 @@ public class InfoPanel extends JPanel { /*Perfeccionado con Antigravity.*/
             false
     );
 
-    public InfoPanel() {
+    protected InfoPanel() {
+    }
+
+    public static InfoPanel create() {
+        InfoPanel panel = new InfoPanel();
+        panel.initializeView();
+        return panel;
+    }
+
+    protected void initializeView() {
         setPreferredSize(new Dimension(BASE_WIDTH, BASE_HEIGHT));
         setBackground(new Color(20, 20, 25));
         setOpaque(true);
@@ -70,45 +79,45 @@ public class InfoPanel extends JPanel { /*Perfeccionado con Antigravity.*/
         int p1BarX = 12;
         int p2BarX = BASE_WIDTH - 12 - barW;
 
-        drawPlayerHud(g2, snapshot.player1(), p1BarX, barW, Color.CYAN, false);
+        drawPlayerHud(g2, snapshot.getPlayer1(), p1BarX, barW, Color.CYAN, false);
         drawCenterScoreAndTimer(g2);
-        drawPlayerHud(g2, snapshot.player2(), p2BarX, barW, Color.ORANGE, true);
+        drawPlayerHud(g2, snapshot.getPlayer2(), p2BarX, barW, Color.ORANGE, true);
         g2.dispose();
     }
 
     private void drawPlayerHud(Graphics2D g2, PlayerHudInfo info, int barX, int barW,
                                Color nameColor, boolean rightAligned) {
         drawPlayerIdentityWithFlag(g2, info, barX, barW, nameColor, rightAligned);
-        drawBar(g2, barX, 23, barW, 10, clamp01(info.healthPercent()), resolveHpColor(info.healthPercent()), rightAligned);
-        drawBar(g2, barX, 36, barW, 8, clamp01(info.powerPercent()), resolvePowerColor(info.powerPercent()), rightAligned);
+        drawBar(g2, barX, 23, barW, 10, clamp01(info.getHealthPercent()), resolveHpColor(info.getHealthPercent()), rightAligned);
+        drawBar(g2, barX, 36, barW, 8, clamp01(info.getPowerPercent()), resolvePowerColor(info.getPowerPercent()), rightAligned);
         drawPowerStatusText(g2, info, barX, barW, rightAligned);
-        drawStatsSummary(g2, info.statsSummary(), barX, barW, rightAligned);
+        drawStatsSummary(g2, info.getStatsSummary(), barX, barW, rightAligned);
     }
 
     private void drawPlayerIdentityWithFlag(Graphics2D g2, PlayerHudInfo info, int barX, int barW,
                                             Color nameColor, boolean rightAligned) {
         g2.setFont(FONT_HUD);
-        String label = info.displayName() != null ? info.displayName() : "";
+        String label = info.getDisplayName() != null ? info.getDisplayName() : "";
         int textWidth = g2.getFontMetrics().stringWidth(label);
         int flagY = 5;
         int textY = 16;
 
         if (rightAligned) {
             int flagX = barX + barW - FLAG_WIDTH; // Ubica la bandera pegada al borde derecho para Jugador 2
-            CountryFlagRenderer.drawFlag(g2, info.teamName(), flagX, flagY, FLAG_WIDTH, FLAG_HEIGHT);
+            CountryFlagRenderer.drawFlag(g2, info.getTeamName(), flagX, flagY, FLAG_WIDTH, FLAG_HEIGHT);
             g2.setColor(nameColor);
             g2.drawString(label, flagX - 6 - textWidth, textY);
             return;
         }
-        CountryFlagRenderer.drawFlag(g2, info.teamName(), barX, flagY, FLAG_WIDTH, FLAG_HEIGHT);
+        CountryFlagRenderer.drawFlag(g2, info.getTeamName(), barX, flagY, FLAG_WIDTH, FLAG_HEIGHT);
         g2.setColor(nameColor);
         g2.drawString(label, barX + FLAG_WIDTH + 6, textY);
     }
 
     private void drawPowerStatusText(Graphics2D g2, PlayerHudInfo info, int barX, int barW, boolean rightAligned) {
         g2.setFont(FONT_POWER);
-        float pow = clamp01(info.powerPercent());
-        String active = info.activePower() != null ? info.activePower() : "";
+        float pow = clamp01(info.getPowerPercent());
+        String active = info.getActivePower() != null ? info.getActivePower() : "";
         g2.setColor(resolvePowerTextColor(active, pow));
         String label = formatPowerLabel(active, pow);
         int x = rightAligned ? barX + barW - g2.getFontMetrics().stringWidth(label) : barX;
@@ -128,14 +137,14 @@ public class InfoPanel extends JPanel { /*Perfeccionado con Antigravity.*/
     private void drawCenterScoreAndTimer(Graphics2D g2) {
         g2.setFont(FONT_SCORE);
         g2.setColor(Color.YELLOW);
-        String scoreText = snapshot.score() != null ? snapshot.score() : "0 - 0";
+        String scoreText = snapshot.getScore() != null ? snapshot.getScore() : "0 - 0";
         int scoreX = (BASE_WIDTH - g2.getFontMetrics().stringWidth(scoreText)) / 2;
         g2.drawString(scoreText, scoreX, 36);
 
-        String timerLabel = formatTimerLabel(snapshot.timeRemaining(), snapshot.suddenDeath());
+        String timerLabel = formatTimerLabel(snapshot.getTimeRemaining(), snapshot.isSuddenDeath());
         if (!timerLabel.isEmpty()) {
             g2.setFont(FONT_TIMER);
-            g2.setColor(snapshot.suddenDeath() ? Color.RED : Color.LIGHT_GRAY);
+            g2.setColor(snapshot.isSuddenDeath() ? Color.RED : Color.LIGHT_GRAY);
             int timerX = (BASE_WIDTH - g2.getFontMetrics().stringWidth(timerLabel)) / 2;
             g2.drawString(timerLabel, timerX, 58);
         }

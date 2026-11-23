@@ -52,19 +52,28 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
     private final List<ElementEffectRenderer> overlayRenderers = new ArrayList<>();
     private final List<PauseDialog.PauseOption> pauseOptions = new ArrayList<>();
 
-    public GamePanel(GamePanelListener listener, GameController controller,
-                     Dimension resolution, SoundEffectPlayer soundEffectPlayer) {
-        this(listener, controller, resolution, soundEffectPlayer, KeyHandler.getInstance());
-    }
-
-    public GamePanel(GamePanelListener listener, GameController controller,
-                     Dimension resolution, SoundEffectPlayer soundEffectPlayer,
-                     GameInputSource inputSource) {
+    protected GamePanel(GamePanelListener listener, GameController controller,
+                        SoundEffectPlayer soundEffectPlayer, GameInputSource inputSource) {
         this.listener = listener;
         this.controller = controller;
         this.soundEffectPlayer = soundEffectPlayer;
         this.inputSource = inputSource != null ? inputSource : KeyHandler.getInstance();
+    }
 
+    public static GamePanel create(GamePanelListener listener, GameController controller,
+                                   Dimension resolution, SoundEffectPlayer soundEffectPlayer) {
+        return create(listener, controller, resolution, soundEffectPlayer, KeyHandler.getInstance());
+    }
+
+    public static GamePanel create(GamePanelListener listener, GameController controller,
+                                   Dimension resolution, SoundEffectPlayer soundEffectPlayer,
+                                   GameInputSource inputSource) {
+        GamePanel panel = new GamePanel(listener, controller, soundEffectPlayer, inputSource);
+        panel.initializeView(resolution);
+        return panel;
+    }
+
+    protected void initializeView(Dimension resolution) {
         setPreferredSize(resolution != null ? resolution : new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
         setBackground(Color.BLACK);
         setDoubleBuffered(true); // Evita parpadeos dibujando primero en un búfer fuera de pantalla
@@ -83,20 +92,20 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
     }
 
     private void registerDefaultEffectRenderers() {
-        registerEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderPowerAura);
-        registerEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderStatusEffect);
-        registerEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderFallbackShotAura);
-        registerEffectRenderer(ElementEffectRenderer.Layer.OVERLAY, this::renderShotGifOverlay);
+        appendEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderPowerAura);
+        appendEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderStatusEffect);
+        appendEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderFallbackShotAura);
+        appendEffectRenderer(ElementEffectRenderer.Layer.OVERLAY, this::renderShotGifOverlay);
     }
 
     private void registerDefaultPauseOptions() {
-        addPauseOption(new PauseDialog.PauseOption("Continuar", ArcadeUIStyle.BTN_GREEN, this::resumeFromPause));
-        addPauseOption(new PauseDialog.PauseOption("Reiniciar", PauseDialog.BTN_RESTART, () -> {
+        appendPauseOption(new PauseDialog.PauseOption("Continuar", ArcadeUIStyle.BTN_GREEN, this::resumeFromPause));
+        appendPauseOption(new PauseDialog.PauseOption("Reiniciar", PauseDialog.BTN_RESTART, () -> {
             if (listener != null) {
                 listener.restartFromLevel1();
             }
         }));
-        addPauseOption(new PauseDialog.PauseOption("Volver al menú", PauseDialog.BTN_MENU, () -> {
+        appendPauseOption(new PauseDialog.PauseOption("Volver al menú", PauseDialog.BTN_MENU, () -> {
             if (listener != null) {
                 listener.goToMenu();
             }
@@ -107,6 +116,11 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
      * Registers a custom visual effect renderer on the chosen layer without editing draw().
      */
     public GamePanel registerEffectRenderer(ElementEffectRenderer.Layer layer, ElementEffectRenderer renderer) {
+        appendEffectRenderer(layer, renderer);
+        return this;
+    }
+
+    private void appendEffectRenderer(ElementEffectRenderer.Layer layer, ElementEffectRenderer renderer) {
         if (layer == null) {
             throw new IllegalArgumentException("Effect layer cannot be null.");
         }
@@ -118,18 +132,21 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
         } else {
             overlayRenderers.add(renderer);
         }
-        return this;
     }
 
     /**
      * Appends an action entry to the pause menu without editing PauseDialog or GamePanel switch logic.
      */
     public GamePanel addPauseOption(PauseDialog.PauseOption option) {
+        appendPauseOption(option);
+        return this;
+    }
+
+    private void appendPauseOption(PauseDialog.PauseOption option) {
         if (option == null) {
             throw new IllegalArgumentException("Pause option cannot be null.");
         }
         pauseOptions.add(option);
-        return this;
     }
 
     public List<PauseDialog.PauseOption> getPauseOptions() {
@@ -276,7 +293,7 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
      * Builds the resource path dynamically from the visual category and variant.
      */
     private String resolveImagePath(RenderElement elem) {
-        return "/" + elem.category() + "/" + elem.variant() + ".png";
+        return "/" + elem.getCategory() + "/" + elem.getVariant() + ".png";
     }
 
     private BufferedImage getSprite(String path) {
@@ -334,7 +351,7 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
                 BufferedImage sprite = getSprite(resolveImagePath(elem)); // Obtiene el sprite pre-cargado de caché
                 if (sprite != null) {
                     runEffectRenderers(underlayRenderers, g2, elem);
-                    g2.drawImage(sprite, elem.x(), elem.y(), elem.width(), elem.height(), null);
+                    g2.drawImage(sprite, elem.getX(), elem.getY(), elem.getWidth(), elem.getHeight(), null);
                     runEffectRenderers(overlayRenderers, g2, elem);
                 }
             }
@@ -348,13 +365,13 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
     }
 
     private void renderPowerAura(Graphics2D g2, RenderElement elem, ImageObserver observer) {
-        if (!elem.powerAura()) {
+        if (!elem.isPowerAura()) {
             return;
         }
-        int x = elem.x();
-        int y = elem.y();
-        int width = elem.width();
-        int height = elem.height();
+        int x = elem.getX();
+        int y = elem.getY();
+        int width = elem.getWidth();
+        int height = elem.getHeight();
         g2.setColor(AURA_FILL);
         g2.fillOval(x - 10, y - 10, width + 20, height + 20);
         g2.setColor(AURA_BORDER);
@@ -362,15 +379,15 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
     }
 
     private void renderStatusEffect(Graphics2D g2, RenderElement elem, ImageObserver observer) {
-        boolean stunned = elem.stunned();
-        String statusLabel = stunned ? STUNNED_LABEL : elem.statusText();
+        boolean stunned = elem.isStunned();
+        String statusLabel = stunned ? STUNNED_LABEL : elem.getStatusText();
         if (statusLabel == null || statusLabel.isEmpty()) {
             return;
         }
-        int x = elem.x();
-        int y = elem.y();
-        int width = elem.width();
-        int height = elem.height();
+        int x = elem.getX();
+        int y = elem.getY();
+        int width = elem.getWidth();
+        int height = elem.getHeight();
         g2.setColor(stunned ? STUN_FILL : EFFECT_FILL);
         g2.fillOval(x - 6, y - 6, width + 12, height + 12);
         g2.setColor(stunned ? Color.RED : Color.YELLOW);
@@ -378,25 +395,25 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
     }
 
     private void renderFallbackShotAura(Graphics2D g2, RenderElement elem, ImageObserver observer) {
-        if (elem.shotAura() && getAnimatedGif(elem.category(), elem.shotEffectSprite()) == null) {
+        if (elem.isShotAura() && getAnimatedGif(elem.getCategory(), elem.getShotEffectSprite()) == null) {
             g2.setColor(SHOT_AURA_FILL);
-            g2.fillOval(elem.x() - 6, elem.y() - 6, elem.width() + 12, elem.height() + 12);
+            g2.fillOval(elem.getX() - 6, elem.getY() - 6, elem.getWidth() + 12, elem.getHeight() + 12);
         }
     }
 
     private void renderShotGifOverlay(Graphics2D g2, RenderElement elem, ImageObserver observer) {
-        if (!elem.shotAura()) {
+        if (!elem.isShotAura()) {
             return;
         }
-        Image shotGif = getAnimatedGif(elem.category(), elem.shotEffectSprite());
+        Image shotGif = getAnimatedGif(elem.getCategory(), elem.getShotEffectSprite());
         if (shotGif != null) {
             int pad = SHOT_GIF_PADDING;
             g2.drawImage(
                     shotGif,
-                    elem.x() - pad,
-                    elem.y() - pad,
-                    elem.width() + pad * 2,
-                    elem.height() + pad * 2,
+                    elem.getX() - pad,
+                    elem.getY() - pad,
+                    elem.getWidth() + pad * 2,
+                    elem.getHeight() + pad * 2,
                     observer
             );
         }

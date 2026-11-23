@@ -1,6 +1,6 @@
 package domain;
 
-public class Tornado extends Power { /*Perfeccionado con Antigravity.*/
+public class Tornado implements Power { /*Perfeccionado con Antigravity.*/
     // Rapidez horizontal del tiro (px/frame); sqrt(SHOT_SPEED^2 + BOUNCE_UPWARD_VY^2) debe ser <= Ball.MAX_SPEED (16.0f)
     public static final float SHOT_SPEED = 11.0f;
     // Impulso vertical inicial al lanzar el tiro (negativo = hacia arriba para iniciar el primer rebote de inmediato)

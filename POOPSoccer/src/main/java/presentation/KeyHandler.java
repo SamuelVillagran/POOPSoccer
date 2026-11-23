@@ -31,28 +31,32 @@ public class KeyHandler extends KeyAdapter implements GameInputSource { /*Perfec
     }
 
     private void registerDefaultBindings() {
-        bindKey(KeyEvent.VK_W, controller -> controller.movePlayer1('j'));
-        bindKey(KeyEvent.VK_S, controller -> controller.movePlayer1('k'));
-        bindKey(KeyEvent.VK_A, controller -> controller.movePlayer1('l'));
-        bindKey(KeyEvent.VK_D, controller -> controller.movePlayer1('r'));
-        bindKey(KeyEvent.VK_Q, controller -> controller.movePlayer1('p'));
+        addKeyBinding(KeyEvent.VK_W, controller -> controller.movePlayer1('j'));
+        addKeyBinding(KeyEvent.VK_S, controller -> controller.movePlayer1('k'));
+        addKeyBinding(KeyEvent.VK_A, controller -> controller.movePlayer1('l'));
+        addKeyBinding(KeyEvent.VK_D, controller -> controller.movePlayer1('r'));
+        addKeyBinding(KeyEvent.VK_Q, controller -> controller.movePlayer1('p'));
 
-        bindKey(KeyEvent.VK_UP, controller -> controller.movePlayer2('j'));
-        bindKey(KeyEvent.VK_DOWN, controller -> controller.movePlayer2('k'));
-        bindKey(KeyEvent.VK_LEFT, controller -> controller.movePlayer2('l'));
-        bindKey(KeyEvent.VK_RIGHT, controller -> controller.movePlayer2('r'));
-        bindKey(KeyEvent.VK_CONTROL, controller -> controller.movePlayer2('p'));
+        addKeyBinding(KeyEvent.VK_UP, controller -> controller.movePlayer2('j'));
+        addKeyBinding(KeyEvent.VK_DOWN, controller -> controller.movePlayer2('k'));
+        addKeyBinding(KeyEvent.VK_LEFT, controller -> controller.movePlayer2('l'));
+        addKeyBinding(KeyEvent.VK_RIGHT, controller -> controller.movePlayer2('r'));
+        addKeyBinding(KeyEvent.VK_CONTROL, controller -> controller.movePlayer2('p'));
     }
 
     /**
      * Registers or replaces the action bound to the given key code.
      */
     public synchronized KeyHandler bindKey(int keyCode, Consumer<GameController> action) {
+        addKeyBinding(keyCode, action);
+        return this;
+    }
+
+    private void addKeyBinding(int keyCode, Consumer<GameController> action) {
         if (action == null) {
             throw new IllegalArgumentException("Key action cannot be null.");
         }
         keyBindings.put(keyCode, action);
-        return this;
     }
 
     public synchronized KeyHandler unbindKey(int keyCode) {
