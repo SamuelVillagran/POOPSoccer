@@ -41,10 +41,13 @@ import java.io.File;
 import java.io.Serializable;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -942,6 +945,46 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         assertTrue(customPlacements.get() > 0);
         assertNotNull(data.getBall());
         assertEquals(2, data.getGoals().size());
+    }
+
+    @Test
+    void mapLoaderSeparatesFieldObstaclesFromCoreActors() {
+        MapLoader.MapData data = new MapLoader().load(p1, p2);
+
+        assertNotNull(data.getBall());
+        assertNotNull(data.getLeftGoal());
+        assertNotNull(data.getRightGoal());
+        assertEquals(2, data.getGoals().size());
+        assertFalse(data.getFieldElements().isEmpty());
+        for (Element elem : data.getFieldElements()) {
+            assertFalse(elem instanceof Player, "Field obstacles should not include players");
+            assertFalse(elem instanceof Ball, "Field obstacles should not include the ball");
+            assertFalse(elem instanceof Goal, "Field obstacles should not include goals");
+        }
+    }
+
+    @Test
+    void boardViewDerivesAllActorsWithoutDuplicatingState() {
+        Map<Integer, Element> board = game.getElementsToDraw();
+        Set<Element> uniqueInstances = Collections.newSetFromMap(new IdentityHashMap<>());
+        uniqueInstances.addAll(board.values());
+
+        assertEquals(board.size(), uniqueInstances.size(), "Board view must not duplicate element instances");
+        assertTrue(uniqueInstances.contains(game.getBall()));
+        assertTrue(uniqueInstances.contains(game.getPlayer1()));
+        assertTrue(uniqueInstances.contains(game.getPlayer2()));
+        assertEquals(2L, board.values().stream().filter(e -> e instanceof Goal).count());
+        assertEquals(2L, board.values().stream().filter(e -> e instanceof Pitch).count());
+
+        List<String> categories = game.getRenderElements().stream()
+                .map(RenderElementData::getCategory)
+                .toList();
+        int ballIndex = categories.indexOf("ball");
+        int firstPlayerIndex = categories.indexOf("player");
+        int firstGoalIndex = categories.indexOf("goal");
+        assertTrue(ballIndex >= 0 && firstPlayerIndex >= 0 && firstGoalIndex >= 0);
+        assertTrue(ballIndex < firstGoalIndex, "Ball should render before goals");
+        assertTrue(firstPlayerIndex < firstGoalIndex, "Players should render before goals");
     }
 
     @Test

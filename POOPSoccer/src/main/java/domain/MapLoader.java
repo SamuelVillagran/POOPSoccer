@@ -4,9 +4,11 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * Builds the board elements (players, ball, pitch and goals) from the map configuration file.
@@ -15,21 +17,33 @@ public class MapLoader { // Responsabilidad de carga del mapa extraída de la fa
     /*Perfeccionado con Antigravity.*/
 
     /**
-     * Result of loading a map: board elements, goals by side and the main ball.
+     * Result of loading a map: extra field elements, left/right goals, and the main ball.
      */
     public static final class MapData {
-        private final TreeMap<Integer, Element> elements = new TreeMap<>();
-        private final TreeMap<Integer, Goal> goals = new TreeMap<>();
+        private final List<Element> fieldElements = new ArrayList<>();
+        private Goal leftGoal;
+        private Goal rightGoal;
         private Ball ball;
 
-        public TreeMap<Integer, Element> getElements() { return elements; }
-        public TreeMap<Integer, Goal> getGoals() { return goals; }
+        public List<Element> getFieldElements() { return Collections.unmodifiableList(fieldElements); }
+        public void addFieldElement(Element element) {
+            if (element != null) {
+                fieldElements.add(element);
+            }
+        }
+        public Goal getLeftGoal() { return leftGoal; }
+        public Goal getRightGoal() { return rightGoal; }
+        public List<Goal> getGoals() {
+            List<Goal> goals = new ArrayList<>(2);
+            if (leftGoal != null) goals.add(leftGoal);
+            if (rightGoal != null) goals.add(rightGoal);
+            return Collections.unmodifiableList(goals);
+        }
         public Ball getBall() { return ball; }
         public void setBall(Ball ball) { this.ball = ball; }
     }
 
     private static final String DEFAULT_PATH = "/positionElements/configuration.txt";
-    private static final int FIRST_FREE_ID = 3; // Reserva los IDs 0, 1 y 2 para balón y jugadores
     private static final int TILE_SIZE = 50; // Tamaño de cada celda de la grilla de configuración del mapa
     private static final float RIGHT_SIDE_OFFSET_X = 5.0f; // Ajuste horizontal en píxeles para elementos del lado derecho
     private static final float GOAL_TOP_Y = 358.0f; // Coordenada Y superior del arco apoyado hasta el suelo (358 + 157 = 515)
@@ -51,16 +65,16 @@ public class MapLoader { // Responsabilidad de carga del mapa extraída de la fa
      */
     public MapData load(Player player1, Player player2) {
         if (player1 == null || player2 == null) {
-            throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER);
+            throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER); // Impide construir un tablero sin ambos jugadores
         }
         if (path == null || path.isBlank()) {
-            throw new POOPSoccerException(POOPSoccerException.MAP_LOAD_ERROR + path);
+            throw new POOPSoccerException(POOPSoccerException.MAP_LOAD_ERROR + path); // Rechaza rutas vacías antes de abrir recursos
         }
         MapData map = new MapData();
-        int nextId = FIRST_FREE_ID;
+        int nextId = 0;
         try (InputStream is = getClass().getResourceAsStream(path)) {
             if (is == null) {
-                throw new POOPSoccerException(POOPSoccerException.MAP_LOAD_ERROR + path);
+                throw new POOPSoccerException(POOPSoccerException.MAP_LOAD_ERROR + path); // Falla de inmediato si falta el archivo del mapa
             }
             BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
             String line;
@@ -74,9 +88,9 @@ public class MapLoader { // Responsabilidad de carga del mapa extraída de la fa
                 row++;
             }
         } catch (POOPSoccerException e) {
-            throw e;
+            throw e; // Repropaga errores de dominio ya validados sin envolverlos dos veces
         } catch (Exception e) {
-            ErrorLogger.report(e);
+            ErrorLogger.report(e); // Registra el fallo inesperado de lectura y lo convierte en error de dominio con su causa raíz
             throw new POOPSoccerException(POOPSoccerException.MAP_LOAD_ERROR + path, e);
         }
         return map;
@@ -113,19 +127,19 @@ public class MapLoader { // Responsabilidad de carga del mapa extraída de la fa
 
     private void registerDefaultPlacers() {
         addPlacer("1", (map, x, y, tile, id, p1, p2)
-                -> { placePlayer(map, 1, p1, x, y); return id; }); // Ubica al Jugador 1
+                -> { placePlayer(p1, x, y); return id; });
         addPlacer("2", (map, x, y, tile, id, p1, p2)
-                -> { placePlayer(map, 2, p2, x, y); return id; }); // Ubica al Jugador 2
+                -> { placePlayer(p2, x, y); return id; });
         addPlacer("0", (map, x, y, tile, id, p1, p2)
-                -> { placeBall(map, x + tile / 2, y); return id; }); // Centra el balón en la celda inicial
+                -> { placeBall(map, x + tile / 2, y); return id; });
         addPlacer("4", (map, x, y, tile, id, p1, p2)
-                -> { placePitch(map, x, y, id); return id + 1; }); // Tramo del poste o travesaño izquierdo
+                -> { placePitch(map, x, y); return id + 1; });
         addPlacer("5", (map, x, y, tile, id, p1, p2)
-                -> { placePitch(map, x + RIGHT_SIDE_OFFSET_X, y, id); return id + 1; }); // Travesaño derecho
+                -> { placePitch(map, x + RIGHT_SIDE_OFFSET_X, y); return id + 1; });
         addPlacer("6", (map, x, y, tile, id, p1, p2)
-                -> { placeGoal(map, 1, x, GOAL_TOP_Y, id); return id + 1; }); // Arco izquierdo
+                -> { placeGoal(map, true, x, GOAL_TOP_Y); return id; });
         addPlacer("7", (map, x, y, tile, id, p1, p2)
-                -> { placeGoal(map, 2, x + RIGHT_SIDE_OFFSET_X, GOAL_TOP_Y, id); return id + 1; }); // Arco derecho
+                -> { placeGoal(map, false, x + RIGHT_SIDE_OFFSET_X, GOAL_TOP_Y); return id; });
     }
 
     private int placeToken(MapData map, String token, int posX, int posY, int tileSize, int nextId,
@@ -135,29 +149,30 @@ public class MapLoader { // Responsabilidad de carga del mapa extraída de la fa
         return placer.place(map, posX, posY, tileSize, nextId, player1, player2);
     }
 
-    private void placePlayer(MapData map, int id, Player player, float x, float y) {
+    private void placePlayer(Player player, float x, float y) {
         player.setPositions(x, y);
         player.setGroundY(y);
-        map.elements.put(id, player);
     }
 
     private void placeBall(MapData map, float x, float y) {
         Ball ball = new Ball();
         ball.setPositions(x, y);
         map.ball = ball;
-        map.elements.put(0, ball);
     }
 
-    private void placePitch(MapData map, float x, float y, int id) {
+    private void placePitch(MapData map, float x, float y) {
         Pitch pitch = new Pitch();
         pitch.setPositions(x, y);
-        map.elements.put(id, pitch);
+        map.addFieldElement(pitch);
     }
 
-    private void placeGoal(MapData map, int goalKey, float x, float y, int id) {
+    private void placeGoal(MapData map, boolean isLeft, float x, float y) {
         Goal goal = new Goal();
-        map.goals.putIfAbsent(goalKey, goal);
         goal.setPositions(x, y);
-        map.elements.put(id, goal);
+        if (isLeft && map.leftGoal == null) {
+            map.leftGoal = goal;
+        } else if (!isLeft && map.rightGoal == null) {
+            map.rightGoal = goal;
+        }
     }
 }

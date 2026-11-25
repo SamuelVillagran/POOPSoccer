@@ -3,9 +3,9 @@ package domain;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 public final class POOPSoccer implements Serializable { /*Perfeccionado con Antigravity.*/
 
@@ -20,8 +20,9 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
 
     private CollisionChecker cChecker; // Gestor central de colisiones físicas
     private ProfileManager profileManager; // Gestor de perfiles, recompensas y persistencia de progreso
-    private TreeMap<Integer, Element> elements; // Colección ordenada por ID de todos los elementos del tablero
-    private TreeMap<Integer, Goal> goalPlayers; // Asocia cada arco (1 izquierdo, 2 derecho) con su dueño
+    private Goal leftGoal;
+    private Goal rightGoal;
+    private List<Element> fieldElements; // Holds only static/extra map elements without duplicating core actors
     private final DecoyBallManager decoyBalls = new DecoyBallManager(); // Gestor de ciclo de vida y física de balones señuelo
     private boolean pointsAwarded = false; // Evita premiar puntos dos veces al finalizar el mismo partido
     private transient MatchStorageGateway matchStorage; // Puerto de persistencia para guardar y cargar partidas
@@ -36,10 +37,9 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
     }
 
     private POOPSoccer(ProfileManager profileManager, CollisionChecker collisionChecker) {
-        elements = new TreeMap<>();
+        fieldElements = new ArrayList<>();
         cChecker = (collisionChecker != null) ? collisionChecker : new CollisionChecker();
         this.profileManager = profileManager;
-        goalPlayers = new TreeMap<>();
         this.typeMatch = new PVP();
         this.matchRule = new GoalMatch(3);
         String[] defaultNames = this.profileManager.resolveDefaultNames("Jugador 1", "Jugador 2");
@@ -56,6 +56,7 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return game;
     }
 
+    // Recibe estrategias abiertas (TypeMatch, MatchRule) y objetos de dominio ya validados en la frontera
     public synchronized void startGame(TypeMatch typeMatch, MatchRule matchRule,
                                        String nameP1, Team teamP1,
                                        String nameP2, Team teamP2) {
@@ -98,11 +99,11 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
     }
 
     private void initFieldElements() {
-        elements.clear();
-        goalPlayers.clear();
+        fieldElements.clear();
         MapLoader.MapData mapData = new MapLoader().load(playerLeft, playerRight);
-        elements.putAll(mapData.getElements());
-        goalPlayers.putAll(mapData.getGoals());
+        fieldElements.addAll(mapData.getFieldElements());
+        leftGoal = mapData.getLeftGoal();
+        rightGoal = mapData.getRightGoal();
         if (mapData.getBall() != null) {
             ball = mapData.getBall();
         }
@@ -117,9 +118,18 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
     }
 
     private void elementsUpdate() {
-        for (Element element : elements.values()) {
+        if (ball != null) {
+            ball.update();
+        }
+        if (playerLeft != null) {
+            playerLeft.update();
+        }
+        if (playerRight != null) {
+            playerRight.update();
+        }
+        for (Element element : fieldElements) {
             if (element != null) {
-                element.update(); // Actualiza cada elemento del tablero de forma polimórfica
+                element.update();
             }
         }
         decoyBalls.update(DELTA_TIME);
@@ -137,8 +147,8 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         } else if (rightHadPower && !playerRight.isPowerActive()) {
             decoyBalls.spawnFrom(ball, playerRight);
         }
-        cChecker.resolveBallEnvironmentCollisions(ball, elements.values()); // Rebota el balón real contra bordes y travesaños
-        decoyBalls.resolveCollisions(cChecker, elements.values());
+        cChecker.resolveBallEnvironmentCollisions(ball, fieldElements);
+        decoyBalls.resolveCollisions(cChecker, fieldElements);
         cChecker.resolveKickDamage(playerLeft, playerRight); // Aplica daño cuerpo a cuerpo si las patadas alcanzan al rival
         cChecker.resolveKickDamage(playerRight, playerLeft);
         cChecker.resolvePlayersOverlap(playerLeft, playerRight); // Evita que los jugadores queden superpuestos tras saltar
@@ -157,7 +167,7 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         Player mover = getPlayer(player);
         Player blocker = getOpponent(player);
         if (mover != null && (typeMatch == null || typeMatch.canControlManually(player))) {
-            float xBefore = mover.getX();
+            float xBefore = mover.getX(); // Registra la posición previa para detectar desplazamiento horizontal en cualquier acción personalizada
             mover.execute(action);
             if (mover.getX() != xBefore) {
                 cChecker.resolvePlayerMovementCollision(mover, blocker); // Evita atravesar al rival al desplazarse
@@ -168,9 +178,9 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
 
     public void checkGoal() {
         if (ball == null) return;
-        if (cChecker.isGoal(ball, goalPlayers.get(1))) {
+        if (cChecker.isGoal(ball, leftGoal)) {
             registerGoal(playerRight, playerLeft);
-        } else if (cChecker.isGoal(ball, goalPlayers.get(2))) {
+        } else if (cChecker.isGoal(ball, rightGoal)) {
             registerGoal(playerLeft, playerRight);
         }
     }
@@ -334,31 +344,55 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return matchRule.isSuddenDeath();
     }
 
-    public Map<Integer, Element> getElementsToDraw() {
-        if (!decoyBalls.isActive()) {
-            return elements;
+    /**
+     * Derives an ordered board element map from the single-source facade fields without duplicating state.
+     */
+    public synchronized Map<Integer, Element> getElementsToDraw() {
+        List<Element> boardElements = collectBoardElements();
+        Map<Integer, Element> view = new LinkedHashMap<>(boardElements.size());
+        int id = 0;
+        for (Element elem : boardElements) {
+            view.put(id++, elem);
         }
-        TreeMap<Integer, Element> allElements = new TreeMap<>(elements);
-        int nextId = allElements.isEmpty() ? 1 : allElements.lastKey() + 1;
-        for (Ball decoy : decoyBalls.getBalls()) {
-            allElements.put(nextId++, decoy); // Añade los señuelos activos a una vista combinada sin modificar el tablero base
-        }
-        return allElements;
+        return view;
     }
 
     /**
      * Returns an immutable thread-safe snapshot of all board elements for the view to render.
      */
     public synchronized List<RenderElementData> getRenderElements() {
-        List<Ball> decoys = decoyBalls.isActive() ? decoyBalls.getBalls() : List.of();
-        List<RenderElementData> snapshots = new ArrayList<>(elements.size() + decoys.size());
-        for (Element elem : elements.values()) { // Traduce entidades del dominio a DTOs visuales inmutables
+        List<Element> boardElements = collectBoardElements();
+        List<RenderElementData> snapshots = new ArrayList<>(boardElements.size());
+        for (Element elem : boardElements) {
             addRenderSnapshot(snapshots, elem);
         }
-        for (Ball decoy : decoys) {
-            addRenderSnapshot(snapshots, decoy); // Incluye señuelos activos sin clonar el TreeMap en cada frame
-        }
         return snapshots;
+    }
+
+    private List<Element> collectBoardElements() {
+        List<Ball> decoys = decoyBalls.isActive() ? decoyBalls.getBalls() : List.of();
+        int fieldCount = (fieldElements != null) ? fieldElements.size() : 0;
+        List<Element> boardElements = new ArrayList<>(5 + fieldCount + decoys.size());
+        addIfPresent(boardElements, ball);
+        addIfPresent(boardElements, playerLeft);
+        addIfPresent(boardElements, playerRight);
+        if (fieldElements != null) {
+            for (Element elem : fieldElements) {
+                addIfPresent(boardElements, elem);
+            }
+        }
+        addIfPresent(boardElements, leftGoal);
+        addIfPresent(boardElements, rightGoal);
+        for (Ball decoy : decoys) {
+            addIfPresent(boardElements, decoy);
+        }
+        return boardElements;
+    }
+
+    private void addIfPresent(List<Element> target, Element element) {
+        if (element != null) {
+            target.add(element);
+        }
     }
 
     private void addRenderSnapshot(List<RenderElementData> snapshots, Element elem) {
@@ -428,6 +462,9 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         }
         if (loadedGame.cChecker == null) {
             loadedGame.cChecker = new CollisionChecker();
+        }
+        if (loadedGame.fieldElements == null) {
+            loadedGame.fieldElements = new ArrayList<>();
         }
         if (this.matchStorage != null) {
             loadedGame.matchStorage = this.matchStorage;

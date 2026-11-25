@@ -17,15 +17,16 @@ public interface ErrorLogger { /*Perfeccionado con Antigravity.*/
         if (e == null) {
             return;
         }
+        // Pasa null en onFailure para evitar recursión infinita si falla la carga del propio ErrorLogger vía SPI
         Optional<ErrorLogger> logger = ServiceResolver.loadFirst(ErrorLogger.class, null);
         if (logger.isPresent()) {
             try {
-                logger.get().log(e);
+                logger.get().log(e); // Delega el registro del error al proveedor descubierto
                 return;
             } catch (Exception | LinkageError ignored) {
-                // Fall back to stderr if the resolved logger fails at runtime
+                // Recurre a stderr si el proveedor resuelto falla en tiempo de ejecución
             }
         }
-        e.printStackTrace();
+        e.printStackTrace(); // Respaldo final en consola cuando no existe ningún ErrorLogger operativo
     }
 }

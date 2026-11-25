@@ -43,6 +43,7 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         this.health = new PlayerHealth(profile.getMaxLife());
     }
 
+    // Encapsula el perfil interno (Ley de Demeter) y sincroniza la vida máxima automáticamente tras cada cambio
     public boolean upgradeStat(PlayerStat stat) {
         if (profile.upgradeStat(stat)) {
             restoreFullHealth();
@@ -68,7 +69,7 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         if (previous == null) {
             return;
         }
-        profile.copyFrom(previous.profile);
+        profile.copyFrom(previous.profile); // Accede al perfil del otro Player dentro de la misma clase sin exponer un getter público
         restoreFullHealth();
     }
 
@@ -108,6 +109,7 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         return profile.getUpgradeCost(stat);
     }
 
+    // Delega en un solo salto los datos del equipo y del poder para evitar cadenas desde colaboradores
     public String getTeamDisplayName() {
         return team != null ? team.getDisplayName() : "";
     }

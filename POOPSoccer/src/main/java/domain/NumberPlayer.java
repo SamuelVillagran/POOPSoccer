@@ -20,9 +20,10 @@ public enum NumberPlayer { /*Perfeccionado con Antigravity.*/
     public static NumberPlayer fromNumber(int playerNumber) {
         for (NumberPlayer slot : values()) {
             if (slot.number == playerNumber) {
-                return slot;
+                return slot; // Convierte el entero externo (1 o 2) al valor cerrado del dominio
             }
         }
+        // Rechaza cualquier índice fuera de 1 o 2 en la frontera en lugar de asumir un jugador por defecto
         throw new POOPSoccerException(POOPSoccerException.INVALID_PLAYER_SLOT + playerNumber);
     }
 }

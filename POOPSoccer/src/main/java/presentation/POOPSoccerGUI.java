@@ -194,6 +194,7 @@ public class POOPSoccerGUI implements GameController { /*Perfeccionado con Antig
     @Override
     public void startGame(String gameMode, String matchType, int matchLimit,
                           String nameP1, String teamP1, String nameP2, String teamP2) {
+        // Parsea una sola vez en la frontera las selecciones de texto hacia estrategias y tipos cerrados de dominio
         TypeMatch resolvedMode = GameMode.fromName(gameMode).createTypeMatch();
         MatchRule resolvedRule = MatchType.fromDisplayName(matchType).createMatchRule(matchLimit);
         Team resolvedTeamP1 = Team.fromDisplayName(teamP1);
@@ -234,6 +235,7 @@ public class POOPSoccerGUI implements GameController { /*Perfeccionado con Antig
     }
 
     private void dispatchPlayerAction(NumberPlayer player, char direction) {
+        // Traduce la tecla cruda en la frontera hacia una PlayerAction abierta del dominio
         PlayerAction action = INPUT_ACTIONS.get(direction);
         if (action != null) {
             POOPSoccer.getGame().performAction(player, action);

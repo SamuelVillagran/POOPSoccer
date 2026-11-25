@@ -26,6 +26,7 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
         return new ProfileManager(resolveDefaultDataGateway());
     }
 
+    // Busca mediante SPI el primer adaptador de persistencia de perfiles disponible; devuelve null si ninguno carga
     private static PlayerDataGateway resolveDefaultDataGateway() {
         return ServiceResolver.loadFirst(PlayerDataGateway.class).orElse(null);
     }

@@ -18,6 +18,7 @@ public interface MatchStorageGateway { /*Perfeccionado con Antigravity.*/
      * Resolves the default MatchStorageGateway implementation discovered via SPI.
      */
     static MatchStorageGateway resolveDefault() {
+        // Busca mediante SPI el adaptador de guardado de partidas; falla explícitamente si no existe ningún proveedor válido
         return ServiceResolver.loadFirst(MatchStorageGateway.class)
                 .orElseThrow(() -> new POOPSoccerException(POOPSoccerException.SAVE_ERROR));
     }
