@@ -84,8 +84,4 @@ public class PowerCharge implements Serializable { /*Perfeccionado con Antigravi
     public float getPercent() {
         return currentPower / MAX_POWER;
     }
-
-    public float getCurrentCharge() {
-        return currentPower;
-    }
 }

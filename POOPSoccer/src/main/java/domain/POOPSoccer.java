@@ -26,7 +26,6 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
     private final DecoyBallManager decoyBalls = new DecoyBallManager(); // Gestor de ciclo de vida y física de balones señuelo
     private boolean pointsAwarded = false; // Evita premiar puntos dos veces al finalizar el mismo partido
     private transient MatchStorageGateway matchStorage; // Puerto de persistencia para guardar y cargar partidas
-    private transient List<MatchEvent> pendingMatchEvents = new ArrayList<>(); // Eventos puros de interacción del partido
 
     private POOPSoccer() {
         this(ProfileManager.withDefaultGateway());
@@ -82,7 +81,6 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         this.isPaused = false;
         this.decoyBalls.clear();
         this.pointsAwarded = false;
-        ensureMatchEventQueue().clear();
     }
 
     private void initPlayers(TypeMatch typeMatch, String nameP1, Team teamP1, String nameP2, Team teamP2) {
@@ -473,15 +471,6 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
     }
 
     /**
-     * Queues a pure domain interaction event for presentation to consume after each step.
-     */
-    public synchronized void emitMatchEvent(MatchEvent event) {
-        if (event != null) {
-            ensureMatchEventQueue().add(event);
-        }
-    }
-
-    /**
      * Returns and clears all pending gameplay events emitted during the latest frames.
      */
     public synchronized List<MatchEvent> consumeMatchEvents() {
@@ -492,19 +481,7 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         if (playerRight != null) {
             playerRight.drainMatchEvents(events);
         }
-        List<MatchEvent> queue = ensureMatchEventQueue();
-        if (!queue.isEmpty()) {
-            events.addAll(queue);
-            queue.clear();
-        }
         return events;
-    }
-
-    private List<MatchEvent> ensureMatchEventQueue() {
-        if (pendingMatchEvents == null) {
-            pendingMatchEvents = new ArrayList<>();
-        }
-        return pendingMatchEvents;
     }
 
     public Player getPlayer1() { return playerLeft; }

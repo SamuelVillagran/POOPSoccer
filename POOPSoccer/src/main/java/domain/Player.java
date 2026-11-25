@@ -97,10 +97,6 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         return profile.getGoalsFor();
     }
 
-    public int getGoalsAgainst() {
-        return profile.getGoalsAgainst();
-    }
-
     public int getStatLevel(PlayerStat stat) {
         return profile.getStatLevel(stat);
     }
@@ -239,13 +235,6 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
      */
     public void addPowerCharge(float amount) {
         powerCharge.addCharge(amount);
-    }
-
-    /**
-     * Drains charge from this player's power bar.
-     */
-    public void drainPowerCharge(float amount) {
-        powerCharge.drainCharge(amount);
     }
 
     /** Returns health as a 0.0–1.0 fraction for the HUD bar. */

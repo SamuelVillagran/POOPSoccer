@@ -59,18 +59,9 @@ public class KeyHandler extends KeyAdapter implements GameInputSource { /*Perfec
         keyBindings.put(keyCode, action);
     }
 
-    public synchronized KeyHandler unbindKey(int keyCode) {
-        keyBindings.remove(keyCode);
-        return this;
-    }
-
     public synchronized KeyHandler setPauseKey(int keyCode) {
         this.pauseKeyCode = keyCode;
         return this;
-    }
-
-    public synchronized boolean isKeyPressed(int keyCode) {
-        return keys.get(keyCode);
     }
 
     @Override
@@ -120,13 +111,5 @@ public class KeyHandler extends KeyAdapter implements GameInputSource { /*Perfec
             component.removeKeyListener(this);
             component.addKeyListener(this);
         }
-    }
-
-    public boolean consumeEscToggle() {
-        return consumePauseTrigger();
-    }
-
-    public void clearAllKeys() {
-        clearInputs();
     }
 }

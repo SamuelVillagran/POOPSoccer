@@ -44,20 +44,6 @@ public final class RenderElementData { /*Perfeccionado con Antigravity.*/
         this.shotEffectSprite = shotEffectSprite;
     }
 
-    public RenderElementData(
-            String category,
-            String variant,
-            int x,
-            int y,
-            int width,
-            int height,
-            boolean powerAura,
-            boolean stunned,
-            String statusText,
-            boolean shotAura) {
-        this(category, variant, x, y, width, height, powerAura, stunned, statusText, shotAura, "");
-    }
-
     public String getCategory() {
         return category;
     }

@@ -18,18 +18,6 @@ public final class ResolutionOption {
         this.heightScale = heightScale;
     }
 
-    public String getLabel() {
-        return label;
-    }
-
-    public double getWidthScale() {
-        return widthScale;
-    }
-
-    public double getHeightScale() {
-        return heightScale;
-    }
-
     public Dimension toDimension(Dimension screenSize) {
         return new Dimension(
                 (int) Math.round(screenSize.width * widthScale),

@@ -66,8 +66,4 @@ public abstract class TypeMatch implements Serializable { //Ayudado a desacoplar
     public boolean isMachinePlayer(NumberPlayer player) {
         return !canControlManually(player);
     }
-
-    public String getName() {
-        return getClass().getSimpleName();
-    }
 }

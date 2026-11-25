@@ -1,30 +1,25 @@
 package domain;
 
-import java.util.function.BiFunction;
 import java.util.function.IntFunction;
 
 /**
  * Match types for DOPOSoccer.
  */
 public enum MatchType { /*Perfeccionado con Antigravity.*/
-    PER_GOALS("Por goles", "Goles para ganar:", new int[] { 3, 5, 7 }, GoalMatch::new,
-            (goalLimit, timeLimitMinutes) -> new GoalMatch(goalLimit)),
-    PER_TIME("Por tiempo", "Minutos del partido:", new int[] { 1, 2, 3, 5 }, TimedMatch::new,
-            (goalLimit, timeLimitMinutes) -> new TimedMatch(timeLimitMinutes));
+    PER_GOALS("Por goles", "Goles para ganar:", new int[] { 3, 5, 7 }, GoalMatch::new),
+    PER_TIME("Por tiempo", "Minutos del partido:", new int[] { 1, 2, 3, 5 }, TimedMatch::new);
 
     private final String displayName; // Etiqueta visible en el selector de configuración del partido
     private final String parameterLabel;
     private final int[] parameterOptions;
     private final IntFunction<MatchRule> singleParamFactory;
-    private final BiFunction<Integer, Integer, MatchRule> ruleFactory; // Interfaz funcional: recibe (goalLimit, timeLimitMinutes) y devuelve un MatchRule
 
     MatchType(String displayName, String parameterLabel, int[] parameterOptions,
-              IntFunction<MatchRule> singleParamFactory, BiFunction<Integer, Integer, MatchRule> ruleFactory) {
+              IntFunction<MatchRule> singleParamFactory) {
         this.displayName = displayName;
         this.parameterLabel = parameterLabel;
         this.parameterOptions = parameterOptions != null ? parameterOptions.clone() : new int[0];
         this.singleParamFactory = singleParamFactory;
-        this.ruleFactory = ruleFactory; // Guarda la función fábrica sin instanciar la regla todavía
     }
 
     public String getDisplayName() {
@@ -41,10 +36,6 @@ public enum MatchType { /*Perfeccionado con Antigravity.*/
 
     public MatchRule createMatchRule(int parameterValue) {
         return singleParamFactory.apply(parameterValue);
-    }
-
-    public MatchRule createMatchRule(int goalLimit, int timeLimitMinutes) {
-        return ruleFactory.apply(goalLimit, timeLimitMinutes); // Ejecuta la lambda guardada (apply) y crea una instancia nueva de MatchRule para el partido
     }
 
     public static MatchType fromDisplayName(String name) {

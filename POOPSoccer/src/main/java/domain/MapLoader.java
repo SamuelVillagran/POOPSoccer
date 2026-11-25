@@ -40,7 +40,6 @@ public class MapLoader { // Responsabilidad de carga del mapa extraída de la fa
             return Collections.unmodifiableList(goals);
         }
         public Ball getBall() { return ball; }
-        public void setBall(Ball ball) { this.ball = ball; }
     }
 
     private static final String DEFAULT_PATH = "/positionElements/configuration.txt";

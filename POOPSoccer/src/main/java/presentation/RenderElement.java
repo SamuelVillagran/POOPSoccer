@@ -58,20 +58,6 @@ public final class RenderElement { /*Perfeccionado con Antigravity.*/
             boolean powerAura,
             boolean stunned,
             String statusText,
-            boolean shotAura) {
-        this(category, variant, x, y, width, height, powerAura, stunned, statusText, shotAura, "", Map.of());
-    }
-
-    public RenderElement(
-            String category,
-            String variant,
-            int x,
-            int y,
-            int width,
-            int height,
-            boolean powerAura,
-            boolean stunned,
-            String statusText,
             boolean shotAura,
             String shotEffectSprite) {
         this(category, variant, x, y, width, height, powerAura, stunned, statusText, shotAura, shotEffectSprite, Map.of());

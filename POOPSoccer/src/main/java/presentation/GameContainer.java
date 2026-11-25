@@ -122,12 +122,6 @@ public class GameContainer extends JPanel implements GamePanelListener, MenuPane
         infoPanel.updateMatchInfo(hud);
     }
 
-    public void showView(ScreenView view) {
-        if (view != null) {
-            showScreen(view.name());
-        }
-    }
-
     /**
      * Transitions to any registered screen, invoking optional lifecycle hooks and updating music/layout.
      */

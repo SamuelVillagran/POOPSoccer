@@ -12,10 +12,6 @@ public class GoalMatch implements MatchRule { //Ayudado a desacoplar de POOPScoc
         this.goalLimit = Math.max(1, goalLimit);
     }
 
-    public int getGoalLimit() {
-        return goalLimit;
-    }
-
     @Override
     public boolean isFinished(Player player1, Player player2) {
         if (player1 == null || player2 == null) {

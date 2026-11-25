@@ -27,14 +27,6 @@ public final class GameModeOption {
         return displayName;
     }
 
-    public boolean isPlayer1Machine() {
-        return player1Machine;
-    }
-
-    public boolean isPlayer2Machine() {
-        return player2Machine;
-    }
-
     public boolean isMachine(int playerNum) {
         return playerNum == 1 ? player1Machine : playerNum == 2 && player2Machine;
     }

@@ -80,13 +80,6 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
     }
 
     /**
-     * Loads the stored points and stat levels into this profile.
-     */
-    public void loadProgress(int points, int speed, int jump, int kick, int life) {
-        loadProgress(points, speed, jump, kick, life, 0, 0, 0, 0);
-    }
-
-    /**
      * Loads stored points, stat levels, and career match statistics into this profile.
      */
     public void loadProgress(int points, int speed, int jump, int kick, int life,
