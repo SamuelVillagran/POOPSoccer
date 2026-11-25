@@ -13,4 +13,5 @@ public interface Effect extends Serializable { /*Perfeccionado con Antigravity.*
     default void onApply(Player affected) {} // Hook ejecutado una vez al aplicar el efecto sobre el jugador
     default void onTick(Player affected, float deltaTime) {} // Hook ejecutado en cada frame mientras el efecto sigue activo
     default void onExpire(Player affected) {} // Hook ejecutado una vez cuando el efecto finaliza y se retira
+    default float getKickForceFactor() {return 1f; }
 }

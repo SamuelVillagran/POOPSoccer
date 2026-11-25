@@ -1,6 +1,8 @@
 package domain;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Iterator;
 
 public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     private static final int KICK_ACTIVE_FRAMES = 10; // Duración en frames de la animación y alcance de patada
@@ -29,10 +31,11 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     private float groundY = -1.0f; // Coordenada Y exacta del suelo para aterrizar con precisión
 
     private Type type; // Estrategia de control: humano (Normal) o IA (Machine)
-    private Effect effect; // Efecto rival activo sobre este jugador (empuje, rayo, etc.)
+    private List<Effect> effects; // Efecto rival activo sobre este jugador (empuje, rayo, etc.)
     private NumberPlayer numberPlayer; // Posición del jugador en la cancha (1 izquierda, 2 derecha)
 
     public Player(Type type, String name, Team team, NumberPlayer numberPlayer) {
+        this.effects = new ArrayList<>();
         this.numberPlayer = numberPlayer;
         this.type = type;
         if (this.type != null) {
@@ -147,12 +150,16 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     }
 
     private void moveHorizontal(int directionSign) {
-        if (effect != null && effect.getSpeedFactor() <= 0.0f) return; // Impide caminar si el efecto actual inmoviliza al jugador
+        for (Effect effect : effects) {
+            if (effect != null && effect.getSpeedFactor() <= 0.0f) return; // Impide caminar si el efecto actual inmoviliza al jugador
+        }
         move(directionSign * Math.round(getSpeed()), 0);
     }
 
     public void kick() {
-        if (effect != null && !effect.canKick()) return;
+        for (Effect effect : effects) {
+            if (effect != null && !effect.canKick()) return;
+        }
         if (kickFrames == 0 && kickCooldown == 0) {
             kickFrames = KICK_ACTIVE_FRAMES;
             kickCooldown = KICK_COOLDOWN_FRAMES;
@@ -162,7 +169,9 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     }
 
     public void jump() {
-        if (effect != null && !effect.canJump()) return;
+        for (Effect effect : effects) {
+            if (effect != null && !effect.canJump()) return;
+        }
         if (jumpFrames == 0) {
             jumpFrames = 1; // Inicia el conteo del salto desde el primer frame
         }
@@ -183,20 +192,27 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     }
 
     private void updateEffect() {
-        Effect activeEffect = this.effect;
-        if (activeEffect != null) {
-            activeEffect.update(FRAME_DELTA_TIME); // Descuenta un frame (1/60 s) del efecto temporal activo
-            activeEffect.onTick(this, FRAME_DELTA_TIME);
-            if (this.effect == activeEffect && activeEffect.isFinished()) {
-                this.effect = null;
-                activeEffect.onExpire(this);
+        Iterator<Effect> effectIterator = effects.iterator();
+
+         while (effectIterator.hasNext()) {
+            Effect activeEffect = effectIterator.next();
+            if (activeEffect != null) {
+                activeEffect.update(FRAME_DELTA_TIME); // Descuenta un frame (1/60 s) del efecto temporal activo
+                activeEffect.onTick(this, FRAME_DELTA_TIME);
+                if (activeEffect.isFinished()) {
+                    effectIterator.remove();
+                    activeEffect.onExpire(this);
+                }
             }
         }
+
     }
 
     private void updatePush() {
-        if (effect != null && effect.isPushed()) {
-            move(-getAttackDirection() * Math.round(BASE_SPEED * 1.6f), 0); // Empuja al jugador hacia su propio arco
+        for (Effect effect : effects) {
+            if (effect != null && effect.isPushed()) {
+                move(-getAttackDirection() * Math.round(BASE_SPEED * 1.6f), 0); // Empuja al jugador hacia su propio arco
+            }
         }
     }
 
@@ -319,17 +335,26 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     }
 
     public float getSpeed() {
-        float factor = (effect != null) ? effect.getSpeedFactor() : 1.0f;
+        float factor = 1.0f;
+        for (Effect effect : effects) {
+            factor *= (effect != null) ? effect.getSpeedFactor() : 1.0f;
+        }
         return BASE_SPEED * profile.getStatBonusMultiplier(PlayerStat.SPEED) * factor; // Aumenta 10% por nivel y aplica efecto activo
     }
 
     public int getForce() {
-        return Math.round(BALL_KICK_FORCE);
+        float forceFactor = 1.0f;
+        for (Effect effect : effects) {
+            if (effect != null) forceFactor *= effect.getKickForceFactor();
+        }
+        return  Math.round((BALL_KICK_FORCE)*forceFactor);
     }
 
     public float getKickMultiplier() {
         return profile.getStatBonusMultiplier(PlayerStat.KICK); // Suma 10% al daño de golpes por cada nivel sobre 1
     }
+
+
 
     public float getMaxLife() {
         return profile.getMaxLife();
@@ -365,7 +390,10 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
 
     @Override
     public String getStatusText() {
-        return (effect != null && !effect.isFinished()) ? effect.getClass().getSimpleName() : ""; // Muestra el nombre del efecto activo
+        for (Effect effect : effects) {
+            return (effect != null && !effect.isFinished()) ? effect.getClass().getSimpleName() : ""; // Muestra el nombre del efecto activo
+        }
+        return "";
     }
 
     @Override
@@ -433,12 +461,13 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     }
 
     public void applyEffect(Effect newEffect) {
-        if (newEffect != null) {
-            effect = newEffect; // Reemplaza el efecto anterior sin acumularlos
+        if (newEffect != null && !effects.contains(newEffect)) {
+            effects.add(newEffect); // Reemplaza el efecto anterior sin acumularlos
             newEffect.onApply(this);
             if (newEffect.launchesIntoAir() && !isStuned() && jumpFrames == 0) {
                 jumpFrames = 1; // Eleva al rival automáticamente cuando el efecto lo lanza por los aires
             }
         }
     }
+
 }

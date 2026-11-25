@@ -27,6 +27,8 @@ public class TimedMatch implements MatchRule { //Ayudado a desacoplar de POOPSco
         if (remainingTimeSeconds <= 0.0f) {
             remainingTimeSeconds = 0.0f;
             if (player1 != null && player2 != null && player1.getGoals() == player2.getGoals()) {
+                player1.applyEffect(new Sudden());
+                player2.applyEffect(new Sudden());
                 suddenDeath = true;
             }
         }
