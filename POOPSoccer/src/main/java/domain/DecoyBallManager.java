@@ -27,14 +27,11 @@ public class DecoyBallManager implements Serializable { // Responsabilidad de ba
     public void spawnFrom(Ball realBall, Player shooter) {
         if (realBall == null) throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "realBall");
         if (shooter == null) throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER);
-        if (shooter.getTeam() == null) return;
-        Power power = shooter.getTeam().getPower();
-        if (power == null) return;
-        int count = power.getDecoyBallCount();
+        int count = shooter.getDecoyBallCount();
         if (count <= 0) return;
 
         clear();
-        remainingSeconds = power.getDecoyDurationSeconds();
+        remainingSeconds = shooter.getDecoyDurationSeconds();
         float dir = (realBall.getVx() >= 0f) ? 1.0f : -1.0f;
         for (int i = 0; i < count; i++) {
             Ball decoy = new Ball();

@@ -13,4 +13,16 @@ public enum NumberPlayer { /*Perfeccionado con Antigravity.*/
     public int getNumber() {
         return number;
     }
+
+    /**
+     * Parses a 1-based player slot number into its closed domain enum.
+     */
+    public static NumberPlayer fromNumber(int playerNumber) {
+        for (NumberPlayer slot : values()) {
+            if (slot.number == playerNumber) {
+                return slot;
+            }
+        }
+        throw new POOPSoccerException(POOPSoccerException.INVALID_PLAYER_SLOT + playerNumber);
+    }
 }

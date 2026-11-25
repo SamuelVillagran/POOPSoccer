@@ -1,6 +1,6 @@
 package domain;
 
-import java.util.ServiceLoader;
+import java.util.Optional;
 
 /**
  * Output port for reporting unexpected domain errors without depending on persistence or filesystem details.
@@ -17,17 +17,14 @@ public interface ErrorLogger { /*Perfeccionado con Antigravity.*/
         if (e == null) {
             return;
         }
-        try {
-            for (ServiceLoader.Provider<ErrorLogger> provider : ServiceLoader.load(ErrorLogger.class).stream().toList()) {
-                try {
-                    provider.get().log(e);
-                    return;
-                } catch (Exception | LinkageError ignored) {
-                    // Continúa con el siguiente proveedor o respaldo en consola si falla uno
-                }
+        Optional<ErrorLogger> logger = ServiceResolver.loadFirst(ErrorLogger.class, null);
+        if (logger.isPresent()) {
+            try {
+                logger.get().log(e);
+                return;
+            } catch (Exception | LinkageError ignored) {
+                // Fall back to stderr if the resolved logger fails at runtime
             }
-        } catch (Exception | LinkageError ignored) {
-            // Respaldo seguro si falla la carga de servicios SPI
         }
         e.printStackTrace();
     }

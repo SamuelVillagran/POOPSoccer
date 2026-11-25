@@ -83,8 +83,8 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         // POOPSoccer is a singleton, so we throw the old game away before every test.
         POOPSoccer.resetMatch();
         game = POOPSoccer.getGame();
-        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 5,
-                "Ana", "Cameroon", "Luis", "Nigeria");
+        game.startGame(new PVP(), new GoalMatch(5),
+                "Ana", Team.CAMEROON, "Luis", Team.NIGERIA);
         p1 = game.getPlayer1();
         p2 = game.getPlayer2();
     }
@@ -147,7 +147,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     void kickThatReachesTheRivalHurtsHim() {
         standFaceToFace();
 
-        game.movePlayer1('k');   // start the kick
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.KICK);   // start the kick
         playFrames(1);
 
         // kick stat is 1, so the multiplier is 1.0 -> 10 x 1.0 = 10 damage
@@ -158,7 +158,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     void oneKickHurtsOnlyOnce() {
         standFaceToFace();
 
-        game.movePlayer1('k');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.KICK);
         playFrames(8);   // the kick lasts 10 frames, the rival is in range the whole time
 
         assertEquals(p2.getMaxLife() - BASE_KICK_DAMAGE, p2.getCurrentHealth(), DELTA);
@@ -167,7 +167,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     @Test
     void kickOutOfRangeDoesNotHurt() {
         // Default positions: the players start far away from each other.
-        game.movePlayer1('k');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.KICK);
         playFrames(5);
 
         assertEquals(p2.getMaxLife(), p2.getCurrentHealth(), DELTA);
@@ -180,7 +180,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         float ballY = CollisionChecker.DEFAULT_FLOOR_Y - game.getBall().getHeight();
         game.getBall().setPositions(620f, ballY);
 
-        game.movePlayer1('k');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.KICK);
         playFrames(1);
 
         assertEquals(p2.getMaxLife(), p2.getCurrentHealth(), DELTA);
@@ -195,7 +195,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         standFaceToFace();
 
         for (int i = 0; i < 10; i++) {
-            game.movePlayer1('k');
+            game.performAction(NumberPlayer.PLAYER1, PlayerAction.KICK);
             playFrames(30);   // wait until the kick cooldown is over so a new one can start
         }
 
@@ -208,9 +208,9 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         knockOutPlayer2();
         float xBefore = p2.getX();
 
-        game.movePlayer2('l');
-        game.movePlayer2('j');
-        game.movePlayer2('k');
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.MOVE_LEFT);
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.JUMP);
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.KICK);
         playFrames(1);
 
         assertEquals(xBefore, p2.getX(), DELTA);
@@ -246,7 +246,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         playFrames(STUN_FRAMES);
         float xBefore = p2.getX();
 
-        game.movePlayer2('l');
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.MOVE_LEFT);
 
         assertTrue(p2.getX() < xBefore);
     }
@@ -300,7 +300,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     @Test
     void powerCannotBeActivatedBeforeBarIsFull() {
         playFrames(200);
-        game.movePlayer1('p');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.ACTIVATE_POWER);
 
         assertFalse(p1.isPowerActive());
         assertEquals("", p1.getActivePowerName());
@@ -309,7 +309,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     @Test
     void powerCanBeActivatedWhenFullAndShowsActivePowerName() {
         playFrames(600);
-        game.movePlayer1('p');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.ACTIVATE_POWER);
 
         assertTrue(p1.isPowerActive());
         assertEquals(0f, p1.getPowerPercent(), DELTA);
@@ -330,7 +330,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         float normalSpeed = p1.getSpeed();
         assertEquals(normalSpeed * 0.5f, p2.getSpeed(), DELTA);
 
-        game.movePlayer2('j');
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.JUMP);
         assertFalse(p2.isJumping());
     }
 
@@ -341,8 +341,8 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
         assertTrue(p2.isJumping(), "Launched into the air on impact");
         float xBefore = p2.getX();
-        game.movePlayer2('l');
-        game.movePlayer2('k');
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.MOVE_LEFT);
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.KICK);
         assertEquals(xBefore, p2.getX(), DELTA);
         assertFalse(p2.isKicking());
     }
@@ -360,11 +360,11 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void illusionPowerSpawnsSevenDecoyBallsOnBallTouch() {
-        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 5,
-                "Alex", "Estados Unidos", "Luis", "Nigeria");
+        game.startGame(new PVP(), new GoalMatch(5),
+                "Alex", Team.USA, "Luis", Team.NIGERIA);
         p1 = game.getPlayer1();
         playFrames(600);
-        game.movePlayer1('p'); // activate aura
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.ACTIVATE_POWER); // activate aura
 
         // Touch the ball
         game.getBall().setPositions(p1.getX(), p1.getY());
@@ -388,23 +388,23 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         p1.setPositions(340f, floorY);
         p2.setPositions(400f, floorY); // touching edge-to-edge (340 + 60 = 400)
 
-        game.movePlayer1('r');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.MOVE_RIGHT);
         assertEquals(340f, p1.getX(), DELTA, "Player 1 is blocked by Player 2 on the ground");
     }
 
     @Test
     void matchAwardsPointsAndStatUpgradesDoubleInCost() {
         p1.addPoints(1500);
-        assertEquals(500, game.getUpgradeCost(1, "kick"));
-        assertTrue(game.upgradeStat(1, "kick")); // 1 -> 2, costs 500, 1000 left
-        assertEquals(2, game.getStatLevel(1, "kick"));
-        assertEquals(1000, game.getPoints(1));
+        assertEquals(500, game.getUpgradeCost(NumberPlayer.PLAYER1, PlayerStat.KICK));
+        assertTrue(game.upgradeStat(NumberPlayer.PLAYER1, PlayerStat.KICK)); // 1 -> 2, costs 500, 1000 left
+        assertEquals(2, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.KICK));
+        assertEquals(1000, game.getPoints(NumberPlayer.PLAYER1));
 
-        assertEquals(1000, game.getUpgradeCost(1, "kick"));
-        assertTrue(game.upgradeStat(1, "kick")); // 2 -> 3, costs 1000, 0 left
-        assertEquals(3, game.getStatLevel(1, "kick"));
-        assertEquals(0, game.getPoints(1));
-        assertFalse(game.upgradeStat(1, "kick")); // not enough points for 2000
+        assertEquals(1000, game.getUpgradeCost(NumberPlayer.PLAYER1, PlayerStat.KICK));
+        assertTrue(game.upgradeStat(NumberPlayer.PLAYER1, PlayerStat.KICK)); // 2 -> 3, costs 1000, 0 left
+        assertEquals(3, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.KICK));
+        assertEquals(0, game.getPoints(NumberPlayer.PLAYER1));
+        assertFalse(game.upgradeStat(NumberPlayer.PLAYER1, PlayerStat.KICK)); // not enough points for 2000
     }
 
     @Test
@@ -412,7 +412,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         p1.doGoal();
         p1.doGoal();
         p1.addPoints(600);
-        game.upgradeStat(1, "speed");
+        game.upgradeStat(NumberPlayer.PLAYER1, PlayerStat.SPEED);
 
         java.io.File tempFile = java.io.File.createTempFile("poopsoccer_test", ".dat");
         tempFile.deleteOnExit();
@@ -423,14 +423,14 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
         POOPSoccer.getGame().open(tempFile);
         assertEquals(2, POOPSoccer.getGame().getGoalsP1());
-        assertEquals(2, POOPSoccer.getGame().getStatLevel(1, "speed"));
-        assertEquals(100, POOPSoccer.getGame().getPoints(1));
+        assertEquals(2, POOPSoccer.getGame().getStatLevel(NumberPlayer.PLAYER1, PlayerStat.SPEED));
+        assertEquals(100, POOPSoccer.getGame().getPoints(NumberPlayer.PLAYER1));
     }
 
     @Test
     void clumsyMachinePlayerMovesAutomaticallyDuringUpdate() {
-        game.startGame(GameMode.PVM, MatchType.PER_GOALS, 5,
-                "Ana", "Cameroon", "CPU", "Nigeria");
+        game.startGame(new PVM(), new GoalMatch(5),
+                "Ana", Team.CAMEROON, "CPU", Team.NIGERIA);
         p2 = game.getPlayer2();
         float initialX = p2.getX();
 
@@ -454,15 +454,15 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         game.setDataGateway(gateway);
 
         p1.addPoints(700);
-        assertTrue(game.upgradeStat(1, "speed")); // Ana upgrades speed to 2 and saves to tempDb (200 pts left)
+        assertTrue(game.upgradeStat(NumberPlayer.PLAYER1, PlayerStat.SPEED)); // Ana upgrades speed to 2 and saves to tempDb (200 pts left)
 
-        game.selectPlayerProfile(1, "NuevoJugador");
-        assertEquals(0, game.getPoints(1));
-        assertEquals(1, game.getStatLevel(1, "speed"));
+        game.selectPlayerProfile(NumberPlayer.PLAYER1, "NuevoJugador");
+        assertEquals(0, game.getPoints(NumberPlayer.PLAYER1));
+        assertEquals(1, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.SPEED));
 
-        game.selectPlayerProfile(1, "Ana");
-        assertEquals(200, game.getPoints(1));
-        assertEquals(2, game.getStatLevel(1, "speed"));
+        game.selectPlayerProfile(NumberPlayer.PLAYER1, "Ana");
+        assertEquals(200, game.getPoints(NumberPlayer.PLAYER1));
+        assertEquals(2, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.SPEED));
     }
 
     @Test
@@ -472,24 +472,24 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
         PlayerDataGateway sqlite = new persistence.SQLitePlayerDatabase(tempDb);
         game.setDataGateway(sqlite);
-        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 1,
-                "O'Reilly", "Cameroon", "Mateo", "Nigeria");
+        game.startGame(new PVP(), new GoalMatch(1),
+                "O'Reilly", Team.CAMEROON, "Mateo", Team.NIGERIA);
         p1 = game.getPlayer1();
         p1.addPoints(500);
-        assertTrue(game.upgradeStat(1, "Vel"));
+        assertTrue(new POOPSoccerGUI().upgradePlayerStat(1, "Vel"));
         p1.doGoal(); // finishes 1-0 -> +100 pts, 1 match, 1 win
         game.awardMatchPoints();
 
-        game.selectPlayerProfile(1, "Otro");
-        assertEquals(0, game.getPoints(1));
-        assertEquals(0, game.getMatchesPlayed(1));
+        game.selectPlayerProfile(NumberPlayer.PLAYER1, "Otro");
+        assertEquals(0, game.getPoints(NumberPlayer.PLAYER1));
+        assertEquals(0, game.getMatchesPlayed(NumberPlayer.PLAYER1));
 
-        game.selectPlayerProfile(1, "o'reilly");
-        assertEquals(100, game.getPoints(1));
-        assertEquals(2, game.getStatLevel(1, "speed"));
-        assertEquals(1, game.getMatchesPlayed(1));
-        assertEquals(1, game.getWins(1));
-        assertEquals(1, game.getPlayer1().getProfile().getGoalsFor());
+        game.selectPlayerProfile(NumberPlayer.PLAYER1, "o'reilly");
+        assertEquals(100, game.getPoints(NumberPlayer.PLAYER1));
+        assertEquals(2, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.SPEED));
+        assertEquals(1, game.getMatchesPlayed(NumberPlayer.PLAYER1));
+        assertEquals(1, game.getWins(NumberPlayer.PLAYER1));
+        assertEquals(1, game.getPlayer1().getGoalsFor());
     }
 
     @Test
@@ -516,12 +516,12 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void powerShotClearsWhenHittingSideWallOrCrossbar() {
-        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 5,
-                "Ana", "Cameroon", "Luis", "Nigeria");
+        game.startGame(new PVP(), new GoalMatch(5),
+                "Ana", Team.CAMEROON, "Luis", Team.NIGERIA);
         p1 = game.getPlayer1();
         Ball ball = game.getBall();
         playFrames(600);
-        game.movePlayer1('p');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.ACTIVATE_POWER);
 
         // Player 1 touches ball on the ground to launch Lightning, then ball hits upper right wall above goal
         ball.setPositions(p1.getX(), p1.getY());
@@ -535,8 +535,8 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void matchSummaryReturnsStructuredWinnerAndDrawSnapshots() {
-        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 1,
-                "Samuel", "Cameroon", "Atun", "Nigeria");
+        game.startGame(new PVP(), new GoalMatch(1),
+                "Samuel", Team.CAMEROON, "Atun", Team.NIGERIA);
         MatchSummarySnapshot drawSummary = game.getMatchSummary();
         assertTrue(drawSummary.isDraw());
         assertEquals(0, drawSummary.getGoalsP1());
@@ -555,20 +555,21 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void lifeStatUpgradeUpdatesMaxLifeAndHudSummary() {
+        POOPSoccerGUI gui = new POOPSoccerGUI();
         p1.addPoints(3500); // 500 + 1000 + 2000
-        assertTrue(game.upgradeStat(1, "life"));
-        assertEquals(2, game.getStatLevel(1, "life"));
+        assertTrue(game.upgradeStat(NumberPlayer.PLAYER1, PlayerStat.LIFE));
+        assertEquals(2, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.LIFE));
         assertEquals(110f, p1.getMaxLife(), DELTA);
 
-        String hudStats = new presentation.POOPSoccerGUI().getMatchHudSnapshot().getPlayer1().getStatsSummary();
+        String hudStats = gui.getMatchHudSnapshot().getPlayer1().getStatsSummary();
         assertTrue(hudStats.contains("Vid:2"), "HUD summary must reflect upgraded life level: " + hudStats);
 
-        assertTrue(game.upgradeStat(1, "Vida"));
-        assertEquals(3, game.getStatLevel(1, "life"));
+        assertTrue(gui.upgradePlayerStat(1, "Vida"));
+        assertEquals(3, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.LIFE));
         assertEquals(120f, p1.getMaxLife(), DELTA);
 
-        assertTrue(game.upgradeStat(1, "survival"));
-        assertEquals(4, game.getStatLevel(1, "life"));
+        assertTrue(gui.upgradePlayerStat(1, "survival"));
+        assertEquals(4, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.LIFE));
         assertEquals(130f, p1.getMaxLife(), DELTA);
     }
 
@@ -602,14 +603,14 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         }
 
         game.setDataGateway(new persistence.SQLitePlayerDatabase(tempDb));
-        game.selectPlayerProfile(1, "LegacyUser");
-        assertEquals(4, game.getStatLevel(1, "life"));
+        game.selectPlayerProfile(NumberPlayer.PLAYER1, "LegacyUser");
+        assertEquals(4, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.LIFE));
         assertEquals(130f, game.getPlayer1().getMaxLife(), DELTA);
 
-        assertTrue(game.upgradeStat(1, "life")); // 4 -> 5 costs 4000 pts
-        game.selectPlayerProfile(1, "Otro");
-        game.selectPlayerProfile(1, "LegacyUser");
-        assertEquals(5, game.getStatLevel(1, "life"));
+        assertTrue(game.upgradeStat(NumberPlayer.PLAYER1, PlayerStat.LIFE)); // 4 -> 5 costs 4000 pts
+        game.selectPlayerProfile(NumberPlayer.PLAYER1, "Otro");
+        game.selectPlayerProfile(NumberPlayer.PLAYER1, "LegacyUser");
+        assertEquals(5, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.LIFE));
         assertEquals(140f, game.getPlayer1().getMaxLife(), DELTA);
     }
 
@@ -639,8 +640,8 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void nigeriaTornadoExposesTornadoSpriteAndVisiblyBouncesAlongPitch() {
-        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 5,
-                "Obi", "Nigeria", "Luis", "Cameroon");
+        game.startGame(new PVP(), new GoalMatch(5),
+                "Obi", Team.NIGERIA, "Luis", Team.CAMEROON);
         p1 = game.getPlayer1();
         p2 = game.getPlayer2();
         Ball ball = game.getBall();
@@ -648,7 +649,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         p2.setPositions(10f, CollisionChecker.DEFAULT_FLOOR_Y - p2.getHeight());
 
         playFrames(600);
-        game.movePlayer1('p');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.ACTIVATE_POWER);
 
         ball.setPositions(p1.getX(), p1.getY());
         playFrames(1);
@@ -689,13 +690,13 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     @Test
     void pvpModeAllowsManualControlForBothPlayers() {
         assertTrue(game.getTypeMatch() instanceof PVP);
-        assertTrue(game.getTypeMatch().canControlManually(1));
-        assertTrue(game.getTypeMatch().canControlManually(2));
+        assertTrue(game.getTypeMatch().canControlManually(NumberPlayer.PLAYER1));
+        assertTrue(game.getTypeMatch().canControlManually(NumberPlayer.PLAYER2));
 
         float p1X = p1.getX();
         float p2X = p2.getX();
-        game.movePlayer1('r');
-        game.movePlayer2('l');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.MOVE_RIGHT);
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.MOVE_LEFT);
 
         assertTrue(p1.getX() > p1X);
         assertTrue(p2.getX() < p2X);
@@ -709,20 +710,20 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void pvmModeBlocksManualControlOfMachineAndResolvesDefaultCpuName() {
-        game.startGame("PVM", "Por goles", 5, 2,
+        new POOPSoccerGUI().startGame("PVM", "Por goles", 5,
                 "Ana", "Cameroon", "", "Nigeria");
         p1 = game.getPlayer1();
         p2 = game.getPlayer2();
 
         assertTrue(game.getTypeMatch() instanceof PVM);
         assertEquals("CPU", p2.getName());
-        assertTrue(game.getTypeMatch().canControlManually(1));
-        assertFalse(game.getTypeMatch().canControlManually(2));
+        assertTrue(game.getTypeMatch().canControlManually(NumberPlayer.PLAYER1));
+        assertFalse(game.getTypeMatch().canControlManually(NumberPlayer.PLAYER2));
 
         float p1X = p1.getX();
         float p2X = p2.getX();
-        game.movePlayer1('r');
-        game.movePlayer2('l');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.MOVE_RIGHT);
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.MOVE_LEFT);
 
         assertTrue(p1.getX() > p1X);
         assertEquals(p2X, p2.getX(), DELTA);
@@ -739,21 +740,21 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void mvmModeRunsBothPlayersAsMachinesAndBlocksManualInput() {
-        game.startGame(GameMode.MVM, MatchType.PER_GOALS, 5, 2,
-                "", "Cameroon", "", "Nigeria");
+        game.startGame(new MVM(), new GoalMatch(5),
+                "", Team.CAMEROON, "", Team.NIGERIA);
         p1 = game.getPlayer1();
         p2 = game.getPlayer2();
 
         assertTrue(game.getTypeMatch() instanceof MVM);
         assertEquals("CPU 1", p1.getName());
         assertEquals("CPU 2", p2.getName());
-        assertFalse(game.getTypeMatch().canControlManually(1));
-        assertFalse(game.getTypeMatch().canControlManually(2));
+        assertFalse(game.getTypeMatch().canControlManually(NumberPlayer.PLAYER1));
+        assertFalse(game.getTypeMatch().canControlManually(NumberPlayer.PLAYER2));
 
         float p1X = p1.getX();
         float p2X = p2.getX();
-        game.movePlayer1('r');
-        game.movePlayer2('l');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.MOVE_RIGHT);
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.MOVE_LEFT);
         assertEquals(p1X, p1.getX(), DELTA);
         assertEquals(p2X, p2.getX(), DELTA);
 
@@ -775,8 +776,8 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     @Test
     void customTypeMatchExtendsModesWithoutModifyingPOOPSoccer() {
         TypeMatch customMode = new MachineVsHumanMode();
-        game.startGame(customMode, MatchType.PER_GOALS, 3, 2,
-                "Bot", "Cameroon", "Human", "Nigeria");
+        game.startGame(customMode, new GoalMatch(3),
+                "Bot", Team.CAMEROON, "Human", Team.NIGERIA);
         p1 = game.getPlayer1();
         p2 = game.getPlayer2();
 
@@ -784,8 +785,8 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         float p1X = p1.getX();
         float p2X = p2.getX();
 
-        game.movePlayer1('r');
-        game.movePlayer2('l');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.MOVE_RIGHT);
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.MOVE_LEFT);
 
         assertEquals(p1X, p1.getX(), DELTA);
         assertTrue(p2.getX() < p2X);
@@ -793,8 +794,8 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void saveAndOpenPreservesActiveTypeMatch() throws Exception {
-        game.startGame(GameMode.PVM, MatchType.PER_GOALS, 5, 2,
-                "Ana", "Cameroon", "CPU", "Nigeria");
+        game.startGame(new PVM(), new GoalMatch(5),
+                "Ana", Team.CAMEROON, "CPU", Team.NIGERIA);
         java.io.File tempFile = java.io.File.createTempFile("poopsoccer_typematch_test", ".dat");
         tempFile.deleteOnExit();
 
@@ -805,7 +806,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         POOPSoccer reopened = POOPSoccer.getGame();
         assertTrue(reopened.getTypeMatch() instanceof PVM);
         float p2X = reopened.getPlayer2().getX();
-        reopened.movePlayer2('l');
+        reopened.performAction(NumberPlayer.PLAYER2, PlayerAction.MOVE_LEFT);
         assertEquals(p2X, reopened.getPlayer2().getX(), DELTA);
     }
 
@@ -833,8 +834,8 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void goalMatchFinishesOnlyWhenTargetGoalLimitIsReached() {
-        game.startGame(GameMode.PVP, MatchType.PER_GOALS, 2, 1,
-                "Ana", "Cameroon", "Luis", "Nigeria");
+        game.startGame(new PVP(), new GoalMatch(2),
+                "Ana", Team.CAMEROON, "Luis", Team.NIGERIA);
         p1 = game.getPlayer1();
 
         assertTrue(game.getMatchRule() instanceof GoalMatch);
@@ -851,13 +852,13 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void timedMatchCountsDownAndFinishesWhenTimeExpiresWithWinner() {
-        game.startGame(GameMode.PVP, MatchType.PER_TIME, 5, 1,
+        new POOPSoccerGUI().startGame("PVP", "Por tiempo", 1,
                 "Ana", "Cameroon", "Luis", "Nigeria");
         assertTrue(game.getMatchRule() instanceof TimedMatch);
         assertEquals(60f, game.getRemainingTime(), DELTA);
 
         game.startGame(new PVP(), new TimedMatch(0.5f),
-                "Ana", "Cameroon", "Luis", "Nigeria");
+                "Ana", Team.CAMEROON, "Luis", Team.NIGERIA);
         p1 = game.getPlayer1();
         p1.doGoal();
         playFrames(35);
@@ -870,7 +871,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     @Test
     void timedMatchEntersSuddenDeathOnTieAndEndsOnGoldenGoal() {
         game.startGame(new PVP(), new TimedMatch(0.25f),
-                "Ana", "Cameroon", "Luis", "Nigeria");
+                "Ana", Team.CAMEROON, "Luis", Team.NIGERIA);
         p1 = game.getPlayer1();
 
         playFrames(20);
@@ -886,7 +887,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     void customMatchRuleExtendsVictoryConditionsWithoutModifyingPOOPSoccer() {
         MatchRule customRule = new CombinedGoalsRule();
         game.startGame(new PVP(), customRule,
-                "Ana", "Cameroon", "Luis", "Nigeria");
+                "Ana", Team.CAMEROON, "Luis", Team.NIGERIA);
         p1 = game.getPlayer1();
         p2 = game.getPlayer2();
 
@@ -901,7 +902,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     @Test
     void saveAndOpenPreservesActiveMatchRuleState() throws Exception {
         game.startGame(new PVP(), new TimedMatch(1.0f),
-                "Ana", "Cameroon", "Luis", "Nigeria");
+                "Ana", Team.CAMEROON, "Luis", Team.NIGERIA);
         playFrames(15);
         float expectedRemaining = game.getRemainingTime();
         assertTrue(expectedRemaining > 0.0f && expectedRemaining < 1.0f);
@@ -954,7 +955,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         Player nigeriaPlayer = new Player(new Normal(), "Obi", Team.NIGERIA, NumberPlayer.PLAYER1);
         nigeriaPlayer.getTeam().getPower().use(nigeriaPlayer, p2);
         float xBeforeMove = p2.getX();
-        p2.move('r');
+        p2.execute(PlayerAction.MOVE_RIGHT);
         assertEquals(xBeforeMove, p2.getX(), DELTA);
 
         p1.takeDamage(p1.getMaxLife());
@@ -967,8 +968,8 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     void playerProfileEnumMapCopiesAndResetsAllStats() {
         PlayerProfile source = new PlayerProfile();
         source.addPoints(2000);
-        assertTrue(source.upgradeStat("speed"));
-        assertTrue(source.upgradeStat("kick"));
+        assertTrue(source.upgradeStat(PlayerStat.SPEED));
+        assertTrue(source.upgradeStat(PlayerStat.KICK));
         source.recordMatchResult(true, 3, 1);
 
         PlayerProfile copy = new PlayerProfile();
@@ -990,7 +991,7 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
 
     @Test
     void machineDelegatesToCustomStrategyAndRejectsUnavailableProfile() {
-        MachineStrategy moveRight = player -> player.move('r');
+        MachineStrategy moveRight = player -> player.execute(PlayerAction.MOVE_RIGHT);
         Player bot = new Player(new Machine(moveRight), "CustomBot", Team.COLOMBIA, NumberPlayer.PLAYER1);
         bot.setPositions(100f, 400f);
         float startX = bot.getX();
@@ -1001,10 +1002,10 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         assertThrows(POOPSoccerException.class, MachineProfile.OFFENSIVE::createStrategy);
 
         PVM pvm = new PVM(MachineProfile.CLUMSY);
-        assertFalse(pvm.canControlManually(2));
+        assertFalse(pvm.canControlManually(NumberPlayer.PLAYER2));
 
         MVM mvm = new MVM(MachineProfile.CLUMSY, MachineProfile.CLUMSY);
-        assertTrue(mvm.isMachinePlayer(1) && mvm.isMachinePlayer(2));
+        assertTrue(mvm.isMachinePlayer(NumberPlayer.PLAYER1) && mvm.isMachinePlayer(NumberPlayer.PLAYER2));
     }
 
     @Test
@@ -1300,12 +1301,113 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     @Test
     void domainEmitsMatchEventsTranslatedToSoundKeysByPresentation() {
         game.consumeMatchEvents();
-        game.movePlayer1('k');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.KICK);
         assertEquals(List.of(MatchEvent.KICK_SWING), game.consumeMatchEvents());
 
         playFrames(35);
-        game.movePlayer1('k');
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.KICK);
         assertEquals(List.of("KICK"), new POOPSoccerGUI().consumeSoundEvents());
+    }
+
+    @Test
+    void boundaryRejectsInvalidPlayerSlotNumber() {
+        POOPSoccerGUI gui = new POOPSoccerGUI();
+        assertThrows(POOPSoccerException.class, () -> NumberPlayer.fromNumber(0));
+        assertThrows(POOPSoccerException.class, () -> NumberPlayer.fromNumber(3));
+        assertThrows(POOPSoccerException.class, () -> gui.getPlayerPoints(3));
+    }
+
+    @Test
+    void domainRejectsNullMandatoryStrategiesAndTeams() {
+        assertThrows(POOPSoccerException.class,
+                () -> game.startGame(null, new GoalMatch(3), "A", Team.CAMEROON, "B", Team.NIGERIA));
+        assertThrows(POOPSoccerException.class,
+                () -> game.startGame(new PVP(), null, "A", Team.CAMEROON, "B", Team.NIGERIA));
+        assertThrows(POOPSoccerException.class,
+                () -> game.startGame(new PVP(), new GoalMatch(3), "A", null, "B", Team.NIGERIA));
+        assertThrows(POOPSoccerException.class,
+                () -> game.startGame(new PVP(), new GoalMatch(3), "A", Team.CAMEROON, "B", null));
+        assertThrows(POOPSoccerException.class,
+                () -> game.performAction(null, PlayerAction.MOVE_RIGHT));
+        assertThrows(POOPSoccerException.class,
+                () -> game.getPoints(null));
+    }
+
+    @Test
+    void customHorizontalPlayerActionRespectsRivalCollisionWithoutEnumChanges() {
+        float floorY = CollisionChecker.DEFAULT_FLOOR_Y - p1.getHeight();
+        p1.setPositions(340f, floorY);
+        p2.setPositions(400f, floorY);
+
+        PlayerAction dashRight = player -> {
+            player.moveRight();
+            player.moveRight();
+        };
+        game.performAction(NumberPlayer.PLAYER1, dashRight);
+
+        assertEquals(340f, p1.getX(), DELTA,
+                "Any custom horizontal PlayerAction must still respect rival blocking collisions");
+    }
+
+    @Test
+    void guiBoundaryParsesStringsCharsAndPlayerNumbersOnceIntoDomain() {
+        POOPSoccerGUI gui = new POOPSoccerGUI();
+        gui.startGame("PVM", "Por goles", 5, "Ana", "Cameroon", "", "Nigeria");
+
+        Player left = game.getPlayer1();
+        assertTrue(game.getTypeMatch() instanceof PVM);
+        assertTrue(game.getMatchRule() instanceof GoalMatch);
+
+        float xBefore = left.getX();
+        gui.movePlayer1('r');
+        assertTrue(left.getX() > xBefore);
+
+        left.addPoints(500);
+        assertTrue(gui.upgradePlayerStat(1, "survival"));
+        assertEquals(2, game.getStatLevel(NumberPlayer.PLAYER1, PlayerStat.LIFE));
+    }
+
+    @Test
+    void playerProfileMutationsAutomaticallyKeepHealthSyncedWithMaxLife() {
+        Player player = new Player(new Normal(), "Ana", Team.CAMEROON, NumberPlayer.PLAYER1);
+        player.addPoints(500);
+        assertTrue(player.upgradeStat(PlayerStat.LIFE));
+        assertEquals(110f, player.getMaxLife(), DELTA);
+        assertEquals(110f, player.getCurrentHealth(), DELTA);
+
+        player.applyProfileSnapshot(new PlayerProfileSnapshot("Ana", 0, 1, 1, 1, 4));
+        assertEquals(130f, player.getMaxLife(), DELTA);
+        assertEquals(130f, player.getCurrentHealth(), DELTA);
+
+        Player donor = new Player(new Normal(), "Luis", Team.NIGERIA, NumberPlayer.PLAYER2);
+        donor.applyProfileSnapshot(new PlayerProfileSnapshot("Luis", 900, 2, 1, 1, 3));
+        player.copyProfileFrom(donor);
+        assertEquals(900, player.getPoints());
+        assertEquals(120f, player.getMaxLife(), DELTA);
+        assertEquals(120f, player.getCurrentHealth(), DELTA);
+
+        player.resetProfile();
+        assertEquals(0, player.getPoints());
+        assertEquals(100f, player.getMaxLife(), DELTA);
+        assertEquals(100f, player.getCurrentHealth(), DELTA);
+    }
+
+    @Test
+    void mapLoaderThrowsPOOPSoccerExceptionWhenMapResourceIsMissingOrPlayersAreNull() {
+        assertThrows(POOPSoccerException.class,
+                () -> new MapLoader("/positionElements/does_not_exist.txt").load(p1, p2));
+        assertThrows(POOPSoccerException.class,
+                () -> new MapLoader("  ").load(p1, p2));
+        assertThrows(POOPSoccerException.class,
+                () -> new MapLoader().load(null, p2));
+        assertThrows(POOPSoccerException.class,
+                () -> new MapLoader().load(p1, null));
+    }
+
+    @Test
+    void spiResolutionLoadsRegisteredGatewaysThroughSingleServiceResolver() {
+        assertNotNull(MatchStorageGateway.resolveDefault());
+        assertNotNull(ProfileManager.withDefaultGateway());
     }
 
     @Test

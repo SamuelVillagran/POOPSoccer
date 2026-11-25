@@ -8,13 +8,6 @@ import java.io.Serializable;
 public abstract class TypeMatch implements Serializable { //Ayudado a desacoplar de POOPScoccer con Antigravity
     /*Perfeccionado con Antigravity.*/
 
-    /**
-     * Resolves a TypeMatch instance from a game mode name.
-     */
-    public static TypeMatch fromName(String modeName) {
-        return GameMode.fromName(modeName).createTypeMatch();
-    }
-
     protected abstract Type createPlayer1Type();
 
     protected abstract Type createPlayer2Type();
@@ -60,19 +53,18 @@ public abstract class TypeMatch implements Serializable { //Ayudado a desacoplar
     /**
      * Returns true when the given player slot accepts manual keyboard input.
      */
-    public boolean canControlManually(int playerNum) {
-        if (playerNum == 1) return isPlayer1Human();
-        if (playerNum == 2) return isPlayer2Human();
-        return false;
+    public boolean canControlManually(NumberPlayer player) {
+        if (player == null) {
+            throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "player");
+        }
+        return player == NumberPlayer.PLAYER1 ? isPlayer1Human() : isPlayer2Human();
     }
 
     /**
      * Returns true when the given player slot is controlled by the machine.
      */
-    public boolean isMachinePlayer(int playerNum) {
-        if (playerNum == 1) return !isPlayer1Human();
-        if (playerNum == 2) return !isPlayer2Human();
-        return false;
+    public boolean isMachinePlayer(NumberPlayer player) {
+        return !canControlManually(player);
     }
 
     public String getName() {

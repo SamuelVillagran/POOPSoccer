@@ -13,8 +13,14 @@ public class POOPSoccerException extends RuntimeException { /*Perfeccionado con 
     public static final String NO_DATABASE_FILE = "No hay archivo de base de datos configurado."; // Error cuando falta la ruta de almacenamiento en disco
     public static final String NULL_ARGUMENT = "Un argumento obligatorio no puede ser nulo: "; // Prefijo para parámetros obligatorios nulos
     public static final String UNAVAILABLE_MACHINE_PROFILE = "El perfil de máquina aún no está implementado: "; // Perfil CPU sin estrategia disponible
+    public static final String INVALID_PLAYER_SLOT = "Número de jugador inválido: "; // Error cuando el índice de jugador no corresponde a 1 o 2
+    public static final String MAP_LOAD_ERROR = "No se pudo cargar el archivo de mapa: "; // Error cuando falta o falla la lectura del archivo de mapa
 
     public POOPSoccerException(String message) {
         super(message);
+    }
+
+    public POOPSoccerException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

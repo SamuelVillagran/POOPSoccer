@@ -3,7 +3,6 @@ package domain;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -57,60 +56,41 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return game;
     }
 
-    public void startGame(String gameMode, String matchType, int matchLimit,
-                          String nameP1, String teamP1,
-                          String nameP2, String teamP2) {
-        MatchRule resolvedRule = MatchType.fromDisplayName(matchType).createMatchRule(matchLimit);
-        startGame(TypeMatch.fromName(gameMode), resolvedRule, nameP1, teamP1, nameP2, teamP2);
-    }
-
-    public void startGame(String gameMode, String matchType, int goalLimit, int timeLimitMinutes,
-                          String nameP1, String teamP1,
-                          String nameP2, String teamP2) {
-        MatchRule resolvedRule = MatchType.fromDisplayName(matchType).createMatchRule(goalLimit, timeLimitMinutes);
-        startGame(TypeMatch.fromName(gameMode), resolvedRule, nameP1, teamP1, nameP2, teamP2);
-    }
-
-    public synchronized void startGame(GameMode gameMode, MatchType matchType, int goalLimit, int timeLimitMinutes,
-                                       String nameP1, String teamP1,
-                                       String nameP2, String teamP2) {
-        TypeMatch resolvedMode = (gameMode != null ? gameMode : GameMode.PVM).createTypeMatch();
-        MatchRule resolvedRule = (matchType != null ? matchType : MatchType.PER_GOALS)
-                .createMatchRule(goalLimit, timeLimitMinutes);
-        startGame(resolvedMode, resolvedRule, nameP1, teamP1, nameP2, teamP2);
-    }
-
-    public synchronized void startGame(TypeMatch typeMatch, MatchType matchType, int goalLimit, int timeLimitMinutes,
-                                       String nameP1, String teamP1,
-                                       String nameP2, String teamP2) {
-        MatchRule resolvedRule = (matchType != null ? matchType : MatchType.PER_GOALS)
-                .createMatchRule(goalLimit, timeLimitMinutes);
-        startGame(typeMatch, resolvedRule, nameP1, teamP1, nameP2, teamP2);
-    }
-
     public synchronized void startGame(TypeMatch typeMatch, MatchRule matchRule,
-                                       String nameP1, String teamP1,
-                                       String nameP2, String teamP2) {
+                                       String nameP1, Team teamP1,
+                                       String nameP2, Team teamP2) {
+        if (typeMatch == null) {
+            throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "typeMatch");
+        }
+        if (matchRule == null) {
+            throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "matchRule");
+        }
+        if (teamP1 == null) {
+            throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "teamP1");
+        }
+        if (teamP2 == null) {
+            throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "teamP2");
+        }
         initMatchState(matchRule);
         initPlayers(typeMatch, nameP1, teamP1, nameP2, teamP2);
         initFieldElements();
     }
 
     private void initMatchState(MatchRule matchRule) {
-        this.matchRule = (matchRule != null) ? matchRule : new GoalMatch(3);
+        this.matchRule = matchRule;
         this.isPaused = false;
         this.decoyBalls.clear();
         this.pointsAwarded = false;
         ensureMatchEventQueue().clear();
     }
 
-    private void initPlayers(TypeMatch typeMatch, String nameP1, String teamP1, String nameP2, String teamP2) {
+    private void initPlayers(TypeMatch typeMatch, String nameP1, Team teamP1, String nameP2, Team teamP2) {
         Player prevLeft = this.playerLeft;
         Player prevRight = this.playerRight;
 
-        this.typeMatch = (typeMatch != null) ? typeMatch : new PVM();
-        playerLeft = this.typeMatch.createPlayer1(nameP1, Team.fromDisplayName(teamP1));
-        playerRight = this.typeMatch.createPlayer2(nameP2, Team.fromDisplayName(teamP2));
+        this.typeMatch = typeMatch;
+        playerLeft = this.typeMatch.createPlayer1(nameP1, teamP1);
+        playerRight = this.typeMatch.createPlayer2(nameP2, teamP2);
         profileManager.restoreProgress(playerLeft, prevLeft);
         profileManager.restoreProgress(playerRight, prevRight);
         profileManager.save(playerLeft);
@@ -164,19 +144,23 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         cChecker.resolvePlayersOverlap(playerLeft, playerRight); // Evita que los jugadores queden superpuestos tras saltar
     }
 
-    public synchronized void movePlayer1(char direction) {
-        movePlayer(1, playerLeft, playerRight, direction);
-    }
-
-    public synchronized void movePlayer2(char direction) {
-        movePlayer(2, playerRight, playerLeft, direction);
-    }
-
-    private void movePlayer(int playerNum, Player mover, Player blocker, char direction) {
-        if (mover != null && !isPaused && (typeMatch == null || typeMatch.canControlManually(playerNum))) {
-            mover.move(direction);
-            if (direction == 'l' || direction == 'r') {
-                cChecker.resolvePlayerMovementCollision(mover, blocker); // Evita atravesar al rival al caminar
+    /**
+     * Executes a typed domain action for the specified player slot when manual control is allowed.
+     */
+    public synchronized void performAction(NumberPlayer player, PlayerAction action) {
+        if (player == null) {
+            throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "player");
+        }
+        if (action == null || isPaused) {
+            return;
+        }
+        Player mover = getPlayer(player);
+        Player blocker = getOpponent(player);
+        if (mover != null && (typeMatch == null || typeMatch.canControlManually(player))) {
+            float xBefore = mover.getX();
+            mover.execute(action);
+            if (mover.getX() != xBefore) {
+                cChecker.resolvePlayerMovementCollision(mover, blocker); // Evita atravesar al rival al desplazarse
             }
             cChecker.resolvePlayerEnvironmentCollisions(mover);
         }
@@ -249,83 +233,29 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return playerRight.getGoals();
     }
 
-    public String getDisplayInfo(int playerNum) {
-        Player p = getPlayerByNumber(playerNum);
+    public String getDisplayInfo(NumberPlayer player) {
+        Player p = getPlayer(player);
         return p != null ? p.getDisplayInfo() : "";
     }
 
-    public String getPlayerTeamName(int playerNum) {
-        Player p = getPlayerByNumber(playerNum);
-        return (p != null && p.getTeam() != null) ? p.getTeam().getDisplayName() : "";
+    public String getPlayerTeamName(NumberPlayer player) {
+        Player p = getPlayer(player);
+        return p != null ? p.getTeamDisplayName() : "";
     }
 
-    public float getHealthPercent(int playerNum) {
-        Player p = getPlayerByNumber(playerNum);
+    public float getHealthPercent(NumberPlayer player) {
+        Player p = getPlayer(player);
         return p != null ? p.getHealthPercent() : 0f;
     }
 
-    public float getPowerPercent(int playerNum) {
-        Player p = getPlayerByNumber(playerNum);
+    public float getPowerPercent(NumberPlayer player) {
+        Player p = getPlayer(player);
         return p != null ? p.getPowerPercent() : 0f;
     }
 
-    public String getActivePowerName(int playerNum) {
-        Player p = getPlayerByNumber(playerNum);
+    public String getActivePowerName(NumberPlayer player) {
+        Player p = getPlayer(player);
         return p != null ? p.getActivePowerName() : "";
-    }
-
-    public String[] getAvailableTeams() {
-        return Arrays.stream(Team.values())
-                .map(Team::getDisplayName)
-                .toArray(String[]::new);
-    }
-
-    public String[] getAvailableMachineProfiles() {
-        return Arrays.stream(MachineProfile.values())
-                .map(MachineProfile::getDisplayName)
-                .toArray(String[]::new);
-    }
-
-    public boolean isMachineProfileAvailable(String profileName) {
-        return MachineProfile.fromDisplayName(profileName).isAvailable();
-    }
-
-    public String[] getAvailableGameModes() {
-        return Arrays.stream(GameMode.values())
-                .map(GameMode::name)
-                .toArray(String[]::new);
-    }
-
-    public String getGameModeDisplayName(String mode) {
-        return GameMode.fromName(mode).getDisplayName();
-    }
-
-    public boolean isMachineSlotInMode(String mode, int playerNum) {
-        return TypeMatch.fromName(mode).isMachinePlayer(playerNum);
-    }
-
-    public String[] getAvailableMatchTypes() {
-        return Arrays.stream(MatchType.values())
-                .map(MatchType::getDisplayName)
-                .toArray(String[]::new);
-    }
-
-    public String getMatchTypeParameterLabel(String matchType) {
-        return MatchType.fromDisplayName(matchType).getParameterLabel();
-    }
-
-    public int[] getMatchTypeParameterOptions(String matchType) {
-        return MatchType.fromDisplayName(matchType).getParameterOptions();
-    }
-
-    public String[] getAvailableStats() {
-        return Arrays.stream(PlayerStat.values())
-                .map(PlayerStat::getDisplayName)
-                .toArray(String[]::new);
-    }
-
-    public int getMaxStatLevel() {
-        return PlayerProfile.getMaxStatLevel();
     }
 
     public void awardMatchPoints() {
@@ -337,8 +267,8 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
     /**
      * Selects a player profile by name and loads its stored points and stats from the data gateway.
      */
-    public void selectPlayerProfile(int playerNum, String playerName) {
-        profileManager.selectProfile(getPlayerByNumber(playerNum), playerName);
+    public void selectPlayerProfile(NumberPlayer player, String playerName) {
+        profileManager.selectProfile(getPlayer(player), playerName);
     }
 
     public MatchSummarySnapshot getMatchSummary() {
@@ -346,42 +276,49 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return profileManager.buildMatchSummary(playerLeft, playerRight, getWinner());
     }
 
-    private Player getPlayerByNumber(int playerNum) {
-        return playerNum == 1 ? playerLeft : playerRight;
+    private Player getPlayer(NumberPlayer player) {
+        if (player == null) {
+            throw new POOPSoccerException(POOPSoccerException.NULL_ARGUMENT + "player");
+        }
+        return player == NumberPlayer.PLAYER1 ? playerLeft : playerRight;
     }
 
-    public String getPlayerName(int playerNum) {
-        Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getName() : ("Jugador " + playerNum);
+    private Player getOpponent(NumberPlayer player) {
+        return player == NumberPlayer.PLAYER1 ? playerRight : playerLeft;
     }
 
-    public int getPoints(int playerNum) {
-        Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getProfile().getPoints() : 0;
+    public String getPlayerName(NumberPlayer player) {
+        Player p = getPlayer(player);
+        return p != null ? p.getName() : ("Jugador " + player.getNumber());
     }
 
-    public int getMatchesPlayed(int playerNum) {
-        Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getProfile().getMatchesPlayed() : 0;
+    public int getPoints(NumberPlayer player) {
+        Player p = getPlayer(player);
+        return p != null ? p.getPoints() : 0;
     }
 
-    public int getWins(int playerNum) {
-        Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getProfile().getWins() : 0;
+    public int getMatchesPlayed(NumberPlayer player) {
+        Player p = getPlayer(player);
+        return p != null ? p.getMatchesPlayed() : 0;
     }
 
-    public int getStatLevel(int playerNum, String stat) {
-        Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getProfile().getStatLevel(stat) : 1;
+    public int getWins(NumberPlayer player) {
+        Player p = getPlayer(player);
+        return p != null ? p.getWins() : 0;
     }
 
-    public int getUpgradeCost(int playerNum, String stat) {
-        Player p = getPlayerByNumber(playerNum);
-        return p != null ? p.getProfile().getUpgradeCost(stat) : 500;
+    public int getStatLevel(NumberPlayer player, PlayerStat stat) {
+        Player p = getPlayer(player);
+        return p != null ? p.getStatLevel(stat) : 1;
     }
 
-    public boolean upgradeStat(int playerNum, String stat) {
-        return profileManager.upgradeStat(getPlayerByNumber(playerNum), stat);
+    public int getUpgradeCost(NumberPlayer player, PlayerStat stat) {
+        Player p = getPlayer(player);
+        return p != null ? p.getUpgradeCost(stat) : 500;
+    }
+
+    public boolean upgradeStat(NumberPlayer player, PlayerStat stat) {
+        return profileManager.upgradeStat(getPlayer(player), stat);
     }
 
     public boolean isGameFinished() {
@@ -439,12 +376,6 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
                 elem.hasShotAura(),
                 elem.getShotEffectSprite()
         ));
-    }
-
-    public void startGame(GameMode gameMode, MatchType matchType, int goalLimit,
-                          String nameP1, String teamP1,
-                          String nameP2, String teamP2) {
-        startGame(gameMode, matchType, goalLimit, 2, nameP1, teamP1, nameP2, teamP2); // Usa 2 minutos por defecto para llamadas heredadas
     }
 
     /**

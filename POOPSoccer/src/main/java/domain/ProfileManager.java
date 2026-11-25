@@ -3,7 +3,6 @@ package domain;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Optional;
-import java.util.ServiceLoader;
 
 /**
  * Manages player progression, stat upgrades, match rewards, and profile persistence through PlayerDataGateway.
@@ -28,19 +27,7 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
     }
 
     private static PlayerDataGateway resolveDefaultDataGateway() {
-        try {
-            for (ServiceLoader.Provider<PlayerDataGateway> provider
-                    : ServiceLoader.load(PlayerDataGateway.class).stream().toList()) {
-                try {
-                    return provider.get(); // Descubre el primer adaptador compatible registrado vía SPI sin acoplarse a él
-                } catch (Exception | LinkageError err) {
-                    ErrorLogger.report(err instanceof Exception ex ? ex : new RuntimeException(err));
-                }
-            }
-        } catch (Exception | LinkageError err) {
-            ErrorLogger.report(err instanceof Exception ex ? ex : new RuntimeException(err));
-        }
-        return null;
+        return ServiceResolver.loadFirst(PlayerDataGateway.class).orElse(null);
     }
 
     /**
@@ -78,7 +65,6 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
     public void loadIfPresent(Player player) {
         if (dataGateway == null || player == null) return;
         loadIntoPlayer(player);
-        player.restoreFullHealth();
     }
 
     /**
@@ -91,8 +77,7 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
         }
         if (previous != null && previous.getName() != null
                 && previous.getName().trim().equalsIgnoreCase(current.getName().trim())) {
-            current.getProfile().copyFrom(previous.getProfile()); // Conserva el progreso en memoria si coincide el nombre previo
-            current.restoreFullHealth();
+            current.copyProfileFrom(previous); // Conserva el progreso en memoria si coincide el nombre previo
         }
     }
 
@@ -101,7 +86,7 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
      */
     public void save(Player player) {
         if (dataGateway != null && player != null) {
-            dataGateway.savePlayerProfile(player.getProfile().toSnapshot(player.getName()));
+            dataGateway.savePlayerProfile(player.toProfileSnapshot());
         }
     }
 
@@ -112,9 +97,8 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
         if (player == null || playerName == null || playerName.isBlank()) return;
         player.setName(playerName.trim());
         if (!loadIntoPlayer(player)) {
-            player.getProfile().reset(); // Inicializa nivel 1 y 0 puntos si el nombre es nuevo
+            player.resetProfile(); // Inicializa nivel 1 y 0 puntos si el nombre es nuevo
         }
-        player.restoreFullHealth();
     }
 
     private boolean loadIntoPlayer(Player player) {
@@ -125,17 +109,15 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
         if (snapshot.isEmpty()) {
             return false;
         }
-        player.getProfile().applySnapshot(snapshot.get());
-        player.restoreFullHealth();
+        player.applyProfileSnapshot(snapshot.get());
         return true;
     }
 
     /**
      * Attempts to upgrade the specified stat for the player and persists the updated profile.
      */
-    public boolean upgradeStat(Player player, String stat) {
-        if (player != null && player.getProfile().upgradeStat(stat)) {
-            player.restoreFullHealth(); // Actualiza la vida máxima inmediata si mejoró supervivencia
+    public boolean upgradeStat(Player player, PlayerStat stat) {
+        if (player != null && player.upgradeStat(stat)) {
             save(player);
             return true;
         }
@@ -156,8 +138,8 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
             player2.addPoints(WINNER_POINTS_REWARD);
             player1.addPoints(LOSER_POINTS_REWARD);
         }
-        player1.getProfile().recordMatchResult(winner == player1, player1.getGoals(), player2.getGoals());
-        player2.getProfile().recordMatchResult(winner == player2, player2.getGoals(), player1.getGoals());
+        player1.recordMatchResult(winner == player1, player1.getGoals(), player2.getGoals());
+        player2.recordMatchResult(winner == player2, player2.getGoals(), player1.getGoals());
         save(player1);
         save(player2);
     }
@@ -178,10 +160,10 @@ public class ProfileManager implements Serializable { // Responsabilidad de prog
                 goalsP2,
                 winner.getName(),
                 WINNER_POINTS_REWARD,
-                winner.getProfile().getPoints(),
+                winner.getPoints(),
                 loser.getName(),
                 LOSER_POINTS_REWARD,
-                loser.getProfile().getPoints()
+                loser.getPoints()
         );
     }
 }

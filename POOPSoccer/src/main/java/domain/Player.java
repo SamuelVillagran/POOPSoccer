@@ -1,7 +1,6 @@
 package domain;
 
 import java.util.List;
-import java.util.Map;
 
 public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     private static final int KICK_ACTIVE_FRAMES = 10; // Duración en frames de la animación y alcance de patada
@@ -44,8 +43,81 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         this.health = new PlayerHealth(profile.getMaxLife());
     }
 
-    public PlayerProfile getProfile() {
-        return profile;
+    public boolean upgradeStat(PlayerStat stat) {
+        if (profile.upgradeStat(stat)) {
+            restoreFullHealth();
+            return true;
+        }
+        return false;
+    }
+
+    public void applyProfileSnapshot(PlayerProfileSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+        profile.applySnapshot(snapshot);
+        restoreFullHealth();
+    }
+
+    public void resetProfile() {
+        profile.reset();
+        restoreFullHealth();
+    }
+
+    public void copyProfileFrom(Player previous) {
+        if (previous == null) {
+            return;
+        }
+        profile.copyFrom(previous.profile);
+        restoreFullHealth();
+    }
+
+    public void recordMatchResult(boolean won, int goalsScored, int goalsConceded) {
+        profile.recordMatchResult(won, goalsScored, goalsConceded);
+    }
+
+    public PlayerProfileSnapshot toProfileSnapshot() {
+        return profile.toSnapshot(name);
+    }
+
+    public int getPoints() {
+        return profile.getPoints();
+    }
+
+    public int getMatchesPlayed() {
+        return profile.getMatchesPlayed();
+    }
+
+    public int getWins() {
+        return profile.getWins();
+    }
+
+    public int getGoalsFor() {
+        return profile.getGoalsFor();
+    }
+
+    public int getGoalsAgainst() {
+        return profile.getGoalsAgainst();
+    }
+
+    public int getStatLevel(PlayerStat stat) {
+        return profile.getStatLevel(stat);
+    }
+
+    public int getUpgradeCost(PlayerStat stat) {
+        return profile.getUpgradeCost(stat);
+    }
+
+    public String getTeamDisplayName() {
+        return team != null ? team.getDisplayName() : "";
+    }
+
+    public int getDecoyBallCount() {
+        return team != null ? team.getDecoyBallCount() : 0;
+    }
+
+    public float getDecoyDurationSeconds() {
+        return team != null ? team.getDecoyDurationSeconds() : 0.0f;
     }
 
     public void restoreFullHealth() {
@@ -57,13 +129,6 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     }
 
     /**
-     * Executes a registered command matching the given legacy input character.
-     */
-    public void move(char direction) {
-        execute(DEFAULT_ACTIONS.get(direction));
-    }
-
-    /**
      * Executes an action command on this player unless stunned.
      */
     public void execute(PlayerAction action) {
@@ -71,20 +136,20 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         action.execute(this);
     }
 
+    public void moveLeft() {
+        moveHorizontal(-1);
+    }
+
+    public void moveRight() {
+        moveHorizontal(1);
+    }
+
     private void moveHorizontal(int directionSign) {
         if (effect != null && effect.getSpeedFactor() <= 0.0f) return; // Impide caminar si el efecto actual inmoviliza al jugador
         move(directionSign * Math.round(getSpeed()), 0);
     }
 
-    private static final Map<Character, PlayerAction> DEFAULT_ACTIONS = Map.of(
-            'r', p -> p.moveHorizontal(1), // Desplaza a la derecha
-            'l', p -> p.moveHorizontal(-1), // Desplaza a la izquierda
-            'j', Player::jump, // Salta
-            'k', Player::kick, // Patea
-            'p', Player::activatePower // Activa el poder
-    );
-
-    private void kick() {
+    public void kick() {
         if (effect != null && !effect.canKick()) return;
         if (kickFrames == 0 && kickCooldown == 0) {
             kickFrames = KICK_ACTIVE_FRAMES;
@@ -94,7 +159,7 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         }
     }
 
-    private void jump() {
+    public void jump() {
         if (effect != null && !effect.canJump()) return;
         if (jumpFrames == 0) {
             jumpFrames = 1; // Inicia el conteo del salto desde el primer frame

@@ -40,6 +40,8 @@ public enum Team { /*Perfeccionado con Antigravity.*/
     public String getSpriteKey() { return spriteKey; }
     public Power getPower() { return power; }
     public String getPowerName() { return power != null ? power.getName() : ""; }
+    public int getDecoyBallCount() { return power != null ? power.getDecoyBallCount() : 0; }
+    public float getDecoyDurationSeconds() { return power != null ? power.getDecoyDurationSeconds() : 0.0f; }
     public void launchPowerShot(Player owner, Ball ball) {
         if (power != null && ball != null) {
             ball.activatePowerShot(owner, power);

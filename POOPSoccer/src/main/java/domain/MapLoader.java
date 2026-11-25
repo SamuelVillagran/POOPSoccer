@@ -3,6 +3,7 @@ package domain;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -45,14 +46,23 @@ public class MapLoader { // Responsabilidad de carga del mapa extraída de la fa
     }
 
     /**
-     * Reads the configuration file and places every element. Errors are logged and the partial map is returned.
+     * Reads the configuration file and places every element.
+     * Throws POOPSoccerException if the map resource is missing, unreadable, or players are null.
      */
     public MapData load(Player player1, Player player2) {
+        if (player1 == null || player2 == null) {
+            throw new POOPSoccerException(POOPSoccerException.NULL_PLAYER);
+        }
+        if (path == null || path.isBlank()) {
+            throw new POOPSoccerException(POOPSoccerException.MAP_LOAD_ERROR + path);
+        }
         MapData map = new MapData();
         int nextId = FIRST_FREE_ID;
         try (InputStream is = getClass().getResourceAsStream(path)) {
-            if (is == null) throw new IllegalArgumentException("No se encontró el archivo de mapa: " + path);
-            BufferedReader br = new BufferedReader(new InputStreamReader(is));
+            if (is == null) {
+                throw new POOPSoccerException(POOPSoccerException.MAP_LOAD_ERROR + path);
+            }
+            BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
             String line;
             int row = 0;
             while ((line = br.readLine()) != null) {
@@ -63,8 +73,11 @@ public class MapLoader { // Responsabilidad de carga del mapa extraída de la fa
                 }
                 row++;
             }
+        } catch (POOPSoccerException e) {
+            throw e;
         } catch (Exception e) {
-            ErrorLogger.report(e); // Registra el error de carga de mapa mediante el puerto de logging
+            ErrorLogger.report(e);
+            throw new POOPSoccerException(POOPSoccerException.MAP_LOAD_ERROR + path, e);
         }
         return map;
     }

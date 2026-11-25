@@ -48,23 +48,18 @@ public class PlayerProfile implements Serializable { // Responsabilidad de progr
         return statLevels.getOrDefault(stat, 1);
     }
 
-    public int getStatLevel(String stat) {
-        return getStatLevel(PlayerStat.fromName(stat));
-    }
-
-    public int getUpgradeCost(String stat) {
+    public int getUpgradeCost(PlayerStat stat) {
         int level = getStatLevel(stat);
         return BASE_UPGRADE_COST * (int) Math.pow(2, level - 1); // Duplica el precio en cada nivel: 500, 1000, 2000...
     }
 
-    public boolean upgradeStat(String stat) {
-        PlayerStat resolved = PlayerStat.fromName(stat);
-        if (resolved == null) return false;
-        int level = getStatLevel(resolved);
+    public boolean upgradeStat(PlayerStat stat) {
+        if (stat == null) return false;
+        int level = getStatLevel(stat);
         int cost = getUpgradeCost(stat);
         if (level >= MAX_STAT || points < cost) return false;
         points -= cost;
-        incrementStat(resolved);
+        incrementStat(stat);
         return true;
     }
 
