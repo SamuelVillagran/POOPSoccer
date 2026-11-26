@@ -236,7 +236,7 @@ Apenas toma el relevo, Juan decide que los tiros rectos son demasiado aburridos 
 5. En pleno partido presiona **`Esc`** para abrir **`JUEGO EN PAUSA`**, muestra el marcador congelado y prueba las opciones `Continuar`, `Reiniciar` y finalmente `Volver al menú` (`RF-08`).
 
 **Video 2:**
-(Link de video)
+https://youtu.be/_ZpbhObUvzQ
 
 ---
 
@@ -258,7 +258,7 @@ En su última sesión solitaria, Juan pasa del espectáculo a la ingeniería sil
    - Finalmente, intenta abrir un archivo inválido/corrupto desde `Archivo -> Abrir` para mostrar el cuadro de error (`POOPSoccerException`) y mencionar su registro automático en `data/logs/POOPSoccer_log.txt`.
 
 **Video 3:**
-(Aquí va el link)
+https://youtu.be/_ZpbhObUvzQ
 
 ---
 
