@@ -1523,6 +1523,96 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         assertEquals(0f, charge.getPercent(), DELTA);
         assertTrue(charge.consumeActive());
         assertFalse(charge.isActive());
+
+        for (int i = 0; i < 600; i++) {
+            charge.rechargeStep();
+        }
+        assertTrue(charge.activate());
+        charge.addCharge(25f);
+        charge.clearActive();
+        assertFalse(charge.isActive());
+        assertEquals(0.25f, charge.getPercent(), DELTA);
+    }
+
+    @Test
+    void kickDoesNotHurtRivalBehindEitherPlayer() {
+        float floorY = CollisionChecker.DEFAULT_FLOOR_Y - p1.getHeight();
+        // Place Player 2 behind Player 1 (overlapping slightly from behind)
+        p2.setPositions(150f, floorY);
+        p1.setPositions(200f, floorY);
+
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.KICK);
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.KICK);
+        playFrames(1);
+
+        assertEquals(p1.getMaxLife(), p1.getCurrentHealth(), DELTA);
+        assertEquals(p2.getMaxLife(), p2.getCurrentHealth(), DELTA);
+
+        // Verify face-to-face kicks from Player 2 still deal damage normally
+        playFrames(30);
+        standFaceToFace();
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.KICK);
+        playFrames(1);
+
+        assertEquals(p1.getMaxLife() - BASE_KICK_DAMAGE, p1.getCurrentHealth(), DELTA);
+    }
+
+    @Test
+    void kickDoesNotKickBallBehindEitherPlayer() {
+        float floorY = CollisionChecker.DEFAULT_FLOOR_Y - p1.getHeight();
+        float ballY = CollisionChecker.DEFAULT_FLOOR_Y - game.getBall().getHeight();
+        Ball ball = game.getBall();
+
+        // Ball touching Player 1's back (left side)
+        p1.setPositions(200f, floorY);
+        p2.setPositions(700f, floorY);
+        ball.setVelocity(0f, 0f);
+        ball.setPositions(180f, ballY);
+        game.consumeMatchEvents();
+
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.KICK);
+        playFrames(1);
+
+        assertTrue(ball.getVx() <= 0f, "Ball behind Player 1 must not be kicked forward");
+        assertTrue(ball.getX() < p1.getX(), "Ball behind Player 1 must stay behind Player 1");
+        assertFalse(game.consumeMatchEvents().contains(MatchEvent.BALL_KICKED));
+
+        // Ball touching Player 2's back (right side)
+        p1.setPositions(50f, floorY);
+        p2.setPositions(600f, floorY);
+        ball.setVelocity(0f, 0f);
+        ball.setPositions(650f, ballY);
+        game.consumeMatchEvents();
+
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.KICK);
+        playFrames(1);
+
+        assertTrue(ball.getVx() >= 0f, "Ball behind Player 2 must not be kicked forward");
+        assertTrue(ball.getX() > p2.getX() + p2.getWidth(), "Ball behind Player 2 must stay behind Player 2");
+        assertFalse(game.consumeMatchEvents().contains(MatchEvent.BALL_KICKED));
+    }
+
+    @Test
+    void activePowerClearsWhenGoalResetsTheField() {
+        playFrames(600);
+        game.performAction(NumberPlayer.PLAYER1, PlayerAction.ACTIVATE_POWER);
+        game.performAction(NumberPlayer.PLAYER2, PlayerAction.ACTIVATE_POWER);
+
+        assertTrue(p1.isPowerActive());
+        assertFalse(p1.getActivePowerName().isEmpty());
+        assertTrue(p2.isPowerActive());
+        assertFalse(p2.getActivePowerName().isEmpty());
+
+        // Score a goal in Player 1's left goal so Player 1 concedes and field resets
+        game.getBall().setPositions(10f, 400f);
+        game.checkGoal();
+
+        assertEquals(1, game.getGoalsP2());
+        assertFalse(p1.isPowerActive());
+        assertEquals("", p1.getActivePowerName());
+        assertFalse(p2.isPowerActive());
+        assertEquals("", p2.getActivePowerName());
+        assertEquals(0.25f, p1.getPowerPercent(), DELTA);
     }
 
     @Test

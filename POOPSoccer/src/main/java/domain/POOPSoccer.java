@@ -205,9 +205,11 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
             ball.setPositions(400.0f, 250.0f); // Suelta el balón en el centro superior de la cancha
         }
         if (playerLeft != null) {
+            playerLeft.clearActivePower();
             playerLeft.setPositions(200.0f, CollisionChecker.DEFAULT_FLOOR_Y - playerLeft.getHeight());
         }
         if (playerRight != null) {
+            playerRight.clearActivePower();
             playerRight.setPositions(600.0f, CollisionChecker.DEFAULT_FLOOR_Y - playerRight.getHeight());
         }
     }

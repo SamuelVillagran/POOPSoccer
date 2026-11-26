@@ -293,6 +293,13 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         }
     }
 
+    /**
+     * Deactivates any active power aura without altering the current power bar charge.
+     */
+    public void clearActivePower() {
+        powerCharge.clearActive();
+    }
+
     /** Rule 1: When a player receives a goal, their power bar increases by 1/4 (25%). */
     public void onGoalConceded() {
         powerCharge.onGoalConceded();

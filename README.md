@@ -41,7 +41,7 @@
    - [Acto II — Juan contra la Máquina (Parte 1): Tornado, Ilusión, Aturdimiento y Pausa (Video 2)](#acto-ii--juan-contra-la-m%C3%A1quina-parte-1-tornado-ilusi%C3%B3n-aturdimiento-y-pausa)
    - [Acto III — Juan contra la Máquina (Parte 2): Persistencia SQLite, Mejoras y Guardar/Abrir (Video 3)](#acto-iii--juan-contra-la-m%C3%A1quina-parte-2-persistencia-sqlite-mejoras-y-guardarabrir)
    - [Acto IV — Samuel vs. Juan: El Encuentro PvP, Partido por Tiempo y Muerte Súbita (Video 4)](#acto-iv--samuel-vs-juan-el-encuentro-pvp-partido-por-tiempo-y-muerte-s%C3%BAbita)
-   - [Acto V — Samuel vs. Juan: La Gran Final, Partida Guardada, Premiación y Cierre (Video 5)](#acto-v--samuel-vs-juan-la-gran-final-partida-guardada-premiaci%C3%B3n-y-cierre)
+   - [Acto V — Samuel vs. Juan: La Gran Final, Colombia, Reglas de Poder, Premiación y Cierre (Video 5)](#acto-v--samuel-vs-juan-la-gran-final-colombia-reglas-de-poder-premiaci%C3%B3n-y-cierre)
 6. [Derechos de Autor y Referencias](#6-derechos-de-autor-y-referencias)
 
 ---
@@ -87,12 +87,13 @@ La barra de poder se llena en **`10` segundos** (y recibe un impulso instantáne
 | :---: | :--- | :--- | :--- | :--- | :---: | :---: |
 | <img src="POOPSoccer/resources/player/coreadelsur1.png" width="48" alt="Corea del Sur"/> | 🇰🇷 **Corea del Sur** | ![BlueAura](https://img.shields.io/badge/BlueAura-Aura%20Azul-0284C7?style=flat-square) | Disparo recto y horizontal a máxima velocidad (`16 px/frame`), sin caída por gravedad. | `Push` — Empuja al rival hacia su propio arco. | `1.5 s` | **40** |
 | <img src="POOPSoccer/resources/player/camerun1.png" width="48" alt="Camerún"/> | 🇨🇲 **Camerún** | ![Lightning](https://img.shields.io/badge/Lightning-Rayo-EAB308?style=flat-square) | Disparo recto eléctrico que ignora la gravedad. | `Electrocuted` — Impide saltar y reduce velocidad al `50%`. | `3.0 s` | **60** |
-| <img src="POOPSoccer/resources/player/nigeria1.png" width="48" alt="Nigeria"/> | 🇳🇬 **Nigeria** | ![Tornado](https://img.shields.io/badge/Tornado-Remolino-16A34A?style=flat-square) | Remolino rasante que rebota rápido contra el césped. | `Unconscious` — Lanza al rival al aire e impide moverse, saltar o patear. | `3.0 s` | **40** |
+| <img src="POOPSoccer/resources/player/nigeria1.png" width="48" alt="Nigeria"/> | 🇳🇬 **Nigeria** | ![Tornado](https://img.shields.io/badge/Tornado-Remolino-16A34A?style=flat-square) | Remolino rasante con efecto visual animado (`tornado.gif`) que rebota rápido contra el césped. | `Unconscious` — Lanza al rival al aire e impide moverse, saltar o patear. | `3.0 s` | **40** |
 | <img src="POOPSoccer/resources/player/estadosunidos1.png" width="48" alt="Estados Unidos"/> | 🇺🇸 **Estados Unidos** | ![Illusion](https://img.shields.io/badge/Illusion-Ilusi%C3%B3n-9333EA?style=flat-square) | Divide el balón en **`8` balones idénticos** (`1` real + `7` señuelos visibles para ambos). | `Confusion` — Confunde al rival sobre cuál es el balón real. | `2.5 s` | **30** |
 | <img src="POOPSoccer/resources/player/colombia1.png" width="48" alt="Colombia"/> | 🇨🇴 **Colombia** *(extra)* | ![Illusion](https://img.shields.io/badge/Illusion-Ilusi%C3%B3n-9333EA?style=flat-square) | Selección adicional habilitada en el selector con el tiro de poder `Illusion`. | `Confusion` — Mismo efecto de múltiples balones. | `2.5 s` | **30** |
 
 > [!TIP]
 > **Reglas clave de poder:**
+> - **Aura sin límite y sin doble activación:** el aura del poder activo no tiene límite de tiempo hasta tocar el balón (o reiniciarse la ronda tras un gol) y, mientras está activa, no permite activar otro poder aunque la barra vuelva al `100%`.
 > - **Sin acumulación:** si el rival ya tiene un efecto activo, el nuevo impacto lo reemplaza.
 > - **Gol limpio:** si el tiro de poder entra al arco sin tocar al rival, el gol cuenta, pero no aplica daño ni efecto.
 > - **Rebote en borde o travesaño:** si el balón con tiro de poder rebota en una pared lateral o travesaño, el aura del disparo se limpia para continuar con su física normal.
@@ -168,15 +169,15 @@ Cada requisito funcional de la especificación del proyecto (`Docs/!DOPO-FIN-202
 | :---: | :--- | :--- | :---: | :--- |
 | ✅ | **RF-01** | Seleccionar modalidad (`PvP`, `PvM`, `MvM`) y perfil de máquina | Video 1, Video 2, Video 4 | Botones de `MenuPanel`, selector `Perfil de máquina:` (`Torpe` activo; aviso de perfiles en construcción). |
 | ✅ | **RF-02** | Seleccionar resolución de cancha al iniciar | Video 1, Video 4 | Cambio entre `Pequeña (1/4 de pantalla)`, `Mediana (1/2 de pantalla)` y `Grande (3/4 de pantalla)`. |
-| ✅ | **RF-03** | Elegir personaje (país) por jugador | Video 1, Video 2, Video 4 | Combo `País / Poder:` (`Corea del Sur`, `Camerún`, `Nigeria`, `Estados Unidos`, `Colombia`) con sprites y banderas. |
+| ✅ | **RF-03** | Elegir personaje (país) por jugador | Video 1, Video 2, Video 4, Video 5 | Combo `País / Poder:` (`Corea del Sur`, `Camerún`, `Nigeria`, `Estados Unidos`, `Colombia`) con sprites y banderas. |
 | ✅ | **RF-04** | Seleccionar tipo de partido (`Por tiempo` / `Por goles`) y su límite | Video 1, Video 4, Video 5 | Selector dinámico entre `Goles para ganar:` (`3`, `5`, `7`) y `Minutos del partido:` (`1`, `2`, `3`, `5`), incluyendo `¡MUERTE SÚBITA!`. |
-| ✅ | **RF-05** | Realizar movimientos: mover, saltar, patear y activar poder | Video 1, Video 2, Video 4 | Controles P1 (`A`, `D`, `W`, `S`, `Q`) y P2 (`←`, `→`, `↑`, `↓`, `Ctrl`), física, daño, aturdimiento de `3 s`, recarga de `10 s` / `+25%` y los 4 poderes únicos. |
-| ✅ | **RF-06** | Ilustrar permanentemente estado del juego e información de jugadores | Video 1, Video 2, Video 4 | `InfoPanel` superior: banderas, nombres, vida (verde/amarillo/rojo), poder, poder activo, niveles (`Vel/Sal/Pat/Vid`), marcador y reloj. |
+| ✅ | **RF-05** | Realizar movimientos: mover, saltar, patear y activar poder | Video 1, Video 2, Video 4, Video 5 | Controles P1 (`A`, `D`, `W`, `S`, `Q`) y P2 (`←`, `→`, `↑`, `↓`, `Ctrl`), física, daño, aturdimiento de `3 s`, recarga de `10 s` / `+25%`, los 4 poderes únicos, reglas de aura (sin límite y sin doble activación) y cancelación por rebote. |
+| ✅ | **RF-06** | Ilustrar permanentemente estado del juego e información de jugadores | Video 1, Video 2, Video 4, Video 5 | `InfoPanel` superior: banderas, nombres, vida (verde/amarillo/rojo), poder, poder activo, niveles (`Vel/Sal/Pat/Vid`), marcador y reloj. |
 | ✅ | **RF-07** | Pausar momentáneamente el juego | Video 2, Video 4 | Tecla `Esc` abre el diálogo modal `JUEGO EN PAUSA` con marcador actual y botones `Continuar`, `Reiniciar` y `Volver al menú`. |
 | ✅ | **RF-08** | Terminar el juego en cualquier momento | Video 1, Video 2, Video 5 | `Volver al menú` desde pausa, `Archivo -> Nuevo` y `Archivo -> Salir` (con diálogo `"¿Desea salir del juego?"`). |
 | ✅ | **RF-09** | Notificar ganador y puntos obtenidos al finalizar | Video 1, Video 5 | Diálogo `FIN DEL PARTIDO` con trofeo dorado, marcador final, ganador (`+100 pts`) y perdedor (`+25 pts`). |
 | ✅ | **RF-10** | Mejorar estadísticas de cada jugador | Video 3 | Botones `Vel Nv.X (+)`, `Salto Nv.X (+)`, `Patada Nv.X (+)`, `Vida Nv.X (+)` descontando `500`, `1000`, `2000` pts. |
-| ✅ | **RF-11** | Salvar y abrir el estado de un partido | Video 3, Video 5 | Menú `Archivo -> Guardar` (`.dat` en `data/saves/`) y `Archivo -> Abrir` restaurando marcador, posiciones, reloj y vida. |
+| ✅ | **RF-11** | Salvar y abrir el estado de un partido | Video 3 | Menú `Archivo -> Guardar` (`.dat` en `data/saves/`) y `Archivo -> Abrir` restaurando marcador, posiciones, reloj y vida. |
 | ✅ | **RF-12** | Mantener progreso de jugadores (puntos y estadísticas) | Video 3, Video 4, Video 5 | Al escribir el nombre del jugador en `PlayerConfig`, SQLite recarga sus `Puntos`, `PJ`, `G` y niveles guardados. |
 | ✅ | **RF-13** | Presentar mensajes claros y detallados en caso de error | Video 1, Video 3 | Validaciones: nombres `< 3` letras, perfil de máquina en construcción, puntos insuficientes para mejora y error al abrir `.dat` inválido (`POOPSoccerException` + `POOPSoccer_log.txt`). |
 
@@ -229,7 +230,7 @@ Apenas toma el relevo, Juan decide que los tiros rectos son demasiado aburridos 
 
 **Qué se muestra en pantalla durante la grabación:**
 1. En `Jugador vs Máquina (PvM)`, Juan escribe `"Juan"` como Jugador 1 y elige **`Nigeria`** contra la `CPU Torpe` (`Estados Unidos`).
-2. Activa su barra con `Q` y dispara el **`Tornado`** de Nigeria: el remolino rebota a ras de césped y lanza a la máquina por los aires con la etiqueta **`Unconscious`** durante `3 s` (`40` de daño), impidiéndole moverse, saltar o patear.
+2. Activa su barra con `Q` y dispara el **`Tornado`** de Nigeria: el remolino animado (`tornado.gif`) rebota a ras de césped y lanza a la máquina por los aires con la etiqueta **`Unconscious`** durante `3 s` (`40` de daño), impidiéndole moverse, saltar o patear.
 3. En un segundo intento elige **`Estados Unidos`** (o `Colombia`) para disparar **`Illusion`**: en la cancha aparecen **`8` balones idénticos** (`1` real + `7` señuelos) durante `2.5 s` (`Confusion`), desapareciendo los falsos al terminar el efecto.
 4. Juan acorrala a la máquina y conecta **patadas cuerpo a cuerpo (`S`)** (sin tocar el balón) hasta bajar su barra de vida de verde → amarillo → rojo → `0`, mostrando el tinte rojo sobre la CPU y la etiqueta **`¡ATURDIDO!`** durante `3` segundos hasta que recupera el `100%` de vida.
 5. En pleno partido presiona **`Esc`** para abrir **`JUEGO EN PAUSA`**, muestra el marcador congelado y prueba las opciones `Continuar`, `Reiniciar` y finalmente `Volver al menú` (`RF-08`).
@@ -249,7 +250,7 @@ En su última sesión solitaria, Juan pasa del espectáculo a la ingeniería sil
 **Qué se muestra en pantalla durante la grabación:**
 1. **Persistencia automática en SQLite (`RF-12`):** En `PlayerConfig`, al escribir `"Juan"`, la píldora superior muestra sus puntos acumulados, `PJ` (Partidos Jugados) y `G` (Ganados) guardados en `data/database/poopsoccer.db`. Cambia temporalmente a `"NuevoJugador"` para confirmar que inicia en `0` pts y nivel `1`, y al volver a escribir `"Juan"` recupera su progreso intacto.
 2. **Validación y compra de mejoras (`RF-10`, `RF-13`):**
-   - Si todavía tiene menos de `500` puntos, pulsa un botón de mejora (ej. `Patada Nv.1 (+)`) y muestra el mensaje claro: `"Necesitás 500 puntos (o ya está al máximo nivel 10)."`.
+   - Si todavía tiene menos de `500` puntos, pulsa un botón de mejora (ej. `Patada Nv.1 (+)`) y muestra el mensaje claro: `"Necesitas 500 puntos (o ya está al máximo nivel 10)."` (sin exceder el presupuesto disponible).
    - Ya con `≥ 500` puntos acumulados en sus partidas contra la máquina, compra una mejora (ej. `Patada Nv.1 (+)` → `Patada Nv.2 (+)` o `Vel Nv.1 (+)` → `Vel Nv.2 (+)`), mostrando el descuento de `500` pts, cómo el siguiente nivel sube de costo a `1000` pts y cómo el HUD del partido muestra el nivel actualizado (`Pat:2` o `Vel:2`).
 3. **Guardar, abrir y manejo de errores de archivo (`RF-11`, `RF-13`):**
    - Durante un partido contra la máquina con marcador en curso (ej. `1 - 0` o `2 - 1`), abre **`Archivo -> Guardar`**, guarda `entrenamiento_juan.dat` en `data/saves/` y verifica el aviso `"Partida guardada en: entrenamiento_juan.dat"`.
@@ -280,18 +281,22 @@ https://youtu.be/r-dtDvdfvZU
 
 ---
 
-### Acto V — Samuel vs. Juan: La Gran Final, Partida Guardada, Premiación y Cierre
+### Acto V — Samuel vs. Juan: La Gran Final, Colombia, Reglas de Poder, Premiación y Cierre
 
-> **En escena:** **Samuel y Juan juntos**, resolviendo en silencio la revancha definitiva del especial y cerrando la aplicación.
-> **Requisitos cubiertos:** `RF-04`, `RF-08`, `RF-09`, `RF-11`, `RF-12`.
+> **En escena:** **Samuel y Juan juntos**, resolviendo en silencio la revancha definitiva del especial, validando las reglas restantes de poderes y cerrando la aplicación.
+> **Requisitos cubiertos:** `RF-03`, `RF-04`, `RF-05`, `RF-06`, `RF-08`, `RF-09`, `RF-12` *(y extensión/visualización `RD-01`, `RD-02`)*.
 
-El último video retoma la tensión justo donde quedó el clásico familiar: reabriendo una partida decisiva guardada en formato `.dat`, definen sin tregua al campeón de la noche hasta que el trofeo dorado sentencia el resultado y reparte los puntos en el marcador final. Con una última mirada silenciosa a la pantalla de perfiles para confirmar que SQLite registró la gloria y la derrota de cada uno, cierran el telón desde el menú de salida.
+El último video cierra el especial sin repetir pruebas de guardado (ya cubiertas en el Acto III) y define al campeón en una final por tiempo: **Colombia** salta al césped como selección adicional, ambos ponen a prueba las reglas finas del aura de poder y la cancelación por rebote, completan el minuto reglamentario frente al trofeo dorado y confirman sus registros en SQLite antes de despedirse desde el menú de salida, culminando con la verificación presencial de los controles PvP junto a la profesora.
 
 **Qué se muestra en pantalla durante la grabación:**
-1. Retoman una partida PvP decisiva guardada en `.dat` mediante **`Archivo -> Abrir`** (o guardan un instante tenso de la final con `Archivo -> Guardar` y lo reabren para demostrar portabilidad en `PvP`).
-2. Definen el partido final hasta que aparece el diálogo modal **`FIN DEL PARTIDO`**, verificando en pantalla el trofeo dorado, el marcador final, el ganador con **`+100 pts`** y su total actualizado, y el perdedor con **`+25 pts`** y su total actualizado (`RF-09`).
-3. Regresan al menú y entran un momento a `PlayerConfig` para confirmar que SQLite guardó el nuevo puntaje, `PJ` y `G` de `"Samuel"` y `"Juan"` (`RF-12`).
-4. Cierran la aplicación desde **`Archivo -> Salir`**, mostrando el cuadro de confirmación `"¿Desea salir del juego?"` (`RF-08`).
+1. **Configuración PvP con `Colombia` y progreso SQLite (`RF-03`, `RF-04`, `RF-12`):** En `PlayerConfig` (`Jugador vs Jugador (PvP)`), cargan `"Samuel"` y `"Juan"` verificando sus puntos y estadísticas mejoradas en SQLite. Uno elige **`Colombia`** (selección extra `RD-01`, con bandera, sprites propios y tiro `Illusion`) frente a otro país (ej. `Camerún` o `Nigeria`), seleccionan **`Por tiempo` (`1` min)** y entran a la gran final.
+2. **Reglas de aura, rebote y combate con mejoras (`RF-05`, `RF-06`, `RD-02`):** Durante el minuto reglamentario demuestran:
+   - **Aura sin límite y bloqueo de doble activación (Reglas 3 y 7):** Un jugador activa su poder (`Q` o `Ctrl`) y evita tocar el balón durante `10 s` hasta que la barra vuelve al `100%` dorada, verificando que el aura sigue activa y no permite activar otro poder hasta disparar (o hasta que un gol reinicie la ronda y limpie el aura).
+   - **Cancelación por rebote:** Un tiro de poder rebota en una pared lateral o travesaño, limpiando el halo especial del balón para continuar con física normal.
+   - **Estadísticas mejoradas en cancha:** El `InfoPanel` muestra los niveles mejorados (`Vel/Sal/Pat/Vid`) y se aprecia su efecto en movilidad, daño de patada frontal y resistencia.
+3. **Definición en tiempo reglamentario (`RF-04`, `RF-09`):** Terminan el minuto reglamentario con ventaja en el marcador (sin empate, complementando la Muerte Súbita del Acto IV) hasta que el reloj llega a `0s` y aparece el diálogo modal **`FIN DEL PARTIDO`** (con música de victoria `win.wav`), mostrando el trofeo dorado, el marcador final, el ganador con **`+100 pts`** y su total actualizado, y el perdedor con **`+25 pts`** y su total actualizado.
+4. **Confirmación en SQLite y salida segura (`RF-12`, `RF-08`):** Al volver al menú, abren un instante `PlayerConfig` para confirmar que SQLite actualizó `Puntos`, `PJ` y `G` de `"Samuel"` y `"Juan"` (regresando con el botón `←`), y cierran la aplicación desde **`Archivo -> Salir`**, mostrando el cuadro `"¿Desea salir del juego?"`.
+5. **Demostración presencial de controles PvP ante la profesora (`RF-05`):** En sesión presencial junto a la profesora, se oprimen y muestran gráficamente en pantalla las teclas funcionales de ambos jugadores en modo `PvP`: **`A`, `W`, `S`, `D`, `Q`** para el Jugador 1 y las **flechas (`↑`, `↓`, `←`, `→`) + `Ctrl Derecho`** para el Jugador 2.
 
 **Video 5:**
 (Aquí va el link)

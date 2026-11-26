@@ -81,6 +81,13 @@ public class PowerCharge implements Serializable { /*Perfeccionado con Antigravi
         return true;
     }
 
+    /**
+     * Deactivates any active power aura without altering the current recharge progress.
+     */
+    public void clearActive() {
+        active = false;
+    }
+
     public float getPercent() {
         return currentPower / MAX_POWER;
     }

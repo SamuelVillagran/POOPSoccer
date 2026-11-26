@@ -38,15 +38,21 @@ public class CollisionChecker implements Serializable { /*Perfeccionado con Anti
                 && y1 < y2 + h2 && y1 + h1 > y2; // Valida solapamiento simultáneo horizontal y vertical
     }
 
+    private boolean isInFrontOf(Player player, Element target) {
+        float deltaX = centerX(target) - centerX(player);
+        return deltaX * player.getAttackDirection() > 0.0f;
+    }
+
     /**
      * Checks if the target element is within the player's kicking reach.
      */
     private boolean checkKickReach(Player player, Element target) {
-        if (player == null || target == null) return false;
+        if (player == null || target == null || !isInFrontOf(player, target)) return false;
+        float halfWidth = player.getWidth() * 0.5f;
         float reachX = (player.getAttackDirection() == 1)
-                ? player.getX() // Extiende el área de alcance hacia la derecha para Jugador 1
-                : player.getX() - KICK_REACH_PX; // Extiende el área de alcance hacia la izquierda para Jugador 2
-        float reachW = player.getWidth() + KICK_REACH_PX;
+                ? player.getX() + halfWidth
+                : player.getX() - KICK_REACH_PX;
+        float reachW = halfWidth + KICK_REACH_PX;
 
         return checkCollision(
                 reachX, player.getY(), reachW, player.getHeight(),
@@ -77,7 +83,7 @@ public class CollisionChecker implements Serializable { /*Perfeccionado con Anti
         if (applyIncomingPowerShot(player, ball)) return; // Evalúa primero el impacto de un tiro especial enemigo
         if (launchPlayerPowerShot(player, ball)) return; // Luego lanza el poder propio si el aura está activa
 
-        if (pyIsKicking) {
+        if (inKickZone) {
             applyKickToBall(player, ball);
         } else {
             applyBodyContactToBall(player, ball);
