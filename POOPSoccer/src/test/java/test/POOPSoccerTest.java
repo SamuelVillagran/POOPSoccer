@@ -1070,6 +1070,47 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
     }
 
     @Test
+    void countryFlagRendererLoadsFlagsAutomaticallyFromResourcesUsingDomainKeys() {
+        int fallbackRgb = new Color(70, 88, 120).getRGB();
+
+        for (Team team : Team.values()) {
+            String path = CountryFlagRenderer.resolveFlagPath(team.getSpriteKey());
+            assertNotNull(CountryFlagRenderer.class.getResource(path), "Missing flag resource: " + path);
+
+            BufferedImage byKey = new BufferedImage(22, 14, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D gKey = byKey.createGraphics();
+            CountryFlagRenderer.drawFlag(gKey, team.getSpriteKey(), 0, 0, 22, 14);
+            gKey.dispose();
+
+            BufferedImage byDisplay = new BufferedImage(22, 14, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D gDisplay = byDisplay.createGraphics();
+            CountryFlagRenderer.drawFlag(gDisplay, team.getDisplayName(), 0, 0, 22, 14);
+            gDisplay.dispose();
+
+            boolean hasNonFallbackPixel = false;
+            for (int y = 0; y < 14; y++) {
+                for (int x = 0; x < 22; x++) {
+                    assertEquals(byKey.getRGB(x, y), byDisplay.getRGB(x, y));
+                    if (x >= 2 && x < 20 && y >= 2 && y < 12 && byKey.getRGB(x, y) != fallbackRgb) {
+                        hasNonFallbackPixel = true;
+                    }
+                }
+            }
+            assertTrue(hasNonFallbackPixel, "Expected flag image pixels for " + team.name());
+        }
+
+        game.startGame(new PVP(), new GoalMatch(3), "P1", Team.COREA_DEL_SUR, "P2", Team.COLOMBIA);
+        assertEquals(Team.COREA_DEL_SUR.getSpriteKey(), game.getPlayerTeamSpriteKey(NumberPlayer.PLAYER1));
+        assertEquals(Team.COLOMBIA.getSpriteKey(), game.getPlayerTeamSpriteKey(NumberPlayer.PLAYER2));
+
+        BufferedImage unknownCanvas = new BufferedImage(22, 14, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D gUnknown = unknownCanvas.createGraphics();
+        CountryFlagRenderer.drawFlag(gUnknown, "Atlantis", 0, 0, 22, 14);
+        gUnknown.dispose();
+        assertEquals(fallbackRgb, unknownCanvas.getRGB(11, 7));
+    }
+
+    @Test
     void menuPanelBuildsButtonsDynamicallyFromCustomGameModeOptions() {
         List<GameModeOption> modes = List.of(
                 new GameModeOption("PVP", "Jugador vs Jugador (PvP)", false, false),

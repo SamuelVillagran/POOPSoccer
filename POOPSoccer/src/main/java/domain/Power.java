@@ -43,4 +43,10 @@ public interface Power extends Serializable { /*Perfeccionado con Antigravity.*/
         target.takeDamage(getDamage() * owner.getKickMultiplier()); // Aplica el daño base multiplicado por Kick
         target.applyEffect(createEffect());
     }
+
+    /*
+    default boolean onActivate(Player owner) {
+        return false;
+    }
+    */
 }

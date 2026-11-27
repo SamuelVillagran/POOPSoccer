@@ -255,6 +255,11 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return p != null ? p.getTeamDisplayName() : "";
     }
 
+    public String getPlayerTeamSpriteKey(NumberPlayer player) {
+        Player p = getPlayer(player);
+        return p != null ? p.getTeamSpriteKey() : "";
+    }
+
     public float getHealthPercent(NumberPlayer player) {
         Player p = getPlayer(player);
         return p != null ? p.getHealthPercent() : 0f;

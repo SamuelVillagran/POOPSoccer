@@ -320,6 +320,7 @@ public class POOPSoccerGUI implements GameController { /*Perfeccionado con Antig
         return new PlayerHudInfo(
                 game.getDisplayInfo(player),
                 game.getPlayerTeamName(player),
+                game.getPlayerTeamSpriteKey(player),
                 game.getHealthPercent(player),
                 game.getPowerPercent(player),
                 game.getActivePowerName(player),

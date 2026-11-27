@@ -117,6 +117,10 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
         return team != null ? team.getDisplayName() : "";
     }
 
+    public String getTeamSpriteKey() {
+        return team != null ? team.getSpriteKey() : "";
+    }
+
     public int getDecoyBallCount() {
         return team != null ? team.getDecoyBallCount() : 0;
     }
@@ -290,6 +294,14 @@ public class Player extends ItemSoccer { /*Perfeccionado con Antigravity.*/
     public void activatePower() {
         if (!isStuned()) {
             powerCharge.activate();
+            /*
+            boolean isActivated = powerCharge.activate();
+            if (isActivated && team != null) {
+                if (team.activatePower(this)) {
+                    powerCharge.consumeActive();
+                }
+            }
+            */
         }
     }
 

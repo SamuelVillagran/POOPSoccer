@@ -5,7 +5,7 @@ public enum Team { /*Perfeccionado con Antigravity.*/
     CAMEROON("Camerún", new Lightning()), // País con rayo eléctrico que ralentiza y bloquea saltos
     NIGERIA("Nigeria", new Tornado()), // País con remolino rasante que lanza al rival por los aires
     USA("Estados Unidos", new Illusion()), // País con ilusiones ópticas de múltiples balones
-    COLOMBIA("Colombia", new Illusion()); // País adicional con tiro de poder Ilusión
+    COLOMBIA("Colombia", new Illusion()) /* , BRAZIL("Brazil", new Boost()) */; // País adicional con tiro de poder Ilusión
 
     private final String displayName; // Nombre legible mostrado en menús y marcador
     private final String spriteKey; // Clave normalizada sin tildes ni espacios para buscar imágenes PNG
@@ -47,4 +47,13 @@ public enum Team { /*Perfeccionado con Antigravity.*/
             ball.activatePowerShot(owner, power);
         }
     }
+
+    /*
+    public boolean activatePower(Player owner) {
+        if (power != null && owner != null) {
+            return power.onActivate(owner);
+        }
+        return false;
+    }
+    */
 }

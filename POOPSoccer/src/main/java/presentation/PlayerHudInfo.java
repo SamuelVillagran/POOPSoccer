@@ -9,6 +9,7 @@ public final class PlayerHudInfo { /*Perfeccionado con Antigravity.*/
 
     private final String displayName;
     private final String teamName;
+    private final String flagKey;
     private final float healthPercent;
     private final float powerPercent;
     private final String activePower;
@@ -21,8 +22,20 @@ public final class PlayerHudInfo { /*Perfeccionado con Antigravity.*/
             float powerPercent,
             String activePower,
             String statsSummary) {
+        this(displayName, teamName, teamName, healthPercent, powerPercent, activePower, statsSummary);
+    }
+
+    public PlayerHudInfo(
+            String displayName,
+            String teamName,
+            String flagKey,
+            float healthPercent,
+            float powerPercent,
+            String activePower,
+            String statsSummary) {
         this.displayName = displayName;
         this.teamName = teamName;
+        this.flagKey = flagKey;
         this.healthPercent = healthPercent;
         this.powerPercent = powerPercent;
         this.activePower = activePower;
@@ -35,6 +48,10 @@ public final class PlayerHudInfo { /*Perfeccionado con Antigravity.*/
 
     public String getTeamName() {
         return teamName;
+    }
+
+    public String getFlagKey() {
+        return flagKey;
     }
 
     public float getHealthPercent() {
@@ -63,6 +80,7 @@ public final class PlayerHudInfo { /*Perfeccionado con Antigravity.*/
         }
         return Objects.equals(displayName, other.displayName)
                 && Objects.equals(teamName, other.teamName)
+                && Objects.equals(flagKey, other.flagKey)
                 && Float.compare(other.healthPercent, healthPercent) == 0
                 && Float.compare(other.powerPercent, powerPercent) == 0
                 && Objects.equals(activePower, other.activePower)
@@ -71,13 +89,14 @@ public final class PlayerHudInfo { /*Perfeccionado con Antigravity.*/
 
     @Override
     public int hashCode() {
-        return Objects.hash(displayName, teamName, healthPercent, powerPercent, activePower, statsSummary);
+        return Objects.hash(displayName, teamName, flagKey, healthPercent, powerPercent, activePower, statsSummary);
     }
 
     @Override
     public String toString() {
         return "PlayerHudInfo[displayName=" + displayName
                 + ", teamName=" + teamName
+                + ", flagKey=" + flagKey
                 + ", healthPercent=" + healthPercent
                 + ", powerPercent=" + powerPercent
                 + ", activePower=" + activePower

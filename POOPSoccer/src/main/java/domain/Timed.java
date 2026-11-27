@@ -2,6 +2,9 @@ package domain;
 
 public abstract class Timed implements Effect { /*Perfeccionado con Antigravity.*/
     private float remaining; // Segundos restantes antes de que el efecto expire automáticamente
+    /*
+    protected float elapsed = 0.0f;
+    */
 
     protected Timed(float seconds) { this.remaining = seconds; }
 

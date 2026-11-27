@@ -102,14 +102,18 @@ public class InfoPanel extends JPanel { /*Perfeccionado con Antigravity.*/
         int flagY = 5;
         int textY = 16;
 
+        String flagKey = (info.getFlagKey() != null && !info.getFlagKey().isBlank())
+                ? info.getFlagKey()
+                : info.getTeamName();
+
         if (rightAligned) {
             int flagX = barX + barW - FLAG_WIDTH; // Ubica la bandera pegada al borde derecho para Jugador 2
-            CountryFlagRenderer.drawFlag(g2, info.getTeamName(), flagX, flagY, FLAG_WIDTH, FLAG_HEIGHT);
+            CountryFlagRenderer.drawFlag(g2, flagKey, flagX, flagY, FLAG_WIDTH, FLAG_HEIGHT);
             g2.setColor(nameColor);
             g2.drawString(label, flagX - 6 - textWidth, textY);
             return;
         }
-        CountryFlagRenderer.drawFlag(g2, info.getTeamName(), barX, flagY, FLAG_WIDTH, FLAG_HEIGHT);
+        CountryFlagRenderer.drawFlag(g2, flagKey, barX, flagY, FLAG_WIDTH, FLAG_HEIGHT);
         g2.setColor(nameColor);
         g2.drawString(label, barX + FLAG_WIDTH + 6, textY);
     }
