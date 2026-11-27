@@ -1,5 +1,6 @@
 package presentation;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -99,7 +100,7 @@ public class EffectPlayer implements SoundEffectPlayer { /*Perfeccionado con Ant
                 return null;
             }
             try (AudioInputStream audioStream = AudioSystem.getAudioInputStream(
-                    new java.io.BufferedInputStream(rawStream))) { // Envuelve en búfer para soportar mark/reset al leer WAV
+                    new BufferedInputStream(rawStream))) { // Envuelve en búfer para soportar mark/reset al leer WAV
                 AudioFormat format = audioStream.getFormat();
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 byte[] chunk = new byte[4096];

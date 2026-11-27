@@ -21,6 +21,9 @@ import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import presentation.ElementEffectRenderer.Layer;
+import presentation.PauseDialog.PauseOption;
+
 /**
  * Interactive game canvas that runs the 60 FPS game loop, delegates input polling,
  * dispatches sound events, and renders elements through extensible effect renderers.
@@ -50,7 +53,7 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
     private final GameInputSource inputSource;
     private final List<ElementEffectRenderer> underlayRenderers = new ArrayList<>();
     private final List<ElementEffectRenderer> overlayRenderers = new ArrayList<>();
-    private final List<PauseDialog.PauseOption> pauseOptions = new ArrayList<>();
+    private final List<PauseOption> pauseOptions = new ArrayList<>();
 
     protected GamePanel(GamePanelListener listener, GameController controller,
                         SoundEffectPlayer soundEffectPlayer, GameInputSource inputSource) {
@@ -92,20 +95,20 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
     }
 
     private void registerDefaultEffectRenderers() {
-        appendEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderPowerAura);
-        appendEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderStatusEffect);
-        appendEffectRenderer(ElementEffectRenderer.Layer.UNDERLAY, this::renderFallbackShotAura);
-        appendEffectRenderer(ElementEffectRenderer.Layer.OVERLAY, this::renderShotGifOverlay);
+        appendEffectRenderer(Layer.UNDERLAY, this::renderPowerAura);
+        appendEffectRenderer(Layer.UNDERLAY, this::renderStatusEffect);
+        appendEffectRenderer(Layer.UNDERLAY, this::renderFallbackShotAura);
+        appendEffectRenderer(Layer.OVERLAY, this::renderShotGifOverlay);
     }
 
     private void registerDefaultPauseOptions() {
-        appendPauseOption(new PauseDialog.PauseOption("Continuar", ArcadeUIStyle.BTN_GREEN, this::resumeFromPause));
-        appendPauseOption(new PauseDialog.PauseOption("Reiniciar", PauseDialog.BTN_RESTART, () -> {
+        appendPauseOption(new PauseOption("Continuar", ArcadeUIStyle.BTN_GREEN, this::resumeFromPause));
+        appendPauseOption(new PauseOption("Reiniciar", PauseDialog.BTN_RESTART, () -> {
             if (listener != null) {
                 listener.restartFromLevel1();
             }
         }));
-        appendPauseOption(new PauseDialog.PauseOption("Volver al menú", PauseDialog.BTN_MENU, () -> {
+        appendPauseOption(new PauseOption("Volver al menú", PauseDialog.BTN_MENU, () -> {
             if (listener != null) {
                 listener.goToMenu();
             }
@@ -115,19 +118,19 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
     /**
      * Registers a custom visual effect renderer on the chosen layer without editing draw().
      */
-    public GamePanel registerEffectRenderer(ElementEffectRenderer.Layer layer, ElementEffectRenderer renderer) {
+    public GamePanel registerEffectRenderer(Layer layer, ElementEffectRenderer renderer) {
         appendEffectRenderer(layer, renderer);
         return this;
     }
 
-    private void appendEffectRenderer(ElementEffectRenderer.Layer layer, ElementEffectRenderer renderer) {
+    private void appendEffectRenderer(Layer layer, ElementEffectRenderer renderer) {
         if (layer == null) {
             throw new IllegalArgumentException("Effect layer cannot be null.");
         }
         if (renderer == null) {
             throw new IllegalArgumentException("Effect renderer cannot be null.");
         }
-        if (layer == ElementEffectRenderer.Layer.UNDERLAY) {
+        if (layer == Layer.UNDERLAY) {
             underlayRenderers.add(renderer);
         } else {
             overlayRenderers.add(renderer);
@@ -137,19 +140,19 @@ public class GamePanel extends JPanel implements Runnable, ScreenLifecycle { /*P
     /**
      * Appends an action entry to the pause menu without editing PauseDialog or GamePanel switch logic.
      */
-    public GamePanel addPauseOption(PauseDialog.PauseOption option) {
+    public GamePanel addPauseOption(PauseOption option) {
         appendPauseOption(option);
         return this;
     }
 
-    private void appendPauseOption(PauseDialog.PauseOption option) {
+    private void appendPauseOption(PauseOption option) {
         if (option == null) {
             throw new IllegalArgumentException("Pause option cannot be null.");
         }
         pauseOptions.add(option);
     }
 
-    public List<PauseDialog.PauseOption> getPauseOptions() {
+    public List<PauseOption> getPauseOptions() {
         return Collections.unmodifiableList(pauseOptions);
     }
 
