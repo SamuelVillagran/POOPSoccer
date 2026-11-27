@@ -6,7 +6,7 @@
 <img src="POOPSoccer/resources/menu/main.jpg" width="760" alt="Pantalla principal de POOPSoccer"/>
 
 <p>
-  <img src="https://img.shields.io/badge/Java-17%2B-FF7800?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 17+"/>
+  <img src="https://img.shields.io/badge/Java-21%2B-FF7800?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 21+"/>
   <img src="https://img.shields.io/badge/Interfaz-Java%20Swing%20(60%20FPS)-0EA5E9?style=for-the-badge&logo=java&logoColor=white" alt="Java Swing 60 FPS"/>
   <img src="https://img.shields.io/badge/Persistencia-SQLite%20%2B%20.dat-0F766E?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite + .dat"/>
   <img src="https://img.shields.io/badge/Pruebas-JUnit%205-16A34A?style=for-the-badge&logo=junit5&logoColor=white" alt="JUnit 5"/>
@@ -143,7 +143,7 @@ POOPSoccer/
 │   └── saves/*.dat                # Partidas guardadas mediante serialización
 └── POOPSoccer/
     ├── lib/
-    │   ├── Jugar_POOPSoccer.bat   # Lanzador directo en Windows (Java 17+)
+    │   ├── Jugar_POOPSoccer.bat   # Lanzador directo en Windows (Java 21+)
     │   ├── POOPSoccer.jar         # Ejecutable empaquetado
     │   └── sqlite-jdbc-3.54.1.0.jar
     ├── resources/                 # Sprites por país, balón, arcos, estadio, menús y audio WAV
@@ -157,7 +157,7 @@ POOPSoccer/
 </details>
 
 > [!IMPORTANT]
-> **Cómo ejecutar en Windows:** Abre `POOPSoccer/lib/Jugar_POOPSoccer.bat` (requiere **Java 17 o superior**) o ejecuta la clase principal `presentation.POOPSoccerGUI`.
+> **Cómo ejecutar en Windows:** Abre `POOPSoccer/lib/Jugar_POOPSoccer.bat` (requiere **Java 21 o superior**) o ejecuta la clase principal `presentation.POOPSoccerGUI`.
 
 ---
 

@@ -1190,6 +1190,46 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         assertFalse(limitCombo.isVisible());
     }
 
+    // Deshabilitado temporalmente: verifica el desplegable de perfil del jugador cuando se vuelva a habilitar
+    /*
+    @Test
+    void playerConfigUsesDropdownForPlayerProfileStyle() {
+        StubGameController controller = new StubGameController();
+        PlayerConfigListener noopListener = new PlayerConfigListener() {
+            @Override public void goToMenu() {}
+            @Override public void setResolution(Dimension resolution) {}
+            @Override public void onPlayerConfigConfirmed(String n1, String t1, String n2, String t2, String mt, int limit) {}
+        };
+        PlayerConfig config = PlayerConfig.create(
+                noopListener,
+                controller,
+                new GameModeOption("PVM", "Jugador vs Máquina (PvM)", false, true)
+        );
+
+        List<JButton> buttons = findComponents(config, JButton.class);
+        assertFalse(buttons.stream().anyMatch(b -> "Perfil del jugador".equals(b.getText())));
+
+        @SuppressWarnings("unchecked")
+        List<JComboBox<String>> styleCombos = findComponents(config, JComboBox.class).stream()
+                .filter(cb -> cb.getItemCount() == 2
+                        && "Normal".equals(cb.getItemAt(0))
+                        && "Expert".equals(cb.getItemAt(1)))
+                .map(cb -> (JComboBox<String>) cb)
+                .toList();
+        assertEquals(2, styleCombos.size());
+
+        controller.profileSelections.clear();
+        styleCombos.get(0).setSelectedItem("Expert");
+        assertEquals(List.of("1:Expert"), controller.profileSelections);
+
+        JButton backButton = buttons.stream()
+                .filter(b -> "Volver al menú".equals(b.getToolTipText()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("", backButton.getText());
+    }
+    */
+
     @Test
     void gameContainerAllowsRegisteringAndSwitchingToCustomScreen() {
         StubGameController controller = new StubGameController();
@@ -1848,9 +1888,14 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
         List<RenderElement> renderElements = List.of();
         List<String> soundEvents = List.of();
         java.util.function.Consumer<Character> onMoveP1 = c -> {};
+        // Catálogo simulado para el desplegable de perfil (deshabilitado temporalmente)
+        /* String[] styles = new String[] { "Normal", "Expert" }; */
+        /* List<String> profileSelections = new ArrayList<>(); */
         int maxStatLevel = 10;
         int statLevel = 1;
 
+        // Implementación simulada del contrato getAvaliableStyles (deshabilitado temporalmente)
+        /* @Override public String[] getAvaliableStyles() { return styles; } */
         @Override public List<GameModeOption> getAvailableGameModes() { return modes; }
         @Override public String[] getAvailableTeams() { return new String[] { "Colombia", "Nigeria" }; }
         @Override public String[] getAvailableMachineProfiles() { return new String[] { "Torpe" }; }
@@ -1889,6 +1934,49 @@ class POOPSoccerTest { //Ayudado a hacer por Claude Sonnet 5.5
             return new MatchHudSnapshot(info, info, "0 - 0", 0f, false);
         }
         @Override public List<RenderElement> getRenderElements() { return renderElements; }
+    }
+
+    @Test
+    void domainFacadeExposesCatalogAndBoundaryOverloadsWithoutLeakingPresentationImports() throws Exception {
+        assertEquals(List.of("PVP", "PVM", "MVM"), List.of(POOPSoccer.getAvailableGameModeIds()));
+        assertEquals("Jugador vs Máquina (PvM)", POOPSoccer.getGameModeDisplayName("PVM"));
+        assertFalse(POOPSoccer.isGameModeMachinePlayer("PVM", 1));
+        assertTrue(POOPSoccer.isGameModeMachinePlayer("PVM", 2));
+        assertTrue(POOPSoccer.getAvailableTeams().length >= 5);
+        assertTrue(POOPSoccer.getAvailableMachineProfiles().length >= 1);
+        assertTrue(POOPSoccer.isMachineProfileAvailable("Torpe"));
+        assertEquals(List.of("Por goles", "Por tiempo"), List.of(POOPSoccer.getAvailableMatchTypes()));
+        assertEquals("Goles para ganar:", POOPSoccer.getMatchTypeParameterLabel("Por goles"));
+        assertTrue(POOPSoccer.getMatchTypeParameterOptions("Por goles").length >= 3);
+        assertEquals(List.of("Vel", "Salto", "Patada", "Vida"), List.of(POOPSoccer.getAvailableStats()));
+        assertEquals(PlayerProfile.getMaxStatLevel(), POOPSoccer.getMaxStatLevel());
+
+        game.startGame("PVM", "Por goles", 5, "Ana", "Cameroon", "CPU", "Nigeria");
+        assertTrue(game.getTypeMatch() instanceof PVM);
+        assertTrue(game.getMatchRule() instanceof GoalMatch);
+
+        float xBefore = game.getPlayer1().getX();
+        game.performAction(1, "MOVE_RIGHT");
+        assertTrue(game.getPlayer1().getX() > xBefore);
+        assertThrows(POOPSoccerException.class, () -> game.performAction(3, "MOVE_RIGHT"));
+
+        game.consumeMatchEventNames();
+        game.performAction(1, "KICK");
+        assertEquals(List.of("KICK_SWING"), game.consumeMatchEventNames());
+
+        java.nio.file.Path presentationDir = java.nio.file.Path.of("src", "main", "java", "presentation");
+        List<String> domainImports = new ArrayList<>();
+        try (var files = java.nio.file.Files.list(presentationDir)) {
+            for (java.nio.file.Path file : files.filter(p -> p.toString().endsWith(".java")).toList()) {
+                for (String line : java.nio.file.Files.readAllLines(file)) {
+                    String trimmed = line.trim();
+                    if (trimmed.startsWith("import domain.")) {
+                        domainImports.add(file.getFileName() + ":" + trimmed);
+                    }
+                }
+            }
+        }
+        assertEquals(List.of("POOPSoccerGUI.java:import domain.POOPSoccer;"), domainImports);
     }
 
     private static void deleteRecursively(java.io.File dir) {

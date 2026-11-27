@@ -362,4 +362,12 @@ public class POOPSoccerGUI implements GameController { /*Perfeccionado con Antig
         }
         return Collections.unmodifiableList(renderList);
     }
+
+    // Deshabilitado temporalmente: devolvía la lista de estilos disponibles para poblar el desplegable de perfil
+    /*
+    @Override 
+    public String[] getAvaliableStyles() {
+        return new String[] {"Normal", "Expert"};
+    }
+    */
 }

@@ -80,9 +80,13 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
     private JTextField nameFieldP1;
     private JComboBox<String> countryComboP1;
     private JComboBox<String> machineProfileComboP1;
+    // Desplegable deshabilitado temporalmente para el perfil de estilo del Jugador 1
+    /* private JComboBox<String> styleComboP1; */
     private JTextField nameFieldP2;
     private JComboBox<String> countryComboP2;
     private JComboBox<String> machineProfileComboP2;
+    // Desplegable deshabilitado temporalmente para el perfil de estilo del Jugador 2
+    /* private JComboBox<String> styleComboP2; */
 
     private JComboBox<MatchTypeOption> matchTypeCombo;
     private JLabel limitLabel;
@@ -136,6 +140,31 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
             background = null;
         }
     }
+
+    // Deshabilitado temporalmente: creaba el botón desplegable de perfil del jugador y conectaba su listener al controlador
+    /*
+    private JComboBox<String> createProfileStyleCombo(int playerNum) {
+        // Solicita al controlador la lista de estilos disponibles para poblar el desplegable
+        String[] rawStyles = controller.getAvaliableStyles();
+        // Evita errores si el controlador devuelve null usando un arreglo vacío como respaldo
+        String[] styles = rawStyles != null ? rawStyles : new String[0];
+        // Construye el JComboBox con el mismo estilo visual que los demás desplegables
+        JComboBox<String> styleCombo = createStyledComboBox(styles);
+        // Registra el listener después de cargar las opciones para reaccionar solo a cambios del usuario
+        styleCombo.addActionListener(e -> onProfileStyleSelected(playerNum, styleCombo));
+        return styleCombo;
+    }
+
+    // Maneja el cambio de opción en el desplegable de perfil y notifica al controlador qué estilo eligió el jugador
+    private void onProfileStyleSelected(int playerNum, JComboBox<String> styleCombo) {
+        // Obtiene el texto de la opción actualmente elegida en el desplegable
+        String selected = (String) styleCombo.getSelectedItem();
+        if (selected != null) {
+            // Envía al controlador el número de jugador y el perfil seleccionado
+            controller.selectPlayerProfile(playerNum, selected);
+        }
+    }
+    */
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -219,6 +248,8 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         JTextField nameField = createStyledTextField(controller.getPlayerName(playerNum), true);
         JComboBox<String> countryCombo = createStyledComboBox(controller.getAvailableTeams());
         JComboBox<String> profileCombo = isMachine ? createStyledComboBox(controller.getAvailableMachineProfiles()) : null;
+        // Deshabilitado temporalmente: construía el desplegable de perfil del jugador para este jugador
+        /* JComboBox<String> styleCombo = createProfileStyleCombo(playerNum); */
         storePlayerFields(playerNum, nameField, countryCombo, profileCombo);
 
         addPlayerIdentityRows(formCard, gbc, startRow + 1, nameField, countryCombo, profileCombo);
@@ -231,19 +262,25 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
         return "Configuración " + role + ":";
     }
 
+    // Guarda las referencias de los campos y desplegables de cada jugador
     private void storePlayerFields(int playerNum, JTextField nameField,
                                    JComboBox<String> countryCombo, JComboBox<String> profileCombo) {
         if (playerNum == 1) {
             nameFieldP1 = nameField;
             countryComboP1 = countryCombo;
             machineProfileComboP1 = profileCombo;
+            // Almacenaba la referencia del desplegable de perfil del Jugador 1
+            /* styleComboP1 = styleCombo; */
         } else {
             nameFieldP2 = nameField;
             countryComboP2 = countryCombo;
             machineProfileComboP2 = profileCombo;
+            // Almacenaba la referencia del desplegable de perfil del Jugador 2
+            /* styleComboP2 = styleCombo; */
         }
     }
 
+    // Organiza las filas de identidad del jugador (el desplegable de perfil queda comentado temporalmente)
     private void addPlayerIdentityRows(JPanel formCard, GridBagConstraints gbc, int baseRow,
                                        JTextField nameField, JComboBox<String> countryCombo,
                                        JComboBox<String> profileCombo) {
@@ -251,12 +288,19 @@ public class PlayerConfig extends JPanel {//Ayudado a perfeccionar con Gemini Hy
             configureMachineNameField(nameField, profileCombo);
             gbc.gridy = baseRow;
             formCard.add(createInlineFieldRow("Nombre:", nameField), gbc);
+            // Ubicaba el desplegable de perfil junto al nombre cuando el jugador es máquina
+            /* formCard.add(createTwoColumnRow("Nombre:", nameField, "Perfil del jugador:", styleCombo), gbc); */
             gbc.gridy = baseRow + 1;
             formCard.add(createTwoColumnRow("País / Poder:", countryCombo, "Perfil de máquina:", profileCombo), gbc);
             return;
         }
         gbc.gridy = baseRow;
         formCard.add(createTwoColumnRow("Nombre:", nameField, "País / Poder:", countryCombo), gbc);
+        // Agregaba el desplegable de perfil debajo de nombre y país cuando el jugador es humano
+        /*
+        gbc.gridy = baseRow + 1;
+        formCard.add(createInlineFieldRow("Perfil del jugador:", styleCombo), gbc);
+        */
     }
 
     private JLabel createSectionHeader(String text, Color color) {

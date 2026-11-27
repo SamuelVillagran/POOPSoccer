@@ -3,6 +3,7 @@ package domain;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,13 @@ import java.util.Map;
 public final class POOPSoccer implements Serializable { /*Perfeccionado con Antigravity.*/
 
     private static final float DELTA_TIME = 1.0f / 60.0f; // Paso temporal fijo por frame (60 FPS)
+    private static final Map<String, PlayerAction> NAMED_ACTIONS = Map.of(
+            "MOVE_RIGHT", PlayerAction.MOVE_RIGHT,
+            "MOVE_LEFT", PlayerAction.MOVE_LEFT,
+            "JUMP", PlayerAction.JUMP,
+            "KICK", PlayerAction.KICK,
+            "ACTIVATE_POWER", PlayerAction.ACTIVATE_POWER
+    );
 
     private static POOPSoccer game; // Instancia única del motor de juego (Singleton)
     private boolean isPaused; // Detiene la física y el reloj mientras el menú de pausa está abierto
@@ -54,6 +62,107 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
             game = new POOPSoccer();
         }
         return game;
+    }
+
+    /**
+     * Returns all supported game mode identifiers for boundary UI selectors.
+     */
+    public static String[] getAvailableGameModeIds() {
+        return Arrays.stream(GameMode.values())
+                .map(GameMode::name)
+                .toArray(String[]::new);
+    }
+
+    /**
+     * Resolves the user-facing label for a game mode identifier.
+     */
+    public static String getGameModeDisplayName(String gameModeId) {
+        return GameMode.fromName(gameModeId).getDisplayName();
+    }
+
+    /**
+     * Returns whether the specified 1-based player slot is machine-controlled in the given game mode.
+     */
+    public static boolean isGameModeMachinePlayer(String gameModeId, int playerNum) {
+        return GameMode.fromName(gameModeId).createTypeMatch()
+                .isMachinePlayer(NumberPlayer.fromNumber(playerNum));
+    }
+
+    /**
+     * Returns all selectable team display names.
+     */
+    public static String[] getAvailableTeams() {
+        return Arrays.stream(Team.values())
+                .map(Team::getDisplayName)
+                .toArray(String[]::new);
+    }
+
+    /**
+     * Returns all machine profile display names.
+     */
+    public static String[] getAvailableMachineProfiles() {
+        return Arrays.stream(MachineProfile.values())
+                .map(MachineProfile::getDisplayName)
+                .toArray(String[]::new);
+    }
+
+    /**
+     * Returns whether the given machine profile has an implemented AI strategy.
+     */
+    public static boolean isMachineProfileAvailable(String profileName) {
+        return MachineProfile.fromDisplayName(profileName).isAvailable();
+    }
+
+    /**
+     * Returns all available match type display names.
+     */
+    public static String[] getAvailableMatchTypes() {
+        return Arrays.stream(MatchType.values())
+                .map(MatchType::getDisplayName)
+                .toArray(String[]::new);
+    }
+
+    /**
+     * Returns the parameter label associated with the specified match type.
+     */
+    public static String getMatchTypeParameterLabel(String matchType) {
+        return MatchType.fromDisplayName(matchType).getParameterLabel();
+    }
+
+    /**
+     * Returns the selectable parameter values associated with the specified match type.
+     */
+    public static int[] getMatchTypeParameterOptions(String matchType) {
+        return MatchType.fromDisplayName(matchType).getParameterOptions();
+    }
+
+    /**
+     * Returns all upgradable player statistic display names.
+     */
+    public static String[] getAvailableStats() {
+        return Arrays.stream(PlayerStat.values())
+                .map(PlayerStat::getDisplayName)
+                .toArray(String[]::new);
+    }
+
+    /**
+     * Returns the maximum upgrade level allowed for any player statistic.
+     */
+    public static int getMaxStatLevel() {
+        return PlayerProfile.getMaxStatLevel();
+    }
+
+    /**
+     * Boundary overload that resolves string selections into domain strategies and starts a match.
+     */
+    public synchronized void startGame(String gameMode, String matchType, int matchLimit,
+                                       String nameP1, String teamP1,
+                                       String nameP2, String teamP2) {
+        TypeMatch resolvedMode = GameMode.fromName(gameMode).createTypeMatch();
+        MatchRule resolvedRule = MatchType.fromDisplayName(matchType).createMatchRule(matchLimit);
+        Team resolvedTeamP1 = Team.fromDisplayName(teamP1);
+        Team resolvedTeamP2 = Team.fromDisplayName(teamP2);
+        startGame(resolvedMode, resolvedRule, nameP1, resolvedTeamP1, nameP2, resolvedTeamP2);
     }
 
     // Recibe estrategias abiertas (TypeMatch, MatchRule) y objetos de dominio ya validados en la frontera
@@ -155,6 +264,20 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
     }
 
     /**
+     * Boundary overload that resolves a 1-based player slot and semantic action name into a domain action.
+     */
+    public synchronized void performAction(int playerNum, String actionName) {
+        NumberPlayer slot = NumberPlayer.fromNumber(playerNum);
+        if (actionName == null) {
+            return;
+        }
+        PlayerAction action = NAMED_ACTIONS.get(actionName);
+        if (action != null) {
+            performAction(slot, action);
+        }
+    }
+
+    /**
      * Executes a typed domain action for the specified player slot when manual control is allowed.
      */
     public synchronized void performAction(NumberPlayer player, PlayerAction action) {
@@ -250,9 +373,17 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return p != null ? p.getDisplayInfo() : "";
     }
 
+    public String getDisplayInfo(int playerNum) {
+        return getDisplayInfo(NumberPlayer.fromNumber(playerNum));
+    }
+
     public String getPlayerTeamName(NumberPlayer player) {
         Player p = getPlayer(player);
         return p != null ? p.getTeamDisplayName() : "";
+    }
+
+    public String getPlayerTeamName(int playerNum) {
+        return getPlayerTeamName(NumberPlayer.fromNumber(playerNum));
     }
 
     public String getPlayerTeamSpriteKey(NumberPlayer player) {
@@ -260,9 +391,17 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return p != null ? p.getTeamSpriteKey() : "";
     }
 
+    public String getPlayerTeamSpriteKey(int playerNum) {
+        return getPlayerTeamSpriteKey(NumberPlayer.fromNumber(playerNum));
+    }
+
     public float getHealthPercent(NumberPlayer player) {
         Player p = getPlayer(player);
         return p != null ? p.getHealthPercent() : 0f;
+    }
+
+    public float getHealthPercent(int playerNum) {
+        return getHealthPercent(NumberPlayer.fromNumber(playerNum));
     }
 
     public float getPowerPercent(NumberPlayer player) {
@@ -270,9 +409,17 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return p != null ? p.getPowerPercent() : 0f;
     }
 
+    public float getPowerPercent(int playerNum) {
+        return getPowerPercent(NumberPlayer.fromNumber(playerNum));
+    }
+
     public String getActivePowerName(NumberPlayer player) {
         Player p = getPlayer(player);
         return p != null ? p.getActivePowerName() : "";
+    }
+
+    public String getActivePowerName(int playerNum) {
+        return getActivePowerName(NumberPlayer.fromNumber(playerNum));
     }
 
     public void awardMatchPoints() {
@@ -286,6 +433,10 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
      */
     public void selectPlayerProfile(NumberPlayer player, String playerName) {
         profileManager.selectProfile(getPlayer(player), playerName);
+    }
+
+    public void selectPlayerProfile(int playerNum, String playerName) {
+        selectPlayerProfile(NumberPlayer.fromNumber(playerNum), playerName);
     }
 
     public MatchSummarySnapshot getMatchSummary() {
@@ -309,9 +460,17 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return p != null ? p.getName() : ("Jugador " + player.getNumber());
     }
 
+    public String getPlayerName(int playerNum) {
+        return getPlayerName(NumberPlayer.fromNumber(playerNum));
+    }
+
     public int getPoints(NumberPlayer player) {
         Player p = getPlayer(player);
         return p != null ? p.getPoints() : 0;
+    }
+
+    public int getPoints(int playerNum) {
+        return getPoints(NumberPlayer.fromNumber(playerNum));
     }
 
     public int getMatchesPlayed(NumberPlayer player) {
@@ -319,9 +478,17 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return p != null ? p.getMatchesPlayed() : 0;
     }
 
+    public int getMatchesPlayed(int playerNum) {
+        return getMatchesPlayed(NumberPlayer.fromNumber(playerNum));
+    }
+
     public int getWins(NumberPlayer player) {
         Player p = getPlayer(player);
         return p != null ? p.getWins() : 0;
+    }
+
+    public int getWins(int playerNum) {
+        return getWins(NumberPlayer.fromNumber(playerNum));
     }
 
     public int getStatLevel(NumberPlayer player, PlayerStat stat) {
@@ -329,13 +496,25 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
         return p != null ? p.getStatLevel(stat) : 1;
     }
 
+    public int getStatLevel(int playerNum, String statName) {
+        return getStatLevel(NumberPlayer.fromNumber(playerNum), PlayerStat.fromName(statName));
+    }
+
     public int getUpgradeCost(NumberPlayer player, PlayerStat stat) {
         Player p = getPlayer(player);
         return p != null ? p.getUpgradeCost(stat) : 500;
     }
 
+    public int getUpgradeCost(int playerNum, String statName) {
+        return getUpgradeCost(NumberPlayer.fromNumber(playerNum), PlayerStat.fromName(statName));
+    }
+
     public boolean upgradeStat(NumberPlayer player, PlayerStat stat) {
         return profileManager.upgradeStat(getPlayer(player), stat);
+    }
+
+    public boolean upgradeStat(int playerNum, String statName) {
+        return upgradeStat(NumberPlayer.fromNumber(playerNum), PlayerStat.fromName(statName));
     }
 
     public boolean isGameFinished() {
@@ -505,6 +684,18 @@ public final class POOPSoccer implements Serializable { /*Perfeccionado con Anti
             queue.clear();
         }
         return events;
+    }
+
+    /**
+     * Returns and clears all pending gameplay event names for boundary consumers.
+     */
+    public synchronized List<String> consumeMatchEventNames() {
+        List<MatchEvent> events = consumeMatchEvents();
+        List<String> names = new ArrayList<>(events.size());
+        for (MatchEvent event : events) {
+            names.add(event.name());
+        }
+        return names;
     }
 
     private List<MatchEvent> ensureMatchEventQueue() {

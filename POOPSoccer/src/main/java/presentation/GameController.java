@@ -8,6 +8,9 @@ import java.util.List;
  */
 public interface GameController { /*Perfeccionado con Antigravity.*/
 
+    // Deshabilitado temporalmente: expone los estilos disponibles de perfil del jugador para el desplegable
+    /* String[] getAvaliableStyles(); */
+
     List<GameModeOption> getAvailableGameModes();
 
     String[] getAvailableTeams();
